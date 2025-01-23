@@ -59,4 +59,34 @@ module.exports.listenerSetup = (app, getBearerToken) => {
             res.status(500).json({ error: "Error calling external API"});
         }
     });
+
+    app.get("/api/getPersonnelNumber", async (req, res) => {
+        try {
+            const { plant, userId } = req.query;
+    
+            if (!plant || !userId) {
+                return res.status(400).json({ error: "Missing required query parameters: plant or userId" });
+            }
+    
+            const token = await getBearerToken();
+            var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+    
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`, 
+                },
+            });
+    
+            const personnelNumber = response.data.erpPersonnelNumber;
+    
+            if (!personnelNumber) {
+                return res.status(404).json({ error: "Personnel number not found" });
+            }
+    
+            res.json({ erpPersonnelNumber: personnelNumber });
+        } catch (error) {
+            console.error("Error calling external API:", error.response?.data || error.message);
+            res.status(500).json({ error: "Error calling external API" });
+        }
+    });    
 };
