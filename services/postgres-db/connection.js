@@ -13,13 +13,23 @@ const pool = new Pool({
 });
 
 // Funzione per eseguire query
-async function executeQuery(query) {
+// async function executeQuery(query) {
+//     try {
+//         const result = await pool.query(query);
+//         return result.rows;
+//     } catch (error) {
+//         console.error('Errore durante l\'esecuzione della query:', error);
+//         throw error;
+//     }
+// }
+
+async function executeQuery(query, params = []) {
     try {
-        const result = await pool.query(query);
-        return result.rows;
+        const result = await pool.query(query, params); 
+        return result.rows; 
     } catch (error) {
-        console.error('Errore durante l\'esecuzione della query:', error);
-        throw error;
+        console.error("Errore durante l'esecuzione della query:", error);
+        throw error; 
     }
 }
 
