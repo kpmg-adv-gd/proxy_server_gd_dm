@@ -1,28 +1,32 @@
-const { Pool } = require('pg');
+const postgresdbService = require('./connection');
+const queryLibrary = require('./library');
 
 
-const POSTGRES_DB_CONNECTION = JSON.parse(process.env.POSTGRES_DB_CONNECTION);
-// Configura il pool PostgreSQL usando le variabili di ambiente
-const pool = new Pool({
-    user: POSTGRES_DB_CONNECTION.DB_USER,
-    host: POSTGRES_DB_CONNECTION.DB_HOST,
-    database: POSTGRES_DB_CONNECTION.DB_NAME,
-    password: POSTGRES_DB_CONNECTION.DB_PASSWORD,
-    port: POSTGRES_DB_CONNECTION.DB_PORT,
-    ssl: { rejectUnauthorized: false }, 
-});
+module.exports.listenerSetup = (app) => {
+    app.get("/db/getReasonsForVariance", async (req, res) => {
+        // const { query } = req.body;
 
-// Funzione per eseguire query
-async function executeQuery(query) {
-    try {
-        const result = await pool.query(query);
-        return result.rows;
-    } catch (error) {
-        console.error('Errore durante l\'esecuzione della query:', error);
-        throw error;
-    }
-}
+        // if (!query) {
+        //     return res.status(400).json({ error: 'La query è obbligatoria nel corpo della richiesta.' });
+        // }
 
-module.exports = {
-    executeQuery,
+        try {
+            const data = await postgresdbService.executeQuery(queryLibrary.getReasonsForVarianceQuery);
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
+        }
+
+        // let queryResult = postgresdbService.executeQuery(queryLibrary.queryTest);
+        // let response = res.status(response["code"]).send({ message: queryResult });
+    });
+
+    app.get("/db/getMarkingData", async (req, res) => {
+        try {
+            const data = await postgresdbService.executeQuery(queryLibrary.getMarkingDataQuery);
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
+        }
+    })
 };
