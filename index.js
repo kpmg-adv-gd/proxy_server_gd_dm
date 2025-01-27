@@ -48,6 +48,7 @@ const mdoService = require("./services/mdo/listener");
 const postgresdbService = require('./services/postgres-db/listener');
 apiService.listenerSetup(app, getBearerToken);
 mdoService.listenerSetup(app, getBearerToken);
+postgresdbService.listenerSetup(app);
 
 
 
