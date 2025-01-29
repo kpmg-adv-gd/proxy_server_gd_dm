@@ -27,7 +27,7 @@ module.exports.listenerSetup = (app) => {
         }
     }),
     
-    app.post("/db/insertData", async (req, res) => {
+    app.post("/db/insertOpConfirmation", async (req, res) => {
         const {
             wbe_macchina,
             operation,
@@ -46,7 +46,7 @@ module.exports.listenerSetup = (app) => {
         }
 
         try {
-            await postgresdbService.executeQuery(queryLibrary.insertDataQuery, [
+            await postgresdbService.executeQuery(queryLibrary.insertOpConfirmation, [
                 wbe_macchina,
                 operation,
                 mes_order,
