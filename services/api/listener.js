@@ -90,16 +90,16 @@ module.exports.listenerSetup = (app, getBearerToken) => {
         }
     });
 
-    app.get("/api/getWorkCenterResource", async (req, res) => {
+    app.get("/api/getOrder", async (req, res) => {
         try {
-            const { workcenter, plant } = req.query;
+            const { plant, order } = req.query;
 
-            if (!workcenter || !plant) {
-                return res.status(400).json({ error: "Missing required query parameters: workcenter or plant" });
+            if (!plant || !order) {
+                return res.status(400).json({ error: "Missing required query parameters: plant or order" });
             }
 
             const token = await getBearerToken();
-            var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+            var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
 
             const response = await axios.get(url, {
                 headers: {
@@ -107,48 +107,18 @@ module.exports.listenerSetup = (app, getBearerToken) => {
                 },
             });
 
-            const personnelNumber = response.data.erpPersonnelNumber;
+            const orderResponse = response.data;
 
-            if (!personnelNumber) {
-                return res.status(404).json({ error: "Personnel number not found" });
+            if (!orderResponse) {
+                return res.status(404).json({ error: "Order not found" });
             }
 
-            res.json({ erpPersonnelNumber: personnelNumber });
+            res.json({ orderResponse: orderResponse });
         } catch (error) {
             console.error("Error calling external API:", error.response?.data || error.message);
             res.status(500).json({ error: "Error calling external API" });
         }
-    }),
-
-        app.get("/api/getOrder", async (req, res) => {
-            try {
-                const { plant, order } = req.query;
-
-                if (!plant || !order) {
-                    return res.status(400).json({ error: "Missing required query parameters: plant or order" });
-                }
-
-                const token = await getBearerToken();
-                var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
-
-                const response = await axios.get(url, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                const orderResponse = response.data;
-
-                if (!orderResponse) {
-                    return res.status(404).json({ error: "Order not found" });
-                }
-
-                res.json({ orderResponse: orderResponse });
-            } catch (error) {
-                console.error("Error calling external API:", error.response?.data || error.message);
-                res.status(500).json({ error: "Error calling external API" });
-            }
-        });
+    });
 
     app.get("/api/getBom", async (req, res) => {
         try {
