@@ -1,12 +1,12 @@
 const axios = require("axios");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 
-async function dispatch(req,token) {
+async function dispatch(req, token) {
     let MDOCall = await makeMDOCall(req, token);
     return MDOCall;
 };
 
-async function makeMDOCall(req,token) {
+async function makeMDOCall(req, token) {
     let response = { error: false, code: 0, message: "", data: {} };
     try {
         let mdoService = req.path.replace("/mdo", "");
@@ -21,8 +21,8 @@ async function makeMDOCall(req,token) {
             params = params.substring(0, params.length - 1);
         }
 
-        console.log("PARAMS= "+params);
-        console.log("URL = "+ credentials.DM_API_URL + "/dmci/v2/extractor" + mdoService + "?" + "$format=json" + (params ? "&" + params : "") );
+        console.log("PARAMS= " + params);
+        console.log("URL = " + credentials.DM_API_URL + "/dmci/v2/extractor" + mdoService + "?" + "$format=json" + (params ? "&" + params : ""));
         let mdoPromise = axios({
             url: credentials.DM_API_URL + "/dmci/v4/extractor" + mdoService + "?" + "$format=json" + (params ? "&" + params : ""),
             method: req["method"],
@@ -49,15 +49,15 @@ module.exports.listenerSetup = (app, getBearerToken) => {
             // Ottieni il Bearer Token prima di fare la richiesta API
             const token = await getBearerToken();
 
-            let response = await dispatch(req,token);
+            let response = await dispatch(req, token);
             if (response["error"]) {
                 res.status(response["code"]).send({ message: response["message"] });
             }
             else {
                 res.status(200).send(response["data"]);
             }
-        }catch(e){
-            console.log("Error - "+e);
+        } catch (e) {
+            console.log("Error - " + e);
         }
     });
 };
