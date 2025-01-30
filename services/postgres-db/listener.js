@@ -13,14 +13,14 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.get("/db/getMarkingData", async (req, res) => {
-        const { commessa, operation } = req.query;
+        const { project, operation } = req.query;
 
-        if (!commessa || !operation) {
-            return res.status(400).json({ error: "I parametri 'commessa' e 'operation' sono obbligatori." });
+        if (!project || !operation) {
+            return res.status(400).json({ error: "I parametri 'project' e 'operation' sono obbligatori." });
         }
 
         try {
-            const data = await postgresdbService.executeQuery(queryLibrary.getMarkingDataQuery, [commessa, operation]);
+            const data = await postgresdbService.executeQuery(queryLibrary.getMarkingDataQuery, [project, operation]);
             res.json(data);
         } catch (error) {
             res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
