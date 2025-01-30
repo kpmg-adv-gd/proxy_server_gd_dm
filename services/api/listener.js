@@ -181,7 +181,7 @@ module.exports.listenerSetup = (app, getBearerToken) => {
                 return res.status(404).json({ error: "BOM not found" });
             }
 
-            res.json({ bomResponse: orderResponse });
+            res.json({ bomResponse: bomResponse });
         } catch (error) {
             console.error("Error calling external API:", error.response?.data || error.message);
             res.status(500).json({ error: "Error calling external API" });
