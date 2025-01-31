@@ -41,7 +41,7 @@ module.exports.listenerSetup = (app) => {
                 variance_labor,
                 uom_variance_labor,
                 reason_for_variance,
-                user
+                user_id
             } = req.body;
 
             if (!operation) {
@@ -66,7 +66,7 @@ module.exports.listenerSetup = (app) => {
                     variance_labor,
                     uom_variance_labor,
                     reason_for_variance,
-                    user
+                    user_id
                 ]);
                 res.status(200).json({ message: "Dati inseriti con successo!" });
             } catch (error) {
