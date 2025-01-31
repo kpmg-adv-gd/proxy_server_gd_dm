@@ -36,7 +36,12 @@ module.exports.listenerSetup = (app) => {
                 marking_date,
                 start_time,
                 finish_time,
-                reason_for_variance
+                marked_labor,
+                uom_marked_labor,
+                variance_labor,
+                uom_variance_labor,
+                reason_for_variance,
+                user
             } = req.body;
 
             if (!operation) {
@@ -56,7 +61,12 @@ module.exports.listenerSetup = (app) => {
                     marking_date,
                     start_time,
                     finish_time,
-                    reason_for_variance
+                    marked_labor,
+                    uom_marked_labor,
+                    variance_labor,
+                    uom_variance_labor,
+                    reason_for_variance,
+                    user
                 ]);
                 res.status(200).json({ message: "Dati inseriti con successo!" });
             } catch (error) {
