@@ -161,13 +161,50 @@ module.exports.listenerSetup = (app, getBearerToken) => {
     app.get("/api/getShift", async (req, res) => {
         try {
             const { plant, resource } = req.query;
-
+    
             if (!plant || !resource) {
                 return res.status(400).json({ error: "Missing required query parameters: plant or resource" });
             }
-
+    
             const token = await getBearerToken();
             var url = hostname + "/resource/v2/resources?plant=" + plant + "&resource=" + resource;
+    
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+    
+            if (!Array.isArray(response.data) || response.data.length === 0) {
+                return res.status(404).json({ error: "No data found for the given plant and resource" });
+            }
+    
+            const resourceData = response.data[0];
+    
+            if (!Array.isArray(resourceData.shifts) || resourceData.shifts.length === 0) {
+                return res.status(404).json({ error: "Shift not found" });
+            }
+    
+            const shiftName = resourceData.shifts[0].shift;
+    
+            res.json({ shift: shiftName });
+    
+        } catch (error) {
+            console.error("Error calling external API:", error.response?.data || error.message);
+            res.status(500).json({ error: "Error calling external API" });
+        }
+    });
+    
+    app.get("/api/getShiftDetails", async (req, res) => {
+        try {
+            const { plant, shift } = req.query;
+
+            if (!plant || !shift) {
+                return res.status(400).json({ error: "Missing required query parameter: plant or shift" });
+            }
+
+            const token = await getBearerToken();
+            var url = hostname + "/shift/v1/shifts?plant=" + plant + "&shift=" + shift;
 
             const response = await axios.get(url, {
                 headers: {
@@ -175,16 +212,15 @@ module.exports.listenerSetup = (app, getBearerToken) => {
                 },
             });
 
-            const shift = response.data.shifts.shift;
-
-            if (!shift) {
-                return res.status(404).json({ error: "Shift not found" });
+            if (!response.data || response.data.length === 0) {
+                return res.status(404).json({ error: "Shift details not found" });
             }
 
-            res.json({ shift: shift });
+            res.json(response.data[0]); 
         } catch (error) {
-            console.error("Error calling external API:", error.response?.data || error.message);
-            res.status(500).json({ error: "Error calling external API" });
+            console.error("Error fetching shift details:", error.response?.data || error.message);
+            res.status(500).json({ error: "Error fetching shift details" });
         }
     });
+
 };
