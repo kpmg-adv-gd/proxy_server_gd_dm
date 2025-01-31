@@ -11,6 +11,6 @@ const insertOpConfirmation = `INSERT INTO z_op_confirmations (wbe_macchina, oper
 
 const getZOrdersLinkByProjectParentOrderChildOrderFlagQuery = `SELECT *
                                 FROM z_orders_link
-                                WHERE project = $1 AND parent_order = $2 AND child_material in ($3) AND parent_assembly_flag = $4`;
+                                WHERE project = $1 AND parent_order = $2 AND child_material = $3 AND parent_assembly_flag = $4`;
 
 module.exports = { getReasonsForVarianceQuery, getMarkingDataQuery, insertOpConfirmation, getZOrdersLinkByProjectParentOrderChildOrderFlagQuery };
