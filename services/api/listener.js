@@ -157,4 +157,34 @@ module.exports.listenerSetup = (app, getBearerToken) => {
             res.status(500).json({ error: "Error calling external API" });
         }
     });
+
+    app.get("/api/getShift", async (req, res) => {
+        try {
+            const { plant, resource } = req.query;
+
+            if (!plant || !resource) {
+                return res.status(400).json({ error: "Missing required query parameters: plant or resource" });
+            }
+
+            const token = await getBearerToken();
+            var url = hostname + "/resource/v2/resources?plant=" + plant + "&resource=" + resource;
+
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            const shift = response.data.shifts.shift;
+
+            if (!shift) {
+                return res.status(404).json({ error: "Shift not found" });
+            }
+
+            res.json({ shift: shift });
+        } catch (error) {
+            console.error("Error calling external API:", error.response?.data || error.message);
+            res.status(500).json({ error: "Error calling external API" });
+        }
+    });
 };
