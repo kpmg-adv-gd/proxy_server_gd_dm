@@ -13,14 +13,14 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.get("/db/getMarkingData", async (req, res) => {
-        const { project, operation } = req.query;
+        const { wbe_machine, mes_order, operation } = req.query;
 
-        if (!project || !operation) {
-            return res.status(400).json({ error: "I parametri 'project' e 'operation' sono obbligatori." });
+        if (!wbe_machine || !mes_order || !operation) {
+            return res.status(400).json({ error: "I parametri 'wbe_machine', 'mes_order' e 'operation' sono obbligatori." });
         }
 
         try {
-            const data = await postgresdbService.executeQuery(queryLibrary.getMarkingDataQuery, [project, operation]);
+            const data = await postgresdbService.executeQuery(queryLibrary.getMarkingDataQuery, [wbe_machine, mes_order, operation]);
             res.json(data);
         } catch (error) {
             res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
@@ -29,7 +29,7 @@ module.exports.listenerSetup = (app) => {
 
         app.post("/db/insertOpConfirmation", async (req, res) => {
             const {
-                wbe_macchina,
+                wbe_machine,
                 operation,
                 mes_order,
                 confirmation_number,
@@ -54,7 +54,7 @@ module.exports.listenerSetup = (app) => {
 
             try {
                 await postgresdbService.executeQuery(queryLibrary.insertOpConfirmation, [
-                    wbe_macchina,
+                    wbe_machine,
                     operation,
                     mes_order,
                     confirmation_number,
@@ -95,5 +95,40 @@ module.exports.listenerSetup = (app) => {
                 res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
             }
         });
+
+        app.post("/db/updateMarkingRecap", async (req, res) => {
+            try {
+                const { confirmation_number } = req.body;
+        
+                if (!confirmation_number) {
+                    return res.status(400).json({ error: "Missing required parameter: confirmation_number" });
+                }
+        
+                const sumResult = await postgresdbService.executeQuery(queryLibrary.calculateLabor, [confirmation_number]);
+                if (!sumResult || sumResult.length === 0) {
+                    return res.status(404).json({ error: "No data found for confirmation_number" });
+                }
+        
+                const { marked_labor, variance_labor } = sumResult[0];
+        
+                const plannedLaborResult = await postgresdbService.executeQuery(queryLibrary.getPlannedLabor, [confirmation_number]);
+                if (!plannedLaborResult || plannedLaborResult.length === 0) {
+                    return res.status(404).json({ error: "No planned labor data found for confirmation_number" });
+                }
+        
+                const planned_labor = plannedLaborResult[0].planned_labor;
+        
+                const remaining_labor = planned_labor - marked_labor;
+        
+                await postgresdbService.executeQuery(queryLibrary.updateMarkingRecap, [marked_labor, variance_labor, remaining_labor, confirmation_number]);
+        
+                res.json({ success: true, message: "Marking recap updated successfully" });
+        
+            } catch (error) {
+                console.error("Error updating marking recap:", error);
+                res.status(500).json({ error: "Internal server error" });
+            }
+        });
+        
 };
 
