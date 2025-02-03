@@ -9,7 +9,7 @@ module.exports.listenerSetup = (app, getBearerToken) => {
             // Ottieni i query parameters dall'URL
             const { plant } = req.query;
             // Verifica che i parametri richiesti siano presenti
-            if (!plant || !routing) {
+            if (!plant) {
                 return res.status(400).json({ error: "Missing required query parameters: plant or routing" });
             }
 
