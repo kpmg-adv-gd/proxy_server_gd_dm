@@ -1,41 +1,28 @@
 const express = require("express");
-//const xsenv = require("@sap/xsenv");
-const axios = require("axios");
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
+const apiServiceOrderBom = require("./services/api/boms/listener");
+const apiServiceWorkInstructionFile = require("./services/api/workInstructions/listener");
+const apiServiceCompleteOperation = require("./services/api/complete/listener");
+const apiServiceStartOperation = require("./services/api/start/listener");
+const apiServiceCertifications = require("./services/api/certifications/listener");
+const apiServicePodOperations = require("./services/api/podOperations/listener");
+const apiServiceWorklist = require("./services/api/worklist/listener");
+const apiServicefiltersPOD = require("./services/api/filtersPOD/listener");
+const apiServiceResources = require("./services/api/resources/listener");
+const apiServiceShifts = require("./services/api/shifts/listener");
+const apiServiceBoms = require("./services/api/boms/listener");
+const apiServiceOrders = require("./services/api/orders/listener");
+const apiServiceUsers = require("./services/api/users/listener");
+const apiServiceMaterials = require("./services/api/materials/listener");
+const apiServiceRoutings = require("./services/api/routings/listener");
+const mdoService = require("./services/mdo/listener");
+const postgresdbService = require('./services/postgres-db/listener');
 
-// Carica le variabili di ambiente di XSUAA
-// xsenv.loadEnv();
-// Carica le credenziali da variabili d'ambiente
-const credentials = JSON.parse(process.env.CREDENTIALS);
 const whitelist = JSON.parse(process.env.WHITELIST);
-
-// Ottieni le credenziali di XSUAA
-// const xsuaaCredentials = xsenv.getServices({ xsuaa: { label: "xsuaa" } }).xsuaa;
-
-// Funzione per ottenere il Bearer Token
-const getBearerToken = async () => {
-    const url = credentials.GENERATE_TOKEN_URL;
-    const data = new URLSearchParams();
-    data.append("grant_type", "client_credentials");
-    data.append("client_id", credentials.client_id);
-    data.append("client_secret", credentials.client_secret);
-
-    try {
-        const response = await axios.post(url, data, {
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        });
-        return response.data.access_token; // Restituisce il token
-    } catch (error) {
-        console.error("Error getting bearer token: " + error + "CLIENT_ID = "+ credentials.client_id);
-        throw new Error("Failed to obtain Bearer token");
-    }
-};
-
 // Middleware per il parsing del corpo della richiesta
 app.use(express.json());
-
 // Abilita CORS per tutte le richieste
 app.use(cors({
     origin: whitelist, // Puoi specificare un array di domini consentiti
@@ -43,35 +30,26 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const apiService = require("./services/api/listener");
-const mdoService = require("./services/mdo/listener");
-const postgresdbService = require('./services/postgres-db/listener');
-apiService.listenerSetup(app, getBearerToken);
-mdoService.listenerSetup(app, getBearerToken);
+
+//Mi metto in ascolto su tutti i listener
+apiServiceOrderBom.listenerSetup(app);
+apiServiceWorkInstructionFile.listenerSetup(app);
+apiServiceCompleteOperation.listenerSetup(app);
+apiServiceStartOperation.listenerSetup(app);
+apiServiceCertifications.listenerSetup(app);
+apiServicePodOperations.listenerSetup(app);
+apiServiceWorklist.listenerSetup(app);
+apiServicefiltersPOD.listenerSetup(app);
+apiServiceShifts.listenerSetup(app);
+apiServiceResources.listenerSetup(app);
+apiServiceBoms.listenerSetup(app);
+apiServiceOrders.listenerSetup(app);
+apiServiceUsers.listenerSetup(app);
+apiServiceRoutings.listenerSetup(app);
+apiServiceMaterials.listenerSetup(app);
+mdoService.listenerSetup(app);
 postgresdbService.listenerSetup(app);
 
-
-
-// Endpoint per eseguire query
-app.post('/postgresDB/query', async (req, res) => {
-    const { query } = req.body;
-
-    if (!query) {
-        return res.status(400).json({ error: 'La query è obbligatoria nel corpo della richiesta.' });
-    }
-
-    try {
-        const data = await postgresdbService.executeQuery(query);
-        res.json(data);
-    } catch (error) {
-        res.status(500).json({ error: 'Errore durante l\'esecuzione della query.' });
-    }
-});
-
-
-app.get('/', function (req, res) {
-    res.send('Hello World!');
-  });
 // Avvia il server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
