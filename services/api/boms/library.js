@@ -58,8 +58,10 @@ async function getBom(order,plant){
     try{
         var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
         var bomResponse = await callGet(url);
-        var customValueCommessa = bomResponse.customValues.find(obj => obj.attribute == "COMMESSA");
-        return { bom: bomResponse.bom.bom, bomType: bomResponse.bom.type, material: bomResponse.material.material, customValueCommessa: customValueCommessa.value }
+        var customCommessa = bomResponse.customValues.find(obj => obj.attribute == "COMMESSA");
+        const customValueCommessa = customCommessa && customCommessa.value || "";
+
+        return { bom: bomResponse.bom.bom, bomType: bomResponse.bom.type, material: bomResponse.material.material, customValueCommessa }
     } catch(error){
         let errorMessage = error.message || "Error service getBom";
         throw { status: 500, message: errorMessage};

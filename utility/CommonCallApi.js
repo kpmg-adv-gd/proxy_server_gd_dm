@@ -12,13 +12,13 @@ async function callGet(url){
             },
         });
         // Controllo se la risposta è vuota
-        if (!response.data || Object.keys(response.data).length === 0) {
-            //se vuoto mandiamo nel catch questo errore
-            throw {
-                status: 400,
-                message: "Response data is empty",
-            };
-        }
+        // if (!response.data || Object.keys(response.data).length === 0) {
+        //     //se vuoto mandiamo nel catch questo errore
+        //     throw {
+        //         status: 400,
+        //         message: "Response data is empty",
+        //     };
+        // }
         return response.data;
     } catch(error){
         // Recupera il messaggio di errore dalla risposta, se disponibile
