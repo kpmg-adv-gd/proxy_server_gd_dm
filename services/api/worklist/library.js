@@ -39,7 +39,7 @@ function getWorkListDataFiltered(response,body){
             obj.WORKCENTER= workcenter;
             for (let customObj of obj.customValues) {
                 // Controlla se customObj ha 'attribute' e 'value' per aggiungere tutti i campi custom agli oggetti che ritorniamo
-                if (customObj.attribute && customObj.value) {
+                if (customObj && customObj?.attribute && customObj?.value) {
                     let attribute = customObj.attribute.replace(/\s+/g, '');
                     obj[attribute] = customObj.value;
                 }
