@@ -18,7 +18,6 @@ const apiServiceUsers = require("./services/api/users/listener");
 const apiServiceMaterials = require("./services/api/materials/listener");
 const apiServiceRoutings = require("./services/api/routings/listener");
 const mdoService = require("./services/mdo/listener");
-const postgresdbService = require('./services/postgres-db/listener');
 
 const whitelist = JSON.parse(process.env.WHITELIST);
 // Middleware per il parsing del corpo della richiesta
@@ -48,7 +47,6 @@ apiServiceUsers.listenerSetup(app);
 apiServiceRoutings.listenerSetup(app);
 apiServiceMaterials.listenerSetup(app);
 mdoService.listenerSetup(app);
-postgresdbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
