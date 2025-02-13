@@ -17,7 +17,6 @@ async function getShiftName(plant, resource) {
     try {
         var url = hostname + "/resource/v2/resources?plant=" + plant + "&resource=" + resource;
         var shiftNameResponse = await callGet(url);
-        console.log("LC - "+JSON.stringify(shiftNameResponse));
 
         if (shiftNameResponse.length > 0 && shiftNameResponse[0].shifts && shiftNameResponse[0].shifts.length > 0) {
             var shiftName = shiftNameResponse[0].shifts[0].shift;
@@ -36,7 +35,7 @@ async function getShiftDetails(plant, shift) {
     try {
         var url = hostname + "/shift/v1/shifts?plant=" + plant + "&shift=" + shift;
         var shiftDetailsResponse = await callGet(url);
-        if(shiftDetailsResponse && shiftDetailsResponse.length>0){
+        if(shiftDetailsResponse && shiftDetailsResponse.length > 0){
             return shiftDetailsResponse[0];
         } else{
             return {};
