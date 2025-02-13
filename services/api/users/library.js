@@ -6,12 +6,14 @@ async function getPersonnelNumber(plant, userId) {
     try {
         var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
         const response = await callGet(url);
-        if (response.length > 0 && response.erpPersonnelNumber) {
-            const personnelNumber = response.erpPersonnelNumber;
+        const personnelNumber = response.erpPersonnelNumber;
             return personnelNumber;
-        } else {
-            throw { status: 500, message: "Personnel number is empty" };
-        }
+        // if (response.length > 0 && response.erpPersonnelNumber) {
+        //     const personnelNumber = response.erpPersonnelNumber;
+        //     return personnelNumber;
+        // } else {
+        //     throw { status: 500, message: "Personnel number is empty" };
+        // }
     } catch (error) {
         let errorMessage = error.message || "Error service getPersonnelNumber";
         throw { status: 500, message: errorMessage}
