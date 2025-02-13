@@ -7,13 +7,9 @@ async function getPersonnelNumber(plant, userId) {
         var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
         const response = await callGet(url);
         const personnelNumber = response.erpPersonnelNumber;
-            return personnelNumber;
-        // if (response.length > 0 && response.erpPersonnelNumber) {
-        //     const personnelNumber = response.erpPersonnelNumber;
-        //     return personnelNumber;
-        // } else {
-        //     throw { status: 500, message: "Personnel number is empty" };
-        // }
+
+        return personnelNumber;
+           
     } catch (error) {
         let errorMessage = error.message || "Error service getPersonnelNumber";
         throw { status: 500, message: errorMessage}
