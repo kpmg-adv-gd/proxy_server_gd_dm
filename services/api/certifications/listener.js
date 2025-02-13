@@ -1,4 +1,4 @@
-const { callGet } = require("../../../utility/CommonCallApi");
+const { callGet, callPost } = require("../../../utility/CommonCallApi");
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
