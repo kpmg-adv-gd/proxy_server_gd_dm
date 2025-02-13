@@ -28,7 +28,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
         });
         //escludo lo stepId 10 se c'è e le operazione in un altro workcenter
         var filteredResponse = responseRoutingSteps.filter(function(obj) {
-            return obj.stepId!==10 && obj.workCenter && obj.workCenter.workCenter==workcenter;
+            return obj.stepId!==10 && obj.workCenter && obj.workCenter.workCenter==workcenter && !obj.routingStepGroup;
         });
         //tiro fuori a livello dell'oggeto (stepId) i campi custom
         var enrichedResponseData = filteredResponse.map(function(obj){
@@ -40,6 +40,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                     obj[attribute] = customObj.value;
                 }
             }
+            obj.sfcStatus= responseSfcDetails?.status?.code || "";
             return obj; // Restituisci l'oggetto modificato
         })
         return enrichedResponseData;

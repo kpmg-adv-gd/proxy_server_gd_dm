@@ -9,10 +9,10 @@ async function getFilterPOD(plant){
         // Definisci i dettagli delle richieste come oggetti che simulano `req`
         const requests = [
             { key: "WorkCenters", path: "/mdo/WORKCENTER", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((WORKCENTER, DESCRIPTION))"}, method: "GET" },
-            { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Materials", url: hostname + "/material/v2/materials?plant=" + plant },
         ];
 
