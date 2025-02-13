@@ -78,4 +78,4 @@ async function updateMarkingRecap(marked_labor, variance_labor, remaining_labor,
     return data;
 }
 
-module.exports = { getMarkingData, calculateLabor, getPlannedLabor, insertOpConfirmation, updateMarkingRecap }
+module.exports = { getMarkingData, insertOpConfirmation, mark }
