@@ -9,15 +9,19 @@ async function getBomMultilivelloTreeTableData(order,plant){
         let bomComponents = await getBomComponents(plant, responseBom.bom, responseBom.bomType);
     
         // Mappiamo i componenti principali con i loro figli
-        let materialComponents = await Promise.all(bomComponents.map(async (comp) => {
-            let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
-            return {
-                Material: comp.material.material,
-                Quantity: comp.quantity,
-                Sequence: comp.sequence,
-                Children: children
-            };
-        }));
+        let materialComponents = await Promise.all(
+                bomComponents.map(async (comp) => {
+                let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
+                let missingParts = (order=="4505549589_600"?"X":"");
+                return {
+                    Material: comp.material.material,
+                    Quantity: comp.quantity,
+                    Sequence: comp.sequence,
+                    MissingParts: missingParts,
+                    Children: children
+                };
+            })
+        );
         return { Material: responseBom.material, Children: materialComponents } ;
     } catch(error){
         let errorMessage = error.message || "Error service getBomMultilivelloTreeTableData";
