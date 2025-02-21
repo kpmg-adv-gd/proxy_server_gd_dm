@@ -12,7 +12,8 @@ async function getBomMultilivelloTreeTableData(order,plant){
         let materialComponents = await Promise.all(
                 bomComponents.map(async (comp) => {
                 let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
-                let missingParts = (order=="4505549589_600"?"X":"");
+                //let missingParts = (order=="4505549589_600"?"X":"");
+                let missingParts = ( (comp.material.material=="23MK22_2490" && order=="C005.02037.MKM01_0210") ?"X":"");
                 return {
                     Material: comp.material.material,
                     Quantity: comp.quantity,
