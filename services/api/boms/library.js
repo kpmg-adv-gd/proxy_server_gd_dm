@@ -13,7 +13,7 @@ async function getBomMultilivelloTreeTableData(order,plant){
                 bomComponents.map(async (comp) => {
                 let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
                 //let missingParts = (order=="4505549589_600"?"X":"");
-                let missingParts = ( (comp.material.material=="23MK22_2490" && order=="C005.02037.MKM01_0210") ?"X":"");
+                let missingParts = ( (comp.material.material=="2599999999" && order=="C005.02037.MKM01_0210") ?"X":"");
                 return {
                     Material: comp.material.material,
                     Quantity: comp.quantity,
@@ -43,12 +43,12 @@ async function getChildMaterials(customValueCommessa,order, plant, parentMateria
         return await Promise.all(responseQuery.map(async row => {
             let responseBom = await getBom(row.child_order, plant);
             let bomComponents = await getBomComponents(plant, responseBom.bom, responseBom.bomType);
-            
             // Mappiamo i componenti correttamente
             return bomComponents.map(comp => ({
                 Material: comp.material.material,
                 Quantity: comp.quantity,
-                Sequence: comp.sequence
+                Sequence: comp.sequence,
+                MissingParts: comp.material.material=="2599999999" && order=="C005.02037.MKM01_0210"?"X":""
             }));
         })).then(results => results.flat()); // Appiattiamo l'array per evitare array annidati
 
