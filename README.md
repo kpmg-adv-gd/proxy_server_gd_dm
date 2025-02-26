@@ -12,9 +12,31 @@ Gestisce le chiamate alle API di SAP DM. Ogni API ha una propria cartella, in cu
 - **Listener**: Contiene la route per richiamare l'API dal frontend, mantenendolo il più pulito e diretto possibile.
 - **Library**: Contiene la logica per la manipolazione dei dati prima di restituirli al frontend.
 
+##### Esempio di richiesta:
+
+```http
+POST /api/bom/getBomMultilivelloTreeTableData
+Content-Type: application/json
+
+{
+  "order": "ORDER_1234",
+  "plant": "PLANT_001"
+}
+```
+
 ### 🗃️ **MDO**
 
-Cartella riservata per la gestione di logiche specifiche per MDO (Master Data Objects).
+La cartella **MDO** gestisce le richieste e le operazioni relative agli **MDO (Master Data Objects)**, che vengono esposti dal data-center della relativa istanza DM contenuta nel subaccount BTP di destinazione.
+
+#### Richiamare un MDO
+
+In GET sul sottopath `/mdo/` del servizio, è possibile richiamare gli MDO esposti dal data-center. L'utilizzo è quasi trasparente: basta richiamare il sotto-path del server `/mdo/` seguito dal nome dell'MDO che si vuole interrogare, insieme ai relativi parametri (OData).
+
+##### Esempio:
+
+```text
+/mdo/SfcStepStatus?$filter=Sfc eq 'SFC_INO'
+```
 
 ### 🏛️ **Postgres-DB**
 
@@ -38,18 +60,6 @@ Entrambe le funzioni inviano il **Bearer Token**, generato attraverso una funzio
 ## Configurazione
 
 Nel file `.env`, troverai la configurazione necessaria per l’autenticazione, inclusi i dettagli per generare il Bearer Token e configurare la whitelist dei domini che possono richiamare il server. In questo modo, il sistema è sicuro e scalabile.
-
-## Estensione del backend
-
-Per aggiungere nuove funzionalità o estendere il backend:
-1. **Aggiungi un nuovo listener** per la funzionalità o API che desideri integrare.
-2. Crea una cartella dedicata nella struttura del progetto (Api, MDO, o Postgres-DB).
-3. Scrivi il codice di logica per la nuova funzionalità, seguendo la struttura di esempio delle cartelle già esistenti.
-
-Ogni nuova funzionalità dovrebbe includere:
-- Un **listener** per ricevere richieste dal frontend.
-- Un **file per le query** se interagisce con il database.
-- Una **library** per la logica di manipolazione dei dati.
 
 ## Conclusioni
 
