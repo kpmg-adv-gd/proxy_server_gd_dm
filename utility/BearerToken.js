@@ -3,6 +3,7 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 // Funzione per ottenere il Bearer Token
 const getBearerToken = async () => {
     const url = credentials.GENERATE_TOKEN_URL;
+    //Questo oggetto permette di costruire parametri di query in un formato codificato per l'invio in una richiesta HTTP POST con application/x-www-form-urlencoded -- in realtà poremmo direttamente creare il data che è il body della chiamata come un oggetto JSON
     const data = new URLSearchParams();
     data.append("grant_type", "client_credentials");
     data.append("client_id", credentials.client_id);

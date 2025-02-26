@@ -11,14 +11,6 @@ async function callGet(url){
                 Authorization: `Bearer ${token}`, // Aggiungi il Bearer Token nell'intestazione
             },
         });
-        // Controllo se la risposta è vuota
-        // if (!response.data || Object.keys(response.data).length === 0) {
-        //     //se vuoto mandiamo nel catch questo errore
-        //     throw {
-        //         status: 400,
-        //         message: "Response data is empty",
-        //     };
-        // }
         return response.data;
     } catch(error){
         // Recupera il messaggio di errore dalla risposta, se disponibile
@@ -87,7 +79,7 @@ async function callGetFile(url){
             },
             responseType: 'arraybuffer'
         });
-        // responseType: 'arraybuffer' genera una risposta (response.data) composta da {"type":"Buffer","data":[]} in cui all'interno di data c'è i btye del file
+        // responseType: 'arraybuffer' genera una risposta (response.data) composta da {"type":"Buffer","data":[]} in cui all'interno di data c'è il file in byte
         return response;
 
     } catch(error){

@@ -46,7 +46,7 @@ async function getFilterPOD(plant){
             })
         );
 
-        // Consolidare i risultati
+        // Con reduce dall'array generato voglio ottenere un singolo json dove ogni chiave (corrispodnende ad un filtro) è un array contentente i valori suggeriti da mostrare. Nel caso una chiamata sia andata in errore resituisco l'errore per la singola chiamata
         const consolidatedData = responses.reduce((acc, { key, result }) => {
             if (result.error) {
                 acc[key] = { error: true, message: result.message, code: result.code };
