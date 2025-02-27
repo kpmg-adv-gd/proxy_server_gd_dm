@@ -1,3 +1,5 @@
+const { orderTypeMapping } = require("../../../utility/models");
+
 function getWorkListDataFiltered(response,body){
     const { workcenter, sfc, material, project, wbs, machineSection, parentMaterial } = body;
 
@@ -42,6 +44,10 @@ function getWorkListDataFiltered(response,body){
                 if (customObj && customObj?.attribute && customObj?.value) {
                     let attribute = customObj.attribute.replace(/\s+/g, '');
                     obj[attribute] = customObj.value;
+                    //Per il tooltip sull'order type front-end
+                    if(attribute=="ORDER_TYPE"){
+                        obj["ORDER_TYPE_DESC"]= orderTypeMapping[customObj.value] || "";
+                    }
                 }
             }
             return obj; // Restituisci l'oggetto modificato

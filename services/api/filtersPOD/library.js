@@ -13,21 +13,21 @@ async function getFilterPOD(plant){
             { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "Materials", url: hostname + "/material/v2/materials?plant=" + plant },
+            { key: "Materials",  path: "/mdo/SFC", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((MATERIAL))"}, method: "GET" },
         ];
 
         // Esegui tutte le chiamate in parallelo
         const responses = await Promise.all(
             //per ogni chiamata che devo fare (per ogni oggetto di request)
             requests.map(async (request) => {
-                if(request.key==="Materials"){
-                    var result = await callGet(request.url);
-                    // Estraggo solo l'array dei materiali
-                    const materials = result.content.map((item) => ({
-                        Material: item.material
-                    }));
-                    return { key: request.key, result: materials };
-                } else {
+                // if(request.key==="Materials"){
+                //     var result = await callGet(request.url);
+                //     // Estraggo solo l'array dei materiali
+                //     const materials = result.content.map((item) => ({
+                //         Material: item.material
+                //     }));
+                //     return { key: request.key, result: materials };
+                // } else {
                     //creo una request classica per l'mdo
                     const mockReq = {
                         path: request.path,
@@ -42,7 +42,7 @@ async function getFilterPOD(plant){
                     } catch (error) {
                         return { key: request.key, result: { error: true, message: error.message, code: error.code || 500 } }; // Errore
                     }
-                }
+                //}
             })
         );
 
@@ -51,7 +51,7 @@ async function getFilterPOD(plant){
             if (result.error) {
                 acc[key] = { error: true, message: result.message, code: result.code };
             } else {
-                // Se la risposta è un array (solo nel caso di Materials) prendo direttamente il risultato
+                // Se la risposta è un array (solo nel caso di Materials - prima quando ricavato da api non più adesso) prendo direttamente il risultato
                 acc[key] = Array.isArray(result) ? result : result.data?.value || [];
             }
             return acc;
