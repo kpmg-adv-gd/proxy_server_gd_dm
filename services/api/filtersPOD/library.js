@@ -12,7 +12,7 @@ async function getFilterPOD(plant){
             { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Materials",  path: "/mdo/SFC", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((MATERIAL))"}, method: "GET" },
         ];
 
@@ -38,7 +38,7 @@ async function getFilterPOD(plant){
                         //chiamo l'api del mdo con quella request
                         var result = await dispatch(mockReq);
                         //ritorno un oggetto con chiave della chiamta e il suo risultato
-                        return { key: request.key, result }; // DAJE
+                        return { key: request.key, result };
                     } catch (error) {
                         return { key: request.key, result: { error: true, message: error.message, code: error.code || 500 } }; // Errore
                     }

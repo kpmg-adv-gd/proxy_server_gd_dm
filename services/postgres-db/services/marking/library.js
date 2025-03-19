@@ -1,6 +1,16 @@
 const postgresdbService = require('../../connection');
 const queryMarking = require("./queries");
 
+async function insertZMarkingRecap(plant,project,wbe_machine,operation,mes_order,confirmation_number,planned_labor,uom_planned_labor,marked_labor,uom_marked_labor,remaining_labor,uom_remaining_labor,variance_labor,uom_variance){
+    const data = await postgresdbService.executeQuery(queryMarking.insertMarkingRecapQuery, [plant,project, wbe_machine, operation, mes_order, confirmation_number, planned_labor, uom_planned_labor, marked_labor, uom_marked_labor, remaining_labor, uom_remaining_labor, variance_labor, uom_variance]);
+    return data;
+}
+
+async function getMarkingByConfirmationNumber(confirmationNumber){
+    const data = await postgresdbService.executeQuery(queryMarking.getMarkingByConfirmationNumberQuery, [confirmationNumber]);
+    return data;
+}
+
 async function getMarkingData(wbe_machine, mes_order, operation) {
     const data = await postgresdbService.executeQuery(queryMarking.getMarkingDataQuery, [wbe_machine, mes_order, operation]);
     return data;
@@ -78,4 +88,4 @@ async function updateMarkingRecap(marked_labor, variance_labor, remaining_labor,
     return data;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, mark }
+module.exports = { getMarkingData, insertOpConfirmation, mark, insertZMarkingRecap, getMarkingByConfirmationNumber }

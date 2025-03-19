@@ -32,7 +32,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
         });
         //tiro fuori a livello dell'oggeto (stepId) i campi custom
         var enrichedResponseData = filteredResponse.map(function(obj){
-            let customValues = obj.routingOperation.customValues;
+            let customValues = obj?.routingOperation?.customValues || [];
             for (let customObj of customValues) {
                 // Controlla se customObj ha 'attribute' e 'value' per aggiungere tutti i campi custom agli oggetti che ritorniamo
                 if (customObj.attribute && customObj.value) {
@@ -47,7 +47,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
 
     } catch(error){
         console.log("Internal Server Error:"+error);
-        throw { status: 500, message: "Error service getWorkListDataFiltered: "+error};
+        throw { status: 500, message: "Error service getPodOperations: "+error};
     }
 
 }

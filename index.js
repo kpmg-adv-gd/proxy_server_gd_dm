@@ -3,6 +3,8 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const iFlowServiceLOIPROPostService = require("./services/iFlow/LOIPRO05_CST_POST_SERVICE/listener");
+const iFlowServiceLOIPROPostXSLT = require("./services/iFlow/LOIPRO05_CST_POST_XSLT/listener");
 const apiServiceOrderBom = require("./services/api/boms/listener");
 const apiServiceWorkInstructionFile = require("./services/api/workInstructions/listener");
 const apiServiceCompleteOperation = require("./services/api/complete/listener");
@@ -27,13 +29,15 @@ const whitelist = JSON.parse(process.env.WHITELIST);
 app.use(express.json());
 // Abilita CORS per tutte le richieste
 app.use(cors({
-    origin: whitelist, // Puoi specificare un array di domini consentiti
+    origin: '*', // Puoi specificare un array di domini consentiti
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 
 //Mi metto in ascolto su tutti i listener
+iFlowServiceLOIPROPostService.listenerSetup(app);
+iFlowServiceLOIPROPostXSLT.listenerSetup(app);
 apiServiceOrderBom.listenerSetup(app);
 apiServiceWorkInstructionFile.listenerSetup(app);
 apiServiceCompleteOperation.listenerSetup(app);

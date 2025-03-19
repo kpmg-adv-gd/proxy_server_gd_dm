@@ -26,7 +26,7 @@ function getWorkListDataFiltered(response,body){
                 wbsCondition = customValues.some(customObj => customObj.attribute === "WBE" && customObj.value.toUpperCase().includes(wbs.toUpperCase()));
             }
             if (!!machineSection) {
-                machineSectionCondition = customValues.some(customObj => customObj.attribute === "SEZIONE MACCHINA" && customObj.value.toUpperCase().includes(machineSection.toUpperCase()));
+                machineSectionCondition = customValues.some(customObj => customObj.attribute === "SEZIONE MACCHINA MACCHINA" && customObj.value.toUpperCase().includes(machineSection.toUpperCase()));
             }
             if (!!parentMaterial) {
                 parentMaterialCondition = customValues.some(customObj => customObj.attribute === "MATERIALE PADRE" && customObj.value.toUpperCase().includes(parentMaterial.toUpperCase()));

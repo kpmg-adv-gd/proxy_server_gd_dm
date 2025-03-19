@@ -23,4 +23,10 @@ const updateMarkingRecapQuery = `UPDATE z_marking_recap
                                     remaining_labor = $3
                                 WHERE confirmation_number = $4`
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, calculateLaborQuery, getPlannedLaborQuery, insertOpConfirmationQuery };
+const insertMarkingRecapQuery = `INSERT INTO z_marking_recap(plant,project,wbe_machine,operation,mes_order,confirmation_number,planned_labor,uom_planned_labor,marked_labor,uom_marked_labor,remaining_labor,uom_remaining_labor,variance_labor,uom_variance)
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`;
+
+
+const getMarkingByConfirmationNumberQuery = `SELECT * FROM z_marking_recap WHERE confirmation_number = $1`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, calculateLaborQuery, getPlannedLaborQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery };
