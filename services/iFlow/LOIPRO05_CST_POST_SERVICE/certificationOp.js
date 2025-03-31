@@ -89,13 +89,14 @@ async function updateCertifications(plant, certifications, objsOpsCert) {
 
     // Se ci sono errori, li uniamo e li restituiamo al chiamante
     if (errors.length > 0) {
-        let errorMessage = `Errori durante l'elaborazione populateZTables: ${errors.join(" | ")}`;
+        let errorMessage = `Errori durante l'elaborazione updateSingleCertification: ${errors.join(" | ")}`;
         throw { status: 500, message: errorMessage};
     }
     
 }
 
 async function updateSingleCertification(certObj){
+    console.log("UPDATE CERT BODY: "+JSON.stringify(certObj));
     var url = hostname + "/certification/v1/certifications";
     let responsePatch = await callPatch(url,certObj);
 }

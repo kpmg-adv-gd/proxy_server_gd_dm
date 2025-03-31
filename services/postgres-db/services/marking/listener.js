@@ -1,7 +1,21 @@
 const postgresdbService = require('./library');
 
 module.exports.listenerSetup = (app) => {
+    app.post("/db/getZOpConfirmationData", async (req, res) => {
+        const { plant,project,wbe,userId,startMarkingDate,endMarkingDate } = req.body;
 
+        if (!plant || !project) {
+            return res.status(400).json({ error: "Missing required query parameter: Project" });
+        }
+
+        try {
+            const responseData = await postgresdbService.getZOpConfirmationData(plant,project,wbe,userId,startMarkingDate,endMarkingDate);
+            res.status(200).json(responseData);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    })  
     app.post("/db/getMarkingData", async (req, res) => {
         const { wbe_machine, mes_order, operation } = req.body;
 
@@ -10,9 +24,11 @@ module.exports.listenerSetup = (app) => {
         }
 
         try {
+            const updateMarkingLabor = await postgresdbService.updateMarkedLabor_ZMarkingRecap(wbe_machine, mes_order, operation);
             const markingData = await postgresdbService.getMarkingData(wbe_machine, mes_order, operation);
             res.status(200).json(markingData); 
         } catch (error) {
+            console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });
         }
     })  

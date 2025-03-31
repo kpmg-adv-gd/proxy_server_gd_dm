@@ -11,9 +11,9 @@ async function managePostXSLTPhase(docXml){
     var plantValue = plantNode.length > 0 ? plantNode[0]?.textContent : null;
     var isMachNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='IsMach']", docXml);
     var isMachvalue = isMachNode.length > 0 ? isMachNode[0]?.textContent : null;
-    var orderTypeNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrder']", docXml);
+    var orderTypeNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrderType']", docXml);
     var orderTypeValue = orderTypeNode.length > 0 ? orderTypeNode[0]?.textContent : null;
-    var parentAssemblyNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrderParentAssembly']", docXml);
+    var parentAssemblyNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='PARENT_ASSEMBLY']]/*[local-name()='Value']", docXml);
     var parentAssemblyValueFromSAP = parentAssemblyNode.length > 0 ? parentAssemblyNode[0]?.textContent : null;
     var parentAssemblyValue = parentAssemblyValueFromSAP === "X";
     if(parentAssemblyValue || orderTypeValue=="ZMGF"){
@@ -105,7 +105,7 @@ function getMaterials(docXml){
         var materiaUoMNode = xpath.select("*[local-name()='MaterialUoM']", component);
         var materiaUoMValue = materiaUoMNode.length > 0 ? materiaUoMNode[0]?.textContent : null;
 
-        if(!allMaterialsSet.has(materialValue)){
+        if(materialValue && materialValue!=="" && !allMaterialsSet.has(materialValue)){
             allMaterialsSet.add(materialValue);
             allMaterials.push({materialValue,materialDescValue,materiaUoMValue})
         }

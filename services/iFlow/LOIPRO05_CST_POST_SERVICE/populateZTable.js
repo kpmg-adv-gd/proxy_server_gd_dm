@@ -7,6 +7,8 @@ async function populateZTables(docXml){
     var plantValue = plantNode.length > 0 ? plantNode[0]?.textContent : null;
     var orderNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrder']", docXml);
     var orderValue = orderNode.length > 0 ? orderNode[0]?.textContent : null;
+    var orderTypeNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrderType']", docXml);
+    var orderTypeValue = orderTypeNode.length > 0 ? orderTypeNode[0]?.textContent : null;
     var wbsNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='WBE']]/*[local-name()='Value']", docXml);
     var wbsValue = wbsNode.length > 0 ? wbsNode[0]?.textContent : null;
     var projectNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='COMMESSA']]/*[local-name()='Value']", docXml);
@@ -20,10 +22,11 @@ async function populateZTables(docXml){
     var parentOrderValue = parentOrderNode.length > 0 ? parentOrderNode[0]?.textContent : null;
     var parentMaterialNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='MATERIALE PADRE']]/*[local-name()='Value']", docXml);
     var parentMaterialValue = parentMaterialNode.length > 0 ? parentMaterialNode[0]?.textContent : null;    
-    var parentAssemblyNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ManufacturingOrderParentAssembly']", docXml);
+    var parentAssemblyNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='PARENT_ASSEMBLY']]/*[local-name()='Value']", docXml);
     var parentAssemblyValueFromSAP = parentAssemblyNode.length > 0 ? parentAssemblyNode[0]?.textContent : null;
     var parentAssemblyValue = parentAssemblyValueFromSAP === "X";
 
+    if(parentAssemblyValue || orderTypeValue == "ZMGF") return;
     //Faccio le 2 insert in parallelo
     const results = await Promise.allSettled([
         insertZMarkingTable(plantValue, orderValue, wbsValue, projectValue, operationNodes, durationOpNodes, confirmationNumberOpNodes),
@@ -52,7 +55,7 @@ async function insertZMarkingTable(plant,order,wbs,project,operationNodes,durati
     const promises = operationNodes.map((currentOperation, ii) => {
         let op = operationNodes[ii]?.textContent;
         let durationOp = durationOpNodes[ii]?.textContent;
-        let durationUoMOp = durationOpNodes[ii].getAttribute("pp:unitCode");
+        let durationUoMOp = durationOpNodes[ii]?.getAttribute("pp:unitCode") || "";
         let confirmationNumber = confirmationNumberOpNodes[ii]?.textContent;
         if(confirmationNumberOpNodes && confirmationNumberOpNodes!==""){
             return insertZMarkingRecapIfConfirmationIsNew(plant, project, wbs, op, order, confirmationNumber,durationOp, durationUoMOp, durationUoMOp, durationOp, durationUoMOp, durationUoMOp);

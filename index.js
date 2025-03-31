@@ -5,6 +5,7 @@ const port = process.env.PORT || 3000;
 
 const iFlowServiceLOIPROPostService = require("./services/iFlow/LOIPRO05_CST_POST_SERVICE/listener");
 const iFlowServiceLOIPROPostXSLT = require("./services/iFlow/LOIPRO05_CST_POST_XSLT/listener");
+const apiServiceFilterMarkingReport = require("./services/api/filtersMarkingReport/listener");
 const apiServiceOrderBom = require("./services/api/boms/listener");
 const apiServiceWorkInstructionFile = require("./services/api/workInstructions/listener");
 const apiServiceCompleteOperation = require("./services/api/complete/listener");
@@ -14,7 +15,6 @@ const apiServicePodOperations = require("./services/api/podOperations/listener")
 const apiServiceWorklist = require("./services/api/worklist/listener");
 const apiServicefiltersPOD = require("./services/api/filtersPOD/listener");
 const apiServiceResources = require("./services/api/resources/listener");
-const apiServiceShifts = require("./services/api/shifts/listener");
 const apiServiceBoms = require("./services/api/boms/listener");
 const apiServiceOrders = require("./services/api/orders/listener");
 const apiServiceUsers = require("./services/api/users/listener");
@@ -36,6 +36,7 @@ app.use(cors({
 
 
 //Mi metto in ascolto su tutti i listener
+apiServiceFilterMarkingReport.listenerSetup(app);
 iFlowServiceLOIPROPostService.listenerSetup(app);
 iFlowServiceLOIPROPostXSLT.listenerSetup(app);
 apiServiceOrderBom.listenerSetup(app);
@@ -46,7 +47,6 @@ apiServiceCertifications.listenerSetup(app);
 apiServicePodOperations.listenerSetup(app);
 apiServiceWorklist.listenerSetup(app);
 apiServicefiltersPOD.listenerSetup(app);
-apiServiceShifts.listenerSetup(app);
 apiServiceResources.listenerSetup(app);
 apiServiceBoms.listenerSetup(app);
 apiServiceOrders.listenerSetup(app);

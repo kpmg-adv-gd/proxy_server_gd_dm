@@ -5,8 +5,7 @@ const { populateZTables } = require("./populateZTable");
 
 async function managePostServicePhase(docXml){
     const results = await Promise.allSettled([
-        manageOrderRouting(docXml),
-        manageCertifications(docXml), 
+        manageOrderRoutingAndCertification(docXml),
         populateZTables(docXml)
     ]);
 
@@ -28,9 +27,10 @@ async function managePostServicePhase(docXml){
     }
 }
 
-async function manageOrderRouting(doc){
+async function manageOrderRoutingAndCertification(doc){
     await manageRouting(doc);
     await releaseOrder(doc);
+    await manageCertifications(doc);
 }
 
 module.exports = { managePostServicePhase }
