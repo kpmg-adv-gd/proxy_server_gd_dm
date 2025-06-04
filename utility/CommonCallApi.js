@@ -58,11 +58,11 @@ async function callPost(url, data) {
     
         const errorStatus = error.response?.status || error.status || 500;
     
-        console.error("Errore dettagliato:", {
-            status: errorStatus,
-            message: errorMessage,
-            originalError: error,
-        });
+        // console.error("Errore dettagliato:", {
+        //     status: errorStatus,
+        //     message: errorMessage,
+        //     originalError: error,
+        // });
     
         // Lancia l'errore al chiamante
         throw { status: errorStatus, message: errorMessage };

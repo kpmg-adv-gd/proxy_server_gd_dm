@@ -8,9 +8,9 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/getPodOperations", async (req, res) => {
         try {
-            const { plant, workcenter, sfc, routing, type, version } = req.body;
+            const { plant, workcenter, sfc, routing, type, version, orderType } = req.body;
             // Verifica che i parametri richiesti siano presenti
-            if (!plant || !workcenter || !sfc || !routing || !type || !version ) {
+            if (!plant || !workcenter || !sfc || !routing || !type || !version) {
                 return res.status(400).json({ error: "Missing required parameters: plant/workcenter/routing/type/version" });
             }
             var urlWorkCenter = hostname+"/workcenter/v2/workcenters?plant="+plant+"&workCenter="+workcenter;
@@ -21,7 +21,7 @@ module.exports.listenerSetup = (app) => {
             var responseRouting = await callGet(urlRouting);
             var responseSfcDetails = await callGet(urlSfcDetails);
             
-            var filteredData = getPodOperations(responseRouting,responseSfcDetails,responseWorkCenter,req.body);
+            var filteredData = getPodOperations(responseRouting,responseSfcDetails,responseWorkCenter,orderType,req.body);
             res.status(200).json({result: filteredData});
         } catch (error) {
             let status = error.status || 500;

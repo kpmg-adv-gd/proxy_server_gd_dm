@@ -12,18 +12,22 @@ async function getBomMultilivelloTreeTableData(order,plant){
         let materialComponents = await Promise.all(
                 bomComponents.map(async (comp) => {
                 let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
-                //let missingParts = (order=="4505549589_600"?"X":"");
-                let missingParts = ( (comp.material.material=="2599999999" && order=="C005.02037.MKM01_0210") ?"X":"");
+                let mancanteField = comp?.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE");
+                let missingParts = mancanteField?.value == "true" ? "X" : "";
+                let fluxTypeField = comp?.customValues.find(obj => obj.attribute == "FLUX_TYPE");
+                let fluxType = fluxTypeField?.value || "";
                 return {
                     Material: comp.material.material,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
                     MissingParts: missingParts,
+                    FluxType: fluxType,
                     Children: children
                 };
             })
         );
-        return { Material: responseBom.material, Children: materialComponents } ;
+        //Ordino i figli di primo livello con i mancanti prima
+        return { Material: responseBom.material, Children: materialComponents.sort((a, b) => (b.MissingParts === "X" ? 1 : 0) - (a.MissingParts === "X" ? 1 : 0)) } ;
     } catch(error){
         let errorMessage = error.message || "Error service getBomMultilivelloTreeTableData";
         throw { status: 500, message: errorMessage};
@@ -48,9 +52,12 @@ async function getChildMaterials(customValueCommessa,order, plant, parentMateria
                 Material: comp.material.material,
                 Quantity: comp.quantity,
                 Sequence: comp.sequence,
-                MissingParts: comp.material.material=="2599999999" && order=="C005.02037.MKM01_0210"?"X":""
+                MissingParts: comp?.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE").value == "true" ? "X" : "",
+                FluxType: comp?.customValues.find(obj => obj.attribute == "FLUX_TYPE")?.value || ""
             }));
-        })).then(results => results.flat()); // Appiattiamo l'array per evitare array annidati
+        })).then(results => 
+            results.flat().sort((a, b) => (b.MissingParts === "X" ? 1 : 0) - (a.MissingParts === "X" ? 1 : 0))
+        ); // Appiattiamo l'array per evitare array annidati e poi mettiamo i mancanti prima
 
     } catch(error){
         let errorMessage = error.message || "Error service getChildMaterials";

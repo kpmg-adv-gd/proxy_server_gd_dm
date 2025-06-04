@@ -2,7 +2,9 @@
 applications:
   - name: proxyServerGdDm
     path: .
-    memory: 2048M
+    memory: 2000M
+    instances: 32
+    timeout: 300 # timeout in secondi (5 minuti)
     disk_quota: 512M
     buildpacks:
       - nodejs_buildpack

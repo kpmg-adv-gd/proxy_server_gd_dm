@@ -8,7 +8,7 @@ async function getFilterPOD(plant){
     try{
         // Definisci i dettagli delle richieste come oggetti che simulano `req`
         const requests = [
-            { key: "WorkCenters", path: "/mdo/WORKCENTER", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((WORKCENTER, DESCRIPTION))"}, method: "GET" },
+            { key: "WorkCenters", path: "/mdo/WORKCENTER", query: { $apply: "filter(PLANT eq '"+plant+"' and WORKCENTER ne 'DUMMY_WORKCENTER')/groupby((WORKCENTER, DESCRIPTION))"}, method: "GET" },
             { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },

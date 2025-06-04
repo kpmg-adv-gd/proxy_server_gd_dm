@@ -1,9 +1,15 @@
 const axios = require("axios");
 const credentials = JSON.parse(process.env.CREDENTIALS);
-// Funzione per ottenere il Bearer Token
+let cachedToken = null;
+let tokenExpiresAt = null;
+// Funzione per ottenere il Bearer Token -  Aggiunta del token cachato perchè sulla discesa di 200 loipro la richiesta andava in timeout
 const getBearerToken = async () => {
+    const now = Date.now();
+    if (cachedToken && tokenExpiresAt && now < tokenExpiresAt) {
+        return cachedToken;
+    }
+
     const url = credentials.GENERATE_TOKEN_URL;
-    //Questo oggetto permette di costruire parametri di query in un formato codificato per l'invio in una richiesta HTTP POST con application/x-www-form-urlencoded -- in realtà poremmo direttamente creare il data che è il body della chiamata come un oggetto JSON
     const data = new URLSearchParams();
     data.append("grant_type", "client_credentials");
     data.append("client_id", credentials.client_id);
@@ -13,12 +19,15 @@ const getBearerToken = async () => {
         const response = await axios.post(url, data, {
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
         });
-        return response.data.access_token; // Restituisce il token
+
+        const expiresIn = response.data.expires_in || 1800; // seconds
+        tokenExpiresAt = now + expiresIn * 1000 - 10000; // safety buffer di 10 sec - buffer di sicurezza di 10 secondi, per evitare che scada proprio mentre lo usiamo
+        cachedToken = response.data.access_token;
+        return cachedToken;
     } catch (error) {
-        console.error("Error getting bearer token: " + error + "CLIENT_ID = "+ credentials.client_id);
-        throw new Error("Failed to obtain Bearer token");
+        console.error("Error getting bearer token:", error.response?.data || error.message);
+        throw new Error("Failed to obtain Bearer token. Error"+JSON.stringify(error) +" . CLIENT_ID = " + credentials.client_id);
     }
 };
 
-// Esporta la funzione
-module.exports = { getBearerToken };
+module.exports = { getBearerToken }

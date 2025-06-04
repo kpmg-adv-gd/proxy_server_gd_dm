@@ -6,7 +6,7 @@ const { authMiddlewareCPI } = require("../../../utility/authMiddlewareCPI");
 module.exports.listenerSetup = (app) => {
     // Middleware per gestire XML come testo
 
-    app.post("/iFlow/LOIPRO05_CST_POST_XSLT", bodyParser.text({ type: "application/xml" }), authMiddlewareCPI, async (req, res) => {
+    app.post("/iFlow/LOIPRO05_CST_POST_XSLT", bodyParser.text({ type: "application/xml", limit: "20mb" }), async (req, res) => {
         try {
 
             // Converte una stringa XML in un oggetto DOM (Document Object Model).
@@ -22,7 +22,7 @@ module.exports.listenerSetup = (app) => {
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error - LOIPRO05_CST_POST_XSLT";
-            console.error("Error processing XML:", errMessage);
+            console.error("Error processing XML LOIPRO05_CST_POST_XSLT:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

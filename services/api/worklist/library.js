@@ -4,6 +4,7 @@ function getWorkListDataFiltered(response,body){
     const { workcenter, sfc, material, project, wbs, machineSection, parentMaterial } = body;
 
     try{
+        if(response.length == 0) return response;
         var filteredResponse = response.filter(function(obj) {
             let sfcCondition = true; 
             let materialCondition = true;

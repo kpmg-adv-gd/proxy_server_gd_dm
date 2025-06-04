@@ -1,4 +1,4 @@
-function getPodOperations(responseRouting, responseSfcDetails, responseWorkCenter, body){
+function getPodOperations(responseRouting, responseSfcDetails, responseWorkCenter, orderType, body){
     try{
         const { workcenter, routing, version } = body;
         if ( responseRouting.length>0 && responseRouting[0].routingSteps && responseSfcDetails.steps && responseWorkCenter.length>0 ){
@@ -43,6 +43,19 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
             obj.sfcStatus= responseSfcDetails?.status?.code || "";
             return obj; // Restituisci l'oggetto modificato
         })
+
+        //Nel caso degli ordini macchina ordino per Macrofase le operazioni
+        if(orderType=="MACH"){
+            enrichedResponseData.sort((objA, objB) => {
+                let customValuesA = objA?.routingOperation?.customValues;
+                let customValuesB = objB?.routingOperation?.customValues;
+                let macrofaseAField = customValuesA.find(obj => obj.attribute == "MF");
+                let macrofaseBField = customValuesB.find(obj => obj.attribute == "MF");
+                let macrofaseA = macrofaseAField?.value || "MF0";
+                let macrofaseB = macrofaseBField?.value || "MF0";
+                return macrofaseA.localeCompare(macrofaseB);
+            });
+        }
         return enrichedResponseData;
 
     } catch(error){

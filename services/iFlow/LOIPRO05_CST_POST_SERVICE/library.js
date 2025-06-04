@@ -2,10 +2,11 @@ const { manageRouting } = require("./updateRoutingLibrary");
 const { releaseOrder } = require("./releaseOrderLibrary");
 const { manageCertifications } = require("./certificationOp");
 const { populateZTables } = require("./populateZTable");
+const { manageMancanti } = require("./mancanti");
 
 async function managePostServicePhase(docXml){
     const results = await Promise.allSettled([
-        manageOrderRoutingAndCertification(docXml),
+        // manageOrderRoutingAndCertification(docXml),
         populateZTables(docXml)
     ]);
 
@@ -27,10 +28,11 @@ async function managePostServicePhase(docXml){
     }
 }
 
-async function manageOrderRoutingAndCertification(doc){
-    await manageRouting(doc);
-    await releaseOrder(doc);
-    await manageCertifications(doc);
-}
+// async function manageOrderRoutingAndCertification(doc){
+//     await manageRouting(doc);
+//     await releaseOrder(doc);
+//     await manageCertifications(doc);
+//     //await manageMancanti(doc)
+// }
 
 module.exports = { managePostServicePhase }

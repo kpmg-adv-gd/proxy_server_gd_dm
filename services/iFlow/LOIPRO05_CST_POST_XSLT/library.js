@@ -32,12 +32,12 @@ function manageDummyOrders(docXml){
     var orderOperationNode = xpath.select("//*[local-name()='ManufacturingOrderActivityNetworkElement']/*[local-name()='ManufacturingOrderMESReference']/*[local-name()='MESOperation']", docXml);
     var orderOperationDescriptionNode = xpath.select("//*[local-name()='ManufacturingOrderActivityNetworkElement']/*[local-name()='MfgOrderOperationText']", docXml);
     var workCenterOperation = xpath.select("//*[local-name()='ManufacturingOrderActivityNetworkElement']/*[local-name()='WorkCenter']", docXml);
-    orderIdNode[0].textContent = "OP0020";
-    orderIntBillOfOperationsItemNode[0].textContent = "0020";
-    manufacturingOrderOperationNode[0].textContent = "0020";
-    orderOperationNode[0].textContent = "DUMMY_OPERATION";
-    orderOperationDescriptionNode[0].textContent = "DUMMY_OPERATION_DESCRIPTION";
-    workCenterOperation[0].textContent = "DUMMY_WORKCENTER";
+    if(orderIdNode.length>0) orderIdNode[0].textContent = "OP0020" || "";
+    if(orderIntBillOfOperationsItemNode.length>0) orderIntBillOfOperationsItemNode[0].textContent = "OP0020" || "";
+    if(manufacturingOrderOperationNode.length>0) manufacturingOrderOperationNode[0].textContent = "0020" || "";
+    if(orderOperationNode.length>0) orderOperationNode[0].textContent = "DUMMY_OPERATION" || "";
+    if(orderOperationDescriptionNode.length>0) orderOperationDescriptionNode[0].textContent = "DUMMY_OPERATION_DESCRIPTION" || "";
+    if(workCenterOperation.length>0) workCenterOperation[0].textContent = "DUMMY_WORKCENTER" || "";
     return docXml;
 }
 
@@ -138,6 +138,7 @@ async function createAllMaterials(materialsArray,plant,isMach){
 }
 
 async function createMaterial(material,plant,isMach){
+    // if(material?.materialValue) material.materialValue += "_1404_3";
     const mockReq = {
         path: "/mdo/MATERIAL",
         query:  { $apply: "filter(PLANT eq '"+plant+"' and MATERIAL eq '"+material?.materialValue+"' and IS_CURRENT_VERSION eq 'true')"},
@@ -154,7 +155,7 @@ async function createMaterial(material,plant,isMach){
                 "category": "ASSEMBLY",
                 "dataType": "NONE"
             },
-            "description": material?.materialDescValue,
+            "description": material?.materialDescValue == "" ? material?.materialValue : material?.materialDescValue,
             "isAutocompleteAndConfirmed": true,
             "isCurrentVersion": true,
             "lotSize": 1,
@@ -177,7 +178,11 @@ async function createMaterial(material,plant,isMach){
         }
     ];
 
-    var response = await callPost(url,body);
+    try{
+        await callPost(url,body);
+    } catch(e){
+        console.log("Error create material: "+e);
+    }
 
 }
 

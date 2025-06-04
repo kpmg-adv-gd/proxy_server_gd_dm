@@ -1,31 +1,22 @@
-const { callPost } = require("../../../utility/CommonCallApi");
-// Carica le credenziali da variabili d'ambiente
-const credentials = JSON.parse(process.env.CREDENTIALS);
-const hostname = credentials.DM_API_URL;
+const { manageCompleteSfcPhase } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
     app.post("/api/sfc/v1/sfcs/complete", async (req, res) => {
         try {
-            const { plant, operation, resource, sfc  } = req.body;
+            const { plant, project, order, orderMaterial, operation, resource, sfc, checkModificheLastOperation,valueModifica, checkMancantiLastOperation  } = req.body;
             // Verifica che i parametri richiesti siano presenti
-            if (!plant || !operation || !resource || !sfc) {
-                return res.status(400).json({ error: "Missing required parameters: plant-operation-resource-sfc" });
+            if (!plant || !operation || !resource || !sfc || !project || !order || !orderMaterial ) {
+                return res.status(400).json({ error: "Missing one of required parameters: plant, project, order, orderMaterial, operation, resource, sfc" });
             }
 
-            var url = hostname+"/sfc/v1/sfcs/complete";
-            var params = {
-                "plant": plant,
-                "operation":operation,
-                "resource":resource,
-                "sfcs": [sfc]
-            };
-            var response = await callPost(url,params);
+            var response = await manageCompleteSfcPhase(plant,project,order,orderMaterial,operation,resource,sfc,checkModificheLastOperation,valueModifica,checkMancantiLastOperation);
+
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
-            res.status(status).json({ error: errMessage });
+            res.status(status).json(errMessage);
         }
     });
 

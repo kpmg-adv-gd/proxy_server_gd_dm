@@ -1,6 +1,8 @@
 const xpath = require("xpath");
 const { insertZMarkingRecap, getMarkingByConfirmationNumber } = require("../../postgres-db/services/marking/library");
 const { insertZOrdersLink } = require("../../postgres-db/services/orders_link/library");
+const { insertZCertification } = require("../../postgres-db/services/loipro/library");
+const { insertZSpecialGroups } = require("../../postgres-db/services/loipro/library");
 
 async function populateZTables(docXml){
     var plantNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='ProductionPlant']", docXml);
@@ -25,12 +27,15 @@ async function populateZTables(docXml){
     var parentAssemblyNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='PARENT_ASSEMBLY']]/*[local-name()='Value']", docXml);
     var parentAssemblyValueFromSAP = parentAssemblyNode.length > 0 ? parentAssemblyNode[0]?.textContent : null;
     var parentAssemblyValue = parentAssemblyValueFromSAP === "X";
+    var workCenterErpNodes = xpath.select("//*[local-name()='ManufacturingOrderActivityNetworkElement']/*[local-name()='WorkCenterErp']", docXml);
 
-    if(parentAssemblyValue || orderTypeValue == "ZMGF") return;
-    //Faccio le 2 insert in parallelo
+    
+    //Faccio le 4 insert in parallelo
     const results = await Promise.allSettled([
-        insertZMarkingTable(plantValue, orderValue, wbsValue, projectValue, operationNodes, durationOpNodes, confirmationNumberOpNodes),
-        insertZOrdersLinkTable(plantValue, projectValue, parentOrderValue, parentMaterialValue, orderValue, materialValue, parentAssemblyValue)
+        insertZMarkingTable(parentAssemblyValue,orderTypeValue,plantValue, orderValue, wbsValue, projectValue, operationNodes, durationOpNodes, confirmationNumberOpNodes),
+        insertZOrdersLinkTable(plantValue, projectValue, parentOrderValue, parentMaterialValue, orderValue, materialValue, parentAssemblyValue),
+        insertZCertificationTable(plantValue,workCenterErpNodes,operationNodes),
+        insertZSpecialGroupsTable(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,false)
     ]);
 
     // Raccogliamo gli errori dalle promise fallite
@@ -51,7 +56,8 @@ async function populateZTables(docXml){
     }
 }
 
-async function insertZMarkingTable(plant,order,wbs,project,operationNodes,durationOpNodes,confirmationNumberOpNodes){
+async function insertZMarkingTable(parentAssemblyValue,orderTypeValue,plant,order,wbs,project,operationNodes,durationOpNodes,confirmationNumberOpNodes){
+    if(parentAssemblyValue || orderTypeValue == "ZMGF") return;
     const promises = operationNodes.map((currentOperation, ii) => {
         let op = operationNodes[ii]?.textContent;
         let durationOp = durationOpNodes[ii]?.textContent;
@@ -67,7 +73,7 @@ async function insertZMarkingTable(plant,order,wbs,project,operationNodes,durati
 async function insertZMarkingRecapIfConfirmationIsNew(plant, project, wbs, op, order, confirmationNumber,durationOp, durationUoMOp, durationUoMOp, durationOp, durationUoMOp, durationUoMOp){
     let responseMarkingByConfirmation = await getMarkingByConfirmationNumber(confirmationNumber);
     if(responseMarkingByConfirmation.length==0){
-        await insertZMarkingRecap(plant, project, wbs, op, order, confirmationNumber,durationOp, durationUoMOp, 0, durationUoMOp, durationOp, durationUoMOp, 0, durationUoMOp);
+        await insertZMarkingRecap(plant, project, wbs, op, order, confirmationNumber,durationOp, durationUoMOp, 0, durationUoMOp, durationOp, durationUoMOp, 0, durationUoMOp,null,false);
     }
     return;
 }
@@ -75,6 +81,26 @@ async function insertZMarkingRecapIfConfirmationIsNew(plant, project, wbs, op, o
 async function insertZOrdersLinkTable(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue){
     await insertZOrdersLink(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue);
     return;
+}
+
+async function insertZCertificationTable(plant, workCenterErpNodes, operationNodes) {
+    if (workCenterErpNodes.length !== operationNodes.length) {
+        throw { status: 500, message: "WorkCenter|Operations not compiled correctly" };
+    }
+
+    // Creiamo tutte le promise per le insert
+    const insertPromises = workCenterErpNodes.map((workCenterNode, index) => 
+        insertZCertification(plant, operationNodes[index].textContent, workCenterNode.textContent, false)
+    );
+
+    // Eseguiamo tutte le insert in parallelo
+    await Promise.all(insertPromises);
+}
+
+async function insertZSpecialGroupsTable(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,elaborated){
+    if( ((orderTypeValue.includes("GRP") || orderTypeValue.includes("ZPA1")  || orderTypeValue.includes("ZPF1") ) && parentAssemblyValue) || (orderTypeValue=="ZMGF") ){
+        await insertZSpecialGroups(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,elaborated);
+    }
 }
 
 module.exports = { populateZTables }

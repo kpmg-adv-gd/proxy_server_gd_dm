@@ -6,4 +6,19 @@ async function getZOrdersLinkByProjectParentOrderChildOrderFlagQuery(project, pa
     return data;
 }
 
-module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery }
+async function getZOrdersLinkByPlantProjectParentOrderChildMaterial(plant, project, parentOrder, childMaterial){
+    const data = await postgresdbService.executeQuery(queryBom.getZOrdersLinkByPlantProjectParentOrderChildMaterialQuery, [plant, project, parentOrder, childMaterial]);
+    return data;
+}
+
+async function getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant, project, childOrder, childMaterial){
+    const data = await postgresdbService.executeQuery(queryBom.getZOrdersLinkByPlantProjectChildOrderChildMaterialQuery, [plant, project, childOrder, childMaterial]);
+    return data;
+}
+
+async function getZOrderLinkChildOrdersMultipleMaterial(plant,order,material,child_order){
+    const data = await postgresdbService.executeQuery(queryBom.getZOrderLinkChildOrdersMultipleMaterialQuery, [plant, order, material,child_order]);
+    return data;
+}
+
+module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterial,getZOrdersLinkByPlantProjectChildOrderChildMaterial, getZOrderLinkChildOrdersMultipleMaterial }

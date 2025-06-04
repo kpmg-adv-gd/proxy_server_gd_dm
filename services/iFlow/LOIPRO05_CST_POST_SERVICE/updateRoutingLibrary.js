@@ -31,7 +31,7 @@ async function getRoutingResponse(routing, plant) {
                 console.error("Errore nella chiamata:", error);
                 reject(error); // Rifiuta la Promise in caso di errore
             });
-        }, 5000); // Pausa di 3 secondi
+        }, 8000); // Pausa di 3 secondi
     });
 }
 // async function getRoutingResponse(routing,plant){
