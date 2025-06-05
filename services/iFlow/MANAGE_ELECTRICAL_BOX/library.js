@@ -38,6 +38,7 @@ async function manageElBox(newElectricalBox) {
         newElectricalBox.ORDER_ID?.[0] ?? "",
         newElectricalBox.MATERIAL?.[0] ?? "",
         newElectricalBox.MATNR?.[0] ?? 0,
+        newElectricalBox.MATNR_DESCRIPTION?.[0] ?? "",
         newElectricalBox.QUANTITY?.[0] ?? "",
         newElectricalBox.UOM?.[0] ?? "",
         false
