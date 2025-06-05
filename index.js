@@ -28,12 +28,17 @@ const apiServiceOrders = require("./services/api/orders/listener");
 const apiServiceUsers = require("./services/api/users/listener");
 const apiServiceMaterials = require("./services/api/materials/listener");
 const apiServiceRoutings = require("./services/api/routings/listener");
+const apiServiceDefects = require("./services/api/defects/listener");
 const mdoService = require("./services/mdo/listener");
 const sharedMemoryDbService = require("./services/postgres-db/services/shared_memory/listener");
 const electricalBoxDbService = require("./services/postgres-db/services/electrical_box/listener");
 const modificheDbService = require("./services/postgres-db/services/modifiche/listener");
 const markingDbService = require("./services/postgres-db/services/marking/listener");
 const varianceDbService = require("./services/postgres-db/services/variance/listener");
+const priorityDbService = require("./services/postgres-db/services/priority/listener");
+const codingDbService = require("./services/postgres-db/services/coding/listener");
+const responsibleDbService = require("./services/postgres-db/services/responsible/listener");
+const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 
 
 const app = express();
@@ -78,12 +83,20 @@ apiServiceOrders.listenerSetup(app);
 apiServiceUsers.listenerSetup(app);
 apiServiceRoutings.listenerSetup(app);
 apiServiceMaterials.listenerSetup(app);
+apiServiceDefects.listenerSetup(app);
 mdoService.listenerSetup(app);
 sharedMemoryDbService.listenerSetup(app);
 electricalBoxDbService.listenerSetup(app);
 modificheDbService.listenerSetup(app);
 markingDbService.listenerSetup(app);
 varianceDbService.listenerSetup(app);
+priorityDbService.listenerSetup(app);
+priorityDbService.listenerSetup(app);
+priorityDbService.listenerSetup(app);
+priorityDbService.listenerSetup(app);
+codingDbService.listenerSetup(app);
+responsibleDbService.listenerSetup(app);
+notificationTypeDbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
