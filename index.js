@@ -39,6 +39,7 @@ const priorityDbService = require("./services/postgres-db/services/priority/list
 const codingDbService = require("./services/postgres-db/services/coding/listener");
 const responsibleDbService = require("./services/postgres-db/services/responsible/listener");
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
+const defectDbService = require("./services/postgres-db/services/defect/listener");
 
 
 const app = express();
@@ -97,6 +98,7 @@ priorityDbService.listenerSetup(app);
 codingDbService.listenerSetup(app);
 responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
+defectDbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {

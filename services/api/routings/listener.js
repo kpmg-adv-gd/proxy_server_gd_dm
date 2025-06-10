@@ -15,7 +15,7 @@ module.exports.listenerSetup = (app) => {
             if (!plant || !routing) {
                 return res.status(400).json({ error: "Missing required query parameters: plant or routing" });
             }
-            var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&type=" + type + "&routing=" + routing;
+            var url = hostname + "/routing/routings/routingSteps?plant=" + plant + "&type=" + type + "&routing=" + routing;
 
             // Effettua la chiamata alla API esterna con il Bearer Token
             const response = await callGet(url);

@@ -24,9 +24,12 @@ module.exports.listenerSetup = (app) => {
 
         try {
 
-            const { plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project } = req.body;
+            const { plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,
+                user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project, defectId } = req.body;
 
-            var responseConfirmationMarking = await mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project);
+            var responseConfirmationMarking = await mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,
+                uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,
+                workCenter,operationDescription,project, defectId);
             res.status(200).json(responseConfirmationMarking);
         } catch (error) {
             let status = error.status || 500;

@@ -55,14 +55,14 @@ async function getFilterMarkingReport(plant){
     
 }
 
-async function mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,opDescription,project){
+async function mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,opDescription,project, defectId){
     let responseSAPMarkingService = await sendMarkingToSap(plant,personalNumber,confirmation_number,reason_for_variance,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,confirmation,cancellation,cancelled_confirmation);
     if(responseSAPMarkingService && responseSAPMarkingService?.OUTPUT?.confirmation_counter == 0 ){
         let errorMessage = "Errore in responseSAPMarkingService";
         throw { status: 500, message: errorMessage};
     }
     let confirmation_counter = responseSAPMarkingService?.OUTPUT?.confirmation_counter || 0;
-    await insertOpConfirmation(plant,wbe_machine,operation,mes_order,sfc,confirmation_number,confirmation_counter,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,personalNumber,false,cancelled_confirmation,modification,workCenter,opDescription,project) 
+    await insertOpConfirmation(plant,wbe_machine,operation,mes_order,sfc,confirmation_number,confirmation_counter,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,personalNumber,false,cancelled_confirmation,modification,workCenter,opDescription,project, defectId); 
     await updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor, variance_labor);
     if(cancellation=="X"){
         await updateCancelFlagOpConfirmation(confirmation_number,cancelled_confirmation,user_id);
