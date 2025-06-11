@@ -1,13 +1,23 @@
 const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, notification_type, coding, 
-                            replaced_in_assembly, defect_note, responsible, time, sfc, creation_date)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP)`; 
+                            replaced_in_assembly, defect_note, responsible, time, sfc, creation_date, qn_annullata, qn_approvata, "user", operation)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, false, false, $18, $19)`; 
 
-const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, creation_date)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)`; 
+const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, creation_date, qn_annullata, qn_approvata, "user", operation)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, false, false, $12, $13)`; 
 
-const selectZDefect = `SELECT * FROM z_defects WHERE id = ANY($1)`;
+const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
+                    inner join z_coding on z_defects.coding = z_coding.coding
+                    inner join z_priority on z_defects.priority = z_priority.priority
+                    inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    WHERE z_defects.id = ANY($1)
+                    ORDER BY z_defects.creation_date DESC`;
 
-const selectDefectToApprove = `SELECT * FROM z_defects WHERE create_qn = TRUE AND qn_annullata != TRUE AND qn_approvata != TRUE`;
+const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
+                    inner join z_coding on z_defects.coding = z_coding.coding
+                    inner join z_priority on z_defects.priority = z_priority.priority
+                    inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    WHERE z_defects.create_qn = TRUE AND z_defects.qn_annullata != TRUE AND z_defects.qn_approvata != TRUE
+                    ORDER BY z_defects.creation_date DESC`;
 
 const cancelDefectQN = `UPDATE z_defects SET qn_annullata = TRUE, approval_user = $2 WHERE id = $1`;
 const approveDefectQN = `UPDATE z_defects SET qn_approvata = TRUE, approval_user = $2 WHERE id = $1`;

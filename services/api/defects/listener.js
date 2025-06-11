@@ -1,6 +1,6 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
-const { callGet, callPost } = require("../../../utility/CommonCallApi");
+const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
 
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -77,6 +77,7 @@ module.exports.listenerSetup = (app) => {
                 }]
             }
 
+            console.log("Calling external API with params:" + JSON.stringify(params));
             var response = await callPost(url, params);
             res.status(200).json(response);
         } catch (error) {
@@ -111,6 +112,28 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    // Chiusura del difetto
+    app.post("/api/nonconformance/v1/close", async (req, res) => {
+        try {
+            const { id, plant, comments } = req.body;
+            var url = hostname + "/nonconformance/v1/close";
+
+            var params = {
+                "plant": plant,
+                "id": id,
+                "comments": comments
+            }
+
+            var response = await callPost(url, params);
+            res.status(200).json(response);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
     // Recupero difetti aperti di un SFC, in vista standard SAP_MDO_NONCONFORMANCES_V
     app.post("/api/getDefectOpenBySFCs", async (req, res) => {
         try {
@@ -137,7 +160,6 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
-
 
     // Recupero WBE per lista di SFC
     app.post("/api/getWBEBySFCs", async (req, res) => {
@@ -193,13 +215,18 @@ module.exports.listenerSetup = (app) => {
     });
 
     // Download file
-    app.get("/api/nonconformance/v1/file/download", async (req, res) => {
+    app.post("/api/nonconformance/v1/file/download", async (req, res) => {
         try {
-            const { fileId } = req.query;
+            const { fileId } = req.body;
             var url = hostname + "/nonconformance/v1/file/download?fileId=" + fileId;
 
-            var response = await callGet(url);
-            res.status(200).json(response);
+            var response = await callGetFile(url);
+            res.status(200).send({
+                fileName: fileId,
+                fileContent: response.data,
+                contentType: response.headers['content-type'],
+            });
+            console.log("File downloaded successfully:", JSON.stringify(response));
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
