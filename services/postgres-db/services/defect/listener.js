@@ -121,22 +121,22 @@ module.exports.listenerSetup = (app) => {
                         + "inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "WHERE 1=1";
             if (sfcsForWBE && sfcsForWBE.length > 0) {
-                query += ` AND sfc IN (${sfcsForWBE.map(sfc => `'${sfc}'`).join(", ")})`;
+                query += ` AND z_defects.sfc IN (${sfcsForWBE.map(sfc => `'${sfc}'`).join(", ")})`;
             }
             if (sfc) {
-                query += ` AND sfc = '${sfc}'`;
+                query += ` AND z_defects.sfc = '${sfc}'`;
             }
             if (qnCode) {
-                query += ` AND qn_code = '${qnCode}'`;
+                query += ` AND z_defects.qn_code = '${qnCode}'`;
             }
             if (priority) {
-                query += ` AND priority = '${priority}'`;
+                query += ` AND z_priority.description = '${priority}'`;
             }
             if (startDate) {
-                query += ` AND creation_date >= '${startDate}'`;
+                query += ` AND z_defects.creation_date >= '${startDate}'`;
             }
             if (endDate) {
-                query += ` AND creation_date <= '${endDate}'`;
+                query += ` AND z_defects.creation_date <= '${endDate}'`;
             }
             const result = await postgresdbService.selectDefectForReport(query);
 

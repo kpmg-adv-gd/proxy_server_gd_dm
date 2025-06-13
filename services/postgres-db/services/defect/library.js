@@ -1,7 +1,7 @@
 const postgresdbService = require('../../connection');
 const queryDefect = require("./queries");
 const { dispatch } = require("../../../mdo/library");
-const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
+const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
     notificationType, coding, replaceInAssembly, defectNote, responsible, time, sfc, user, operation){
