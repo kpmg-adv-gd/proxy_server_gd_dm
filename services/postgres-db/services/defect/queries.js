@@ -5,14 +5,14 @@ const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly,
 const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, creation_date, qn_annullata, qn_approvata, "user", operation)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, false, false, $12, $13)`; 
 
-const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
+const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
                     inner join z_coding on z_defects.coding = z_coding.coding
                     inner join z_priority on z_defects.priority = z_priority.priority
                     inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     WHERE z_defects.id = ANY($1)
                     ORDER BY z_defects.creation_date DESC`;
 
-const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
+const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects
                     inner join z_coding on z_defects.coding = z_coding.coding
                     inner join z_priority on z_defects.priority = z_priority.priority
                     inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type

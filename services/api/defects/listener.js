@@ -1,6 +1,7 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
+const { sendCloseDefectToSap } = require("./library");
 
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -221,10 +222,13 @@ module.exports.listenerSetup = (app) => {
             var url = hostname + "/nonconformance/v1/file/download?fileId=" + fileId;
 
             var response = await callGetFile(url);
+            var fileName = response.headers['content-disposition'] ? 
+                    response.headers['content-disposition'].split('filename=')[1] : fileId;
             res.status(200).send({
-                fileName: fileId,
+                fileName: fileName,
                 fileContent: response.data,
                 contentType: response.headers['content-type'],
+                extension: fileName.split(".")[fileName.split(".").length - 1]
             });
             console.log("File downloaded successfully:", JSON.stringify(response));
         } catch (error) {
@@ -234,6 +238,26 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
+
+    // Send chiusura difetto a SAP
+    app.post("/api/nonconformance/v1/sap/close", async (req, res) => {
+        try {
+            const { plant, defectId, qnCode } = req.body;
+
+            var dataForSap = {
+                "defectId": defectId,
+                "qnCode": qnCode
+            };
+
+            var response = await sendCloseDefectToSap(plant, dataForSap);
+            res.status(200).json(response);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    }
 
 
 };

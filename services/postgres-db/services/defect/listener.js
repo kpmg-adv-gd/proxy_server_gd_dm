@@ -115,7 +115,7 @@ module.exports.listenerSetup = (app) => {
         const { plant, sfcsForWBE, sfc, order, qnCode, priority, startDate, endDate } = req.body;
         try {
             // Creo la query dinamina in base ai parametri ricevuti
-            let query = "SELECT z_defects.*, z_coding.coding_description, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects "
+            let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects "
                         + "inner join z_coding on z_defects.coding = z_coding.coding " 
                         + "inner join z_priority on z_defects.priority = z_priority.priority "
                         + "inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
