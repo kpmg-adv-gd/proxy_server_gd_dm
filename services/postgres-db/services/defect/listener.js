@@ -115,10 +115,13 @@ module.exports.listenerSetup = (app) => {
         const { plant, sfcsForWBE, sfc, order, qnCode, priority, startDate, endDate } = req.body;
         try {
             // Creo la query dinamina in base ai parametri ricevuti
-            let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, z_notification_type.description as notification_type_description FROM z_defects "
-                        + "inner join z_coding on z_defects.coding = z_coding.coding " 
-                        + "inner join z_priority on z_defects.priority = z_priority.priority "
-                        + "inner join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
+            let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, "
+                        + "z_notification_type.description as notification_type_description, "
+                        + "(select STRING_agg(description, ', ') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description "
+                        + "FROM z_defects "
+                        + "left join z_coding on z_defects.coding = z_coding.coding " 
+                        + "left join z_priority on z_defects.priority = z_priority.priority "
+                        + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "WHERE 1=1";
             if (sfcsForWBE && sfcsForWBE.length > 0) {
                 query += ` AND z_defects.sfc IN (${sfcsForWBE.map(sfc => `'${sfc}'`).join(", ")})`;
@@ -133,10 +136,10 @@ module.exports.listenerSetup = (app) => {
                 query += ` AND z_priority.description = '${priority}'`;
             }
             if (startDate) {
-                query += ` AND z_defects.creation_date >= '${startDate}'`;
+                query += ` AND z_defects.creation_date >= (SELECT '${startDate}' AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' AS utc_time)`;
             }
             if (endDate) {
-                query += ` AND z_defects.creation_date <= '${endDate}'`;
+                query += ` AND z_defects.creation_date <= (SELECT '${endDate}' AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' AS utc_time)`;
             }
             const result = await postgresdbService.selectDefectForReport(query);
 

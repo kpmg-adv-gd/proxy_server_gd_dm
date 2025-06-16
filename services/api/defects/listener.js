@@ -70,12 +70,9 @@ module.exports.listenerSetup = (app) => {
                 "startSfcRequired": startSfcRequired,
                 "allowNotAssembledComponents": allowNotAssembledComponents
             }
+
             if (files != undefined) {
-                params.files = [{
-                    "fileContent": files.fileContent,
-                    "fileMediaType": files.fileMediaType,
-                    "fileName": files.fileName
-                }]
+                params.files = files;
             }
 
             console.log("Calling external API with params:" + JSON.stringify(params));
