@@ -256,4 +256,22 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    app.get("/api/bom/v1/boms", async (req, res) => {
+        try {
+            const { plant, bom, type } = req.query;
+            if (!plant || !bom || !type) {
+                return res.status(400).json({ error: "Missing required query parameters: plant, bom, type" });
+            }
+
+            var url = hostname + "/bom/v1/boms?plant=" + plant + "&bom=" + bom + "&type=" + type;
+            const bomResponse = await callGet(url);
+            res.status(200).json({ bomResponse: bomResponse });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
 };

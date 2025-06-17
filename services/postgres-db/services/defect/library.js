@@ -4,11 +4,11 @@ const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, time, sfc, user, operation){
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation){
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, time, sfc, user, operation]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 

@@ -4,10 +4,10 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/db/insertDefect", async (req, res) => {
         const { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType, coding, replaceInAssembly, defectNote,
-            responsible, time, sfc, user, operation } = req.body;
+            responsible, sfc, user, operation } = req.body;
         try {
             const result = await postgresdbService.insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType,
-                coding, replaceInAssembly, defectNote, responsible, time, sfc, user, operation);
+                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -117,7 +117,7 @@ module.exports.listenerSetup = (app) => {
             // Creo la query dinamina in base ai parametri ricevuti
             let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, "
                         + "z_notification_type.description as notification_type_description, "
-                        + "(select STRING_agg(description, ', ') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description "
+                        + "(select STRING_agg(system_status || ' - ' || description, ',') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description "
                         + "FROM z_defects "
                         + "left join z_coding on z_defects.coding = z_coding.coding " 
                         + "left join z_priority on z_defects.priority = z_priority.priority "
