@@ -48,11 +48,12 @@ async function manageNewModifiche(jsonModifiche) {
 
 async function manageModifica(objModifica){
     var plant = await getPlantFromERPPlant(objModifica?.Plant?.[0]);
+    var order = objModifica?.Order?.[0] || "";
     let modificaType = objModifica?.Type?.[0] || "";
-    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,objModifica?.Order?.[0]) || "";
+    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
     var { bom, bomType, material, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
 
-    await insertZModifiche(objModifica?.ProgEco?.[0], objModifica?.ProcessId?.[0], plant, objModifica?.Wbe?.[0], objModifica?.Type?.[0], sfc, podOrder, objModifica?.Material?.[0], objModifica?.ChildOrder?.[0], objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], objModifica?.Status?.[0], false)
+    await insertZModifiche(objModifica?.ProgEco?.[0], objModifica?.ProcessId?.[0], plant, objModifica?.Wbe?.[0], objModifica?.Type?.[0], sfc, order, objModifica?.Material?.[0], objModifica?.ChildOrder?.[0], objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], objModifica?.Status?.[0], false)
 
     if(!modificaValue){
         modificaValue = modificaType;
@@ -62,8 +63,8 @@ async function manageModifica(objModifica){
 
     await updateCustomFieldModifiche(plant,podOrder,modificaValue);
     if(modificaType=="MT" || modificaType=="MA"){
-        let bomComponentResponse = await getBomComponents(plant,objModifica?.Order?.[0]);
-        await updateBomComponent(bomComponentResponse,plant, objModifica?.Order?.[0],material,objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], modificaType,parentOrderValue,isParentAssembly);
+        let bomComponentResponse = await getBomComponents(plant,order);
+        await updateBomComponent(bomComponentResponse,plant, order,material,objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], modificaType,parentOrderValue,isParentAssembly);
     }
 }
 

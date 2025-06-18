@@ -1,6 +1,6 @@
 const { dispatch } = require("./library");
 
-module.exports.listenerSetup = (app, getBearerToken) => {
+module.exports.listenerSetup = (app) => {
     app.get("/mdo/*", async (req, res) => {
         try {
             let response = await dispatch(req);

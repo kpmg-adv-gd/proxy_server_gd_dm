@@ -1,7 +1,7 @@
 const { callGet, callPatch } = require("../../../utility/CommonCallApi");
 
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
-const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS } = require("../../postgres-db/services/mancanti/library");
+const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti } = require("../../postgres-db/services/mancanti/library");
 const { getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -77,9 +77,11 @@ async function getOrderObjectsToElaborate(jsonMancanti) {
 
         for (const order of wbs?.Order || []) {
             const orderNumber = order?.OrderNumber?.[0] || "";
+            const orderMaterial = order?.OrderMaterial?.[0] || "";
             const materialsArray = order?.Material || [];
             try{
                 await updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, null, orderNumber, materialsArray,false);
+                await manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray);
             } catch(e){
                 console.error("Error updateCustomFieldsOrderAndOrderComponent: "+e);
             }
@@ -290,4 +292,19 @@ async function getPlantFromERPPlant(erpPlant){
 
 }
 
+async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray){
+    for(let mat of materialsArray){
+        let isMissing = mat?.Missing?.[0] == "X" || mat?.Missing?.[0] == "true";
+        let missing_material = mat?.MissingMaterial?.[0] || "";
+        let missing_quantity = mat?.MissingQuantity?.[0] || "";
+        let receipt_expected_date = mat?.ReceiptExpectedDate?.[0] || "";
+        let first_conf_date = mat?.FirstConfDate?.[0] || "";
+        let mrp_date = mat?.MrpDate?.[0] || "";
+        let date_from_workshop = mat?.DateFromWorkShop?.[0] || "";
+        let cover_element = mat?.CoverElement?.[0] || "";
+        let storage_location = mat?.StorageLocation?.[0] || "";
+        let component_order = mat?.ComponentOrder?.[0] || "";
+        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing);
+    }
+}
 module.exports = { manageNewMancanti }
