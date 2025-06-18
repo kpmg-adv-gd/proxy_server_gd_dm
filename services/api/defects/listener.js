@@ -2,6 +2,7 @@ const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
 const { sendCloseDefectToSap } = require("./library");
+const { closeDefect } = require("../../postgres-db/services/defect/library");
 
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -123,6 +124,7 @@ module.exports.listenerSetup = (app) => {
             }
 
             var response = await callPost(url, params);
+            await closeDefect(id);             // Chiudo il difetto in tabella z_defects
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;

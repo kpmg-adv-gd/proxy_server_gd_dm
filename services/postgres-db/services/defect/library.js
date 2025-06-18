@@ -4,15 +4,15 @@ const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation){
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant){
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant]);
         return data;
     }
 }
@@ -82,5 +82,10 @@ async function sendApproveQNToSap(dataForSap) {
     return response;
 }
 
+async function closeDefect(defectId) {
+    const data = await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+    return data;
+}
 
-module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, approveDefectQN, selectDefectForReport, getOrderCustomDataDefect };
+
+module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, approveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap };

@@ -7,7 +7,7 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
 
-    app.get("/api/routing/v1/routings/routingSteps", async (req, res) => {
+    app.get("/api/routing/v1/routings", async (req, res) => {
         try {
             // Ottieni i query parameters dall'URL
             const { plant, type, routing, stepId } = req.query;
@@ -15,13 +15,10 @@ module.exports.listenerSetup = (app) => {
             if (!plant || !routing) {
                 return res.status(400).json({ error: "Missing required query parameters: plant or routing" });
             }
-            var url = hostname + "/routing/routings/routingSteps?plant=" + plant + "&type=" + type + "&routing=" + routing;
+            var url = hostname + "/routing/v1/routings?plant=" + plant + "&type=" + type + "&routing=" + routing;
 
-            // Effettua la chiamata alla API esterna con il Bearer Token
-            const response = await callGet(url);
-            const processedData = getCustomDataFromRoutingStepData(response, stepId);
-            // Restituisci i dati della risposta
-            res.status(200).json(processedData);
+            const routingResponse = await callGet(url);
+            res.status(200).json({ routingResponse: routingResponse });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

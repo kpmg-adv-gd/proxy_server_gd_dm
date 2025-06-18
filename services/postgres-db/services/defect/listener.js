@@ -4,10 +4,10 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/db/insertDefect", async (req, res) => {
         const { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType, coding, replaceInAssembly, defectNote,
-            responsible, sfc, user, operation } = req.body;
+            responsible, sfc, user, operation, plant } = req.body;
         try {
             const result = await postgresdbService.insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType,
-                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation);
+                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
