@@ -1,8 +1,8 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
-const { sendCloseDefectToSap } = require("./library");
-const { closeDefect } = require("../../postgres-db/services/defect/library");
+const { sendCloseDefectToSap, updateCustomDefectOrder } = require("./library");
+const { closeDefect, checkAllDefectClose } = require("../../postgres-db/services/defect/library");
 
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -56,7 +56,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/api/nonconformance/v1/log", async (req, res) => {
         try {
             const { code, plant, sfc, workcenter, quantity, routingStepId, startSfcRequired,
-                allowNotAssembledComponents, files } = req.body;
+                allowNotAssembledComponents, files, order } = req.body;
             var url = hostname + "/nonconformance/v1/log";
 
             var params = {
@@ -78,6 +78,8 @@ module.exports.listenerSetup = (app) => {
 
             console.log("Calling external API with params:" + JSON.stringify(params));
             var response = await callPost(url, params);
+            // Devo aggiornare il campo custom, se non è già valorizzato
+            await updateCustomDefectOrder(plant, order, "true");
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;
@@ -114,17 +116,21 @@ module.exports.listenerSetup = (app) => {
     // Chiusura del difetto
     app.post("/api/nonconformance/v1/close", async (req, res) => {
         try {
-            const { id, plant, comments } = req.body;
+            const { id, plant, comments, sfc, order } = req.body;
             var url = hostname + "/nonconformance/v1/close";
 
             var params = {
                 "plant": plant,
                 "id": id,
-                "comments": comments
+                "comments": comments,
             }
 
             var response = await callPost(url, params);
             await closeDefect(id);             // Chiudo il difetto in tabella z_defects
+            if (await checkAllDefectClose(sfc)) {
+                // Aggiorno campo custom, sbiancandolo
+                await updateCustomDefectOrder(plant, order, "false");
+            } // Controllo se tutti i difetti sono chiusi per l'ordine
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;

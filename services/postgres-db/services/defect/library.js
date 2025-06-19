@@ -61,8 +61,8 @@ async function cancelDefectQN(defectId, userId) {
     return data;
 }
 
-async function approveDefectQN(defectId, userId, dataForSap) {
-    const data = await postgresdbService.executeQuery(queryDefect.approveDefectQN, [defectId, userId]);
+async function sendApproveDefectQN(defectId, userId, dataForSap) {
+    const data = await postgresdbService.executeQuery(queryDefect.sendApproveDefectQN, [defectId, userId]);
     if (data && data.rowCount > 0) {
         await sendApproveQNToSap(dataForSap);
     }
@@ -87,5 +87,22 @@ async function closeDefect(defectId) {
     return data;
 }
 
+async function checkAllDefectClose(sfc) {
+    const data = await postgresdbService.executeQuery(queryDefect.checkAllDefectClose, [sfc]);
+    // If the length of the data is 0, it means there are no open defects
+    return data.length === 0;
+}
 
-module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, approveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap };
+async function receiveApproveDefectQN(jsonDefects) {
+
+    var id = jsonDefects.id;
+    var qn_code = jsonDefects.qn_code;
+    var qn_link = jsonDefects.qn_link;
+    var system_status = jsonDefects.system_status;
+    var user_status = jsonDefects.user_status;
+
+    const data = await postgresdbService.executeQuery(queryDefect.receiveApproveDefectQN, [id, qn_code, qn_link, system_status, user_status]);
+    return data;
+}
+
+module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveApproveDefectQN };

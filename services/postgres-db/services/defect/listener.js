@@ -103,7 +103,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/approveDefectQN", async (req, res) => {
         const { defectId, userId, dataForSap } = req.body;
         try {
-            const result = await postgresdbService.approveDefectQN(defectId, userId, dataForSap);
+            const result = await postgresdbService.sendApproveDefectQN(defectId, userId, dataForSap);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -112,7 +112,7 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/db/selectDefectForReport", async (req, res) => {
-        const { plant, sfcsForWBE, sfc, order, qnCode, priority, startDate, endDate } = req.body;
+        const { plant, sfcsForWBE, sfc, order, qnCode, priority, startDate, endDate, status } = req.body;
         try {
             // Creo la query dinamina in base ai parametri ricevuti
             let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, "
@@ -140,6 +140,9 @@ module.exports.listenerSetup = (app) => {
             }
             if (endDate) {
                 query += ` AND z_defects.creation_date <= (SELECT '${endDate}' AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' AS utc_time)`;
+            }
+            if (status) {
+                query += ` AND z_defects.status = '${status}'`;
             }
             const result = await postgresdbService.selectDefectForReport(query);
 
