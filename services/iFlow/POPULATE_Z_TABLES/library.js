@@ -20,6 +20,8 @@ async function populateZTables(plantValue,orderValue){
     let orderTypeValue = orderTypeField?.value || "";
     let parentOrderField = customValues.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
+    let machineSectionField = customValues.find(obj => obj.attribute == "SEZIONE MACCHINA");
+    let machineSectionValue = machineSectionField?.value || "";
     let parentMaterialField = customValues.find(obj => obj.attribute == "MATERIALE PADRE");
     let parentMaterialValue = parentMaterialField?.value || "";
     let parentAssemblyField = customValues.find(obj => obj.attribute == "PARENT_ASSEMBLY");
@@ -55,7 +57,7 @@ async function populateZTables(plantValue,orderValue){
     //Faccio le 4 insert in parallelo
     const results = await Promise.allSettled([
         insertZMarkingTable(parentAssemblyValue,orderTypeValue,plantValue, orderValue, wbsValue, projectValue, operationNodes, durationOpNodes, confirmationNumberOpNodes),
-        insertZOrdersLinkTable(plantValue, projectValue, parentOrderValue, parentMaterialValue, orderValue, materialValue, parentAssemblyValue),
+        insertZOrdersLinkTable(plantValue, projectValue, parentOrderValue, parentMaterialValue, orderValue, materialValue, parentAssemblyValue, orderTypeValue, machineSectionValue),
         insertZCertificationTable(plantValue,workCenterErpNodes,operationNodes),
         insertZSpecialGroupsTable(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,false)
     ]);
@@ -113,8 +115,8 @@ async function insertZMarkingRecapIfConfirmationIsNew(plant, project, wbs, op, o
     return;
 }
 
-async function insertZOrdersLinkTable(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue){
-    await insertZOrdersLink(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue);
+async function insertZOrdersLinkTable(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue,orderType,machineSection){
+    await insertZOrdersLink(plantValue,projectValue,parentOrderValue,parentMaterialValue,orderValue,materialValue,parentAssemblyValue,orderType,machineSection);
     return;
 }
 
