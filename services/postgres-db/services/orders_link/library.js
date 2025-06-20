@@ -22,5 +22,10 @@ async function getAllMachMaterials(plant){
     return data;
 }
 
+async function getMachOrderByComponentOrder(plant,project,orderComponent){
+    const data = await postgresdbService.executeQuery(queryOrdersLink.getMachOrderByComponentOrderQuery, [plant,project,orderComponent]);
+    return data;
+}
 
-module.exports = { insertZOrdersLink, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials }
+
+module.exports = { insertZOrdersLink, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder }

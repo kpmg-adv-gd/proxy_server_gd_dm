@@ -13,4 +13,27 @@ const getAllMachMaterialsQuery = `SELECT DISTINCT child_material
                             FROM z_orders_link
                             WHERE plant = $1 AND child_order_type=$2 AND (parent_order IS NULL OR parent_order='') `;                  
 
-module.exports = { insertZOrdersLinkQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery};
+const getMachOrderByComponentOrderQuery = `WITH RECURSIVE order_hierarchy AS (
+    -- Punto di partenza
+    SELECT 
+        o.*,
+        0 AS level
+    FROM z_orders_link o
+    WHERE o.plant = $1 AND o.project = $2 AND o.child_order = $3
+
+    UNION ALL
+
+    -- Risali finché trovi parent_order
+    SELECT 
+        o.*,
+        oh.level + 1 AS level
+    FROM z_orders_link o
+    JOIN order_hierarchy oh ON o.child_order = oh.parent_order
+)
+
+-- Seleziona solo l'ultima riga risalita
+SELECT *
+FROM order_hierarchy
+WHERE child_order_type='MACH' `;
+
+module.exports = { insertZOrdersLinkQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getMachOrderByComponentOrderQuery};

@@ -1,21 +1,33 @@
 const { callGet } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials } = require("../../postgres-db/services/orders_link/library");
+const { getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder } = require("../../postgres-db/services/orders_link/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 
-async function getSinotticoBomMultilivelloReportData(plant,project,machineMaterial){
-    let machineOrderRow = await getZOrdersLinkMachByPlantProjectOrderTypeMachineSection(plant,project,"MACH",machineMaterial);
-        if(machineOrderRow && machineOrderRow.length > 0){
-            var childMaterial = machineOrderRow[0].child_material;
-            var childOrder = machineOrderRow[0].child_order;
-        }
+async function getSinotticoBomMultilivelloReportData(plant,project,machineMaterial,callFrom,order){
+    var machineOrderRow = [];
+    if(callFrom=="SinotticoReport"){
+        machineOrderRow = await getZOrdersLinkMachByPlantProjectOrderTypeMachineSection(plant,project,"MACH",machineMaterial);
+    } else if(callFrom=="POD"){
+        machineOrderRow = await getMachOrderByComponentOrder(plant,project,order);
+    }
+    if(machineOrderRow.length > 0){
+        var childMaterial = machineOrderRow[0].child_material;
+        var childOrder = machineOrderRow[0].child_order;
+    } else {
+        let errorMessage = "Machine Order Not Found on SAP DM";
+        throw { status: 500, message: errorMessage};
+    }
     let orderDetail = await getOrderDetail(plant,childOrder);
     let sfc = orderDetail?.sfcs[0] || "";
     let sfcStatus = await getSfcStatus(plant,sfc);
     let hasMancantiField =  orderDetail?.customValues.find(obj => obj.attribute=="MANCANTI");
     let hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+    let isHighlighted = false;
+    if(order){
+        isHighlighted = order==childOrder;
+    }
 
     return {
         Material: childMaterial || "",
@@ -24,16 +36,24 @@ async function getSinotticoBomMultilivelloReportData(plant,project,machineMateri
         OrderType: "MACH",
         MissingParts: hasMancantiValue,
         SfcStatus: sfcStatus,
-        Children: await getChildrenOrder(plant,project,childOrder)
+        isHighlighted: isHighlighted,
+        Children: await getChildrenOrder(plant,project,childOrder,order)
     };
 }
 
-async function getChildrenOrder(plant,project,parentOrder){
+async function getChildrenOrder(plant,project,parentOrder,highlightOrder){
     let orderRow = await getZOrdersLinkByPlantProjectAndParentOrder(plant,project,parentOrder);
     var childrenComponents = [];
     if(orderRow && orderRow.length > 0){
         childrenComponents = await Promise.all(
                 orderRow.map(async (comp) => {
+                    let isHighlighted = false;
+                    console.log("highlightOrder= "+highlightOrder);
+                    console.log("comp.child_order= "+comp.child_order);
+                    
+                    if(highlightOrder){
+                        isHighlighted = highlightOrder==comp.child_order;
+                    }
                     let orderDetail = await getOrderDetail(comp.plant,comp.child_order);
 
                     if(!orderDetail){
@@ -44,6 +64,7 @@ async function getChildrenOrder(plant,project,parentOrder){
                             OrderType: "",
                             MissingParts: "",
                             SfcStatus: "",
+                            isHighlighted: isHighlighted,
                             Children: []
                         };   
                     } 
@@ -54,7 +75,7 @@ async function getChildrenOrder(plant,project,parentOrder){
                     let orderTypeField = orderDetail?.customValues.find(obj => obj.attribute == "ORDER_TYPE");
                     let orderTypeValue = orderTypeField?.value || "";
                     let hasMancantiField =  orderDetail?.customValues.find(obj => obj.attribute=="MANCANTI");
-                    let hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+                    let hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();            
 
                     return {
                         Material: comp.child_material || "",
@@ -63,7 +84,8 @@ async function getChildrenOrder(plant,project,parentOrder){
                         OrderType: orderTypeValue,
                         MissingParts: hasMancantiValue,
                         SfcStatus: sfcStatus,
-                        Children: await getChildrenOrder(plant,project,comp.child_order)
+                        isHighlighted: isHighlighted,
+                        Children: await getChildrenOrder(plant,project,comp.child_order,highlightOrder)
                     };
             })
         );

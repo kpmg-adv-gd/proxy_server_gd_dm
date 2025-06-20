@@ -4,12 +4,12 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/getSinotticoBomMultilivelloReport", async (req, res) => {
         try {
-            const { plant, project, machineMaterial } = req.body;
-            if (!plant || !project || !machineMaterial ) {
-                return res.status(400).json({ error: "Missing required query parameter project or machine material " });
+            const { plant, project, machineMaterial, callFrom, orderComponent } = req.body;
+            if (!plant || !project ) {
+                return res.status(400).json({ error: "Missing required query parameter project " });
             }
 
-            const treeTableResponse = await getSinotticoBomMultilivelloReportData(plant,project,machineMaterial);
+            const treeTableResponse = await getSinotticoBomMultilivelloReportData(plant,project,machineMaterial,callFrom,orderComponent);
             res.status(200).json(treeTableResponse);
         } catch (error) {
             let status = error.status || 500;
@@ -18,6 +18,7 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
+
 
 
     app.post("/api/getProgressStatusOrder", async (req, res) => {
