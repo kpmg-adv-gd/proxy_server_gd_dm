@@ -1,4 +1,6 @@
 const { insertZMarkingRecap } = require("../../postgres-db/services/marking/library");
+const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
+
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -30,8 +32,11 @@ async function manageOpModificheMA(jsonOperationsModificheMA) {
 }
 
 async function manageOpMA(newOperationMA) {
+    let erpPlant = newOperationMA.PLANT?.[0] ?? "";
+    let plant = await getPlantFromERPPlant(erpPlant);
+    
     await insertZMarkingRecap(
-        newOperationMA.PLANT?.[0] ?? "",
+        plant,
         newOperationMA.PROJECT?.[0] ?? "",
         newOperationMA.WBSELEMENT?.[0] ?? "",
         newOperationMA.OPERATION?.[0] ?? "",

@@ -9,7 +9,7 @@ module.exports.listenerSetup = (app) => {
             
             console.log("MANAGE_ELECTRICAL_BOX= "+JSON.stringify(req.body))
             let jsonElectricalBox = req.body;
-            await manageElectricalBoxes(jsonElectricalBox.ELECTRICAL_BOX_LIST[0] || []);
+            await manageElectricalBoxes(jsonElectricalBox.ELECTRICAL_BOX || []);
             res.set('Content-Type', 'text/xml; charset=utf-8');
             res.status(200).send(`
             <ns1:invokeResponse xmlns:ns1="http://cxf.component.camel.apache.org/">

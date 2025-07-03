@@ -13,6 +13,7 @@ const iFlowReleaseOrderSfcService = require("./services/iFlow/RELEASE_ORDER_SFC/
 const iFlowUpdateRoutingService = require("./services/iFlow/UPDATE_ROUTING/listener");
 const iFlowServiceLOIPROPostService = require("./services/iFlow/LOIPRO05_CST_POST_SERVICE/listener");
 const iFlowServiceLOIPROPostXSLT = require("./services/iFlow/LOIPRO05_CST_POST_XSLT/listener");
+const apiServiceModifiche = require("./services/api/modifiche/listener");
 const apiServiceSinotticoBomReport = require("./services/api/sinottico/listener");
 const apiServiceFilterMancantiReport = require("./services/api/mancanti/listener");
 const apiServiceFilterMarkingReport = require("./services/api/marking/listener");
@@ -64,6 +65,7 @@ iFlowUpdateCertificationService.listenerSetup(app);
 iFlowRelabelSfcService.listenerSetup(app);
 iFlowReleaseOrderSfcService.listenerSetup(app);
 iFlowUpdateRoutingService.listenerSetup(app);
+apiServiceModifiche.listenerSetup(app);
 apiServiceSinotticoBomReport.listenerSetup(app);
 apiServiceFilterMancantiReport.listenerSetup(app);
 apiServiceFilterMarkingReport.listenerSetup(app);

@@ -78,7 +78,7 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
     var pathMarkingProductionProcess = await getZSharedMemoryData(plant,"MARCATURA_SAP_PRODUCTION_PROCESS");
     if(pathMarkingProductionProcess.length>0) pathMarkingProductionProcess = pathMarkingProductionProcess[0].value;
     var url = hostname + pathMarkingProductionProcess;
-    console.log("URL SAP: "+url);
+
     if(cancellation=="X"){
         body = {
             "confirmationNumber":confirmation_number,

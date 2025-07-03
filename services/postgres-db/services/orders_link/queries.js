@@ -1,5 +1,6 @@
 const insertZOrdersLinkQuery = `INSERT INTO z_orders_link(plant,project,parent_order,parent_material,child_order,child_material,parent_assembly_flag,child_order_type,machine_section)
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                                ON CONFLICT (plant,project,child_order) DO NOTHING;`;
 
 const getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery = `SELECT *
                                                                 FROM z_orders_link

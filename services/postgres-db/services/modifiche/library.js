@@ -10,8 +10,8 @@ async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, ord
     return data;
 }
 
-async function getModificheData(plant, wbe, sfc, order){
-    const data = await postgresdbService.executeQuery(queryModifiche.getModificheDataQuery, [plant, wbe, sfc, order]);
+async function getModificheData(plant, sfc, order){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheDataQuery, [plant, sfc, order]);
     return data;
 }
 

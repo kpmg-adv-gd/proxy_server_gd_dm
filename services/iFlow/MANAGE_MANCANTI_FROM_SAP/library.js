@@ -1,6 +1,6 @@
 const { callGet, callPatch } = require("../../../utility/CommonCallApi");
+const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
 
-const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti } = require("../../postgres-db/services/mancanti/library");
 const { getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -274,22 +274,6 @@ async function getOrderStatusMancanti(plant,order){
     }
     
     return output;
-}
-
-async function getPlantFromERPPlant(erpPlant){
-    if (plantMappingCache.has(erpPlant)) {
-        return plantMappingCache.get(erpPlant);
-    }
-
-    var plantSharedMemory = await getZSharedMemoryData("ALL","MAPPING_PLANT_ERP_DM");
-    var plantSharedMemoryJSON = JSON.parse(plantSharedMemory[0].value);
-
-    Object.entries(plantSharedMemoryJSON).forEach(([key, value]) => {
-        plantMappingCache.set(key, value);
-    });
-
-    return plantMappingCache.get(erpPlant) || "";
-
 }
 
 async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray){

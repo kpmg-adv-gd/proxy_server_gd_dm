@@ -30,6 +30,10 @@ async function manageElectricalBoxes(jsonElectricalBox) {
 }
 
 async function manageElBox(newElectricalBox) {
+    var project = newElectricalBox.PROJECT?.[0] ?? "";
+    for(let elProject of newElectricalBox){
+        var project = elProject
+    }
     await insertZElectricalBox(
         newElectricalBox.PLANT?.[0] ?? "",
         newElectricalBox.PROJECT?.[0] ?? "",

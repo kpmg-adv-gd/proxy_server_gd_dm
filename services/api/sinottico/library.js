@@ -5,28 +5,37 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 
-async function getSinotticoBomMultilivelloReportData(plant,project,machineMaterial,callFrom,order){
-    var machineOrderRow = [];
-    if(callFrom=="SinotticoReport"){
-        machineOrderRow = await getZOrdersLinkMachByPlantProjectOrderTypeMachineSection(plant,project,"MACH",machineMaterial);
-    } else if(callFrom=="POD"){
-        machineOrderRow = await getMachOrderByComponentOrder(plant,project,order);
+async function getSinotticoBomMultilivelloReportData(plant, project, machineMaterial, callFrom, order) {
+    let machineOrderRow = [];
+    if (callFrom === "SinotticoReport") {
+        machineOrderRow = await getZOrdersLinkMachByPlantProjectOrderTypeMachineSection(plant, project, "MACH", machineMaterial);
+    } else if (callFrom === "POD") {
+        machineOrderRow = await getMachOrderByComponentOrder(plant, project, order);
     }
-    if(machineOrderRow.length > 0){
-        var childMaterial = machineOrderRow[0].child_material;
-        var childOrder = machineOrderRow[0].child_order;
-    } else {
-        let errorMessage = "Machine Order Not Found on SAP DM";
-        throw { status: 500, message: errorMessage};
+
+    if (machineOrderRow.length === 0) {
+        throw { status: 500, message: "Machine Order Not Found on SAP DM" };
     }
-    let orderDetail = await getOrderDetail(plant,childOrder);
-    let sfc = orderDetail?.sfcs[0] || "";
-    let sfcStatus = await getSfcStatus(plant,sfc);
-    let hasMancantiField =  orderDetail?.customValues.find(obj => obj.attribute=="MANCANTI");
-    let hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
-    let isHighlighted = false;
-    if(order){
-        isHighlighted = order==childOrder;
+
+    const { child_material: childMaterial, child_order: childOrder } = machineOrderRow[0];
+
+    const orderDetail = await getOrderDetail(plant, childOrder);
+    const sfc = orderDetail?.sfcs[0] || "";
+
+    // parallelizzo getProgressStatusOrder e getChildrenOrder
+    const [ children, progressStatus] = await Promise.all([
+        getChildrenOrder(plant, project, childOrder, order),
+        getProgressStatusOrder(plant,childOrder)
+    ]);
+
+    const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
+    const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+
+    const isHighlighted = order ? order === childOrder : false;
+
+    var progressStatusOrder=100;
+    if(progressStatus.totalPlannedTime > 0){
+        progressStatusOrder = Math.round((progressStatus.totalCompletedTime / progressStatus.totalPlannedTime) * 100);
     }
 
     return {
@@ -35,64 +44,95 @@ async function getSinotticoBomMultilivelloReportData(plant,project,machineMateri
         Order: childOrder,
         OrderType: "MACH",
         MissingParts: hasMancantiValue,
-        SfcStatus: sfcStatus,
-        isHighlighted: isHighlighted,
-        Children: await getChildrenOrder(plant,project,childOrder,order)
+        ProgressStatus: progressStatusOrder,
+        isHighlighted,
+        Children: children
     };
 }
 
-async function getChildrenOrder(plant,project,parentOrder,highlightOrder){
-    let orderRow = await getZOrdersLinkByPlantProjectAndParentOrder(plant,project,parentOrder);
-    var childrenComponents = [];
-    if(orderRow && orderRow.length > 0){
-        childrenComponents = await Promise.all(
-                orderRow.map(async (comp) => {
-                    let isHighlighted = false;
-                    console.log("highlightOrder= "+highlightOrder);
-                    console.log("comp.child_order= "+comp.child_order);
-                    
-                    if(highlightOrder){
-                        isHighlighted = highlightOrder==comp.child_order;
-                    }
-                    let orderDetail = await getOrderDetail(comp.plant,comp.child_order);
 
-                    if(!orderDetail){
-                        return {
-                            Material: comp.child_material || "",
-                            SFC: "",
-                            Order: comp.child_order,
-                            OrderType: "",
-                            MissingParts: "",
-                            SfcStatus: "",
-                            isHighlighted: isHighlighted,
-                            Children: []
-                        };   
-                    } 
+async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
+    const orderRow = await getZOrdersLinkByPlantProjectAndParentOrder(plant, project, parentOrder);
+    if (orderRow && orderRow.length > 0) {
+        // Parallelizzo la mappatura di tutti i figli
+        const childrenComponents = await Promise.all(
+            orderRow.map(async comp => {
+                // Qui lanciamo tutte le chiamate parallelamente:
+                const orderDetail = await getOrderDetail(comp.plant, comp.child_order);
 
-                    let sfc = orderDetail?.sfcs[0] || "";
-
-                    let sfcStatus = await getSfcStatus(plant,sfc);
-                    let orderTypeField = orderDetail?.customValues.find(obj => obj.attribute == "ORDER_TYPE");
-                    let orderTypeValue = orderTypeField?.value || "";
-                    let hasMancantiField =  orderDetail?.customValues.find(obj => obj.attribute=="MANCANTI");
-                    let hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();            
-
+                if (!orderDetail) {
                     return {
                         Material: comp.child_material || "",
-                        SFC: sfc,
-                        Order: comp.child_order || "",
-                        OrderType: orderTypeValue,
-                        MissingParts: hasMancantiValue,
-                        SfcStatus: sfcStatus,
-                        isHighlighted: isHighlighted,
-                        Children: await getChildrenOrder(plant,project,comp.child_order,highlightOrder)
+                        SFC: "",
+                        Order: comp.child_order,
+                        OrderType: "",
+                        MissingParts: "",
+                        ProgressStatus: "",
+                        isHighlighted:"",
+                        Children: []
                     };
+                }
+
+                const sfc = orderDetail?.sfcs[0] || "";
+
+                // Parallelizziamo ProgressStatus e children
+                const [ progressStatus, children] = await Promise.all([
+                    getProgressStatusOrder(plant, comp.child_order),
+                    getChildrenOrder(plant, project, comp.child_order, highlightOrder)
+                ]);
+
+                const orderTypeField = orderDetail?.customValues.find(obj => obj.attribute === "ORDER_TYPE");
+                const orderTypeValue = orderTypeField?.value || "";
+                const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
+                const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+
+                const isHighlighted = highlightOrder ? highlightOrder === comp.child_order : false;
+                var progressStatusOrder=100;
+                if(progressStatus.totalPlannedTime > 0){
+                    progressStatusOrder = Math.round((progressStatus.totalCompletedTime / progressStatus.totalPlannedTime) * 100);
+                }
+                
+                return {
+                    Material: comp.child_material || "",
+                    SFC: sfc,
+                    Order: comp.child_order || "",
+                    OrderType: orderTypeValue,
+                    MissingParts: hasMancantiValue,
+                    ProgressStatus: progressStatusOrder,
+                    isHighlighted,
+                    Children: children
+                };
             })
         );
-        
-    }
-    return childrenComponents;
 
+
+        return childrenComponents;
+
+    } else {
+        // Quando arrivo ai gruppi
+        const orderDetail = await getOrderDetail(plant, parentOrder);
+        if (!orderDetail) return [];
+        const orderTypeField = orderDetail?.customValues.find(obj => obj.attribute === "ORDER_TYPE");
+        const orderTypeValue = orderTypeField?.value || "";
+        //Se non è un gruppo non posso ricavare i componenti. Finisci
+        if (!orderTypeValue.startsWith("GRP")) return [];
+        const bomComponents = await getBomComponents(plant, orderDetail?.bom?.bom, orderDetail?.bom?.type);
+        const childrenComponents = bomComponents.map(comp => {
+            const isMancantiField = (comp?.customValues || []).find(obj => obj.attribute === "COMPONENTE MANCANTE");
+            const isMancantiValue = (isMancantiField?.value || "").toString().toLowerCase();
+            return {
+                Material: comp?.material?.material || "",
+                SFC: "",
+                Order: "",
+                OrderType: "COMP",
+                MissingParts: isMancantiValue,
+                isHighlighted: false,
+                ProgressStatus: null,
+                Children: []
+            };
+        });
+        return childrenComponents;
+    }
 }
 
 async function getOrderDetail(plant,order){
@@ -115,6 +155,20 @@ async function getSfcStatus(plant,sfc){
         return "";
     }
 }
+
+async function getBomComponents(plant,bom,bomType){
+    try{
+        var url = hostname + "/bom/v1/boms?plant=" + plant + "&bom=" + bom + "&type=" + bomType;
+        var bomComponentsResponse = await callGet(url);
+        var bomComponents = (bomComponentsResponse && bomComponentsResponse.length > 0 ) ? bomComponentsResponse[0].components : [];
+        return bomComponents;
+    } catch(error){
+        let errorMessage = error.message || "Error service getBomComponents";
+        throw { status: 500, message: errorMessage};
+    }
+
+}
+
 async function getFilterSinotticoBom(plant){
   try{
         // Definisci i dettagli delle richieste come oggetti che simulano `req`
@@ -182,7 +236,7 @@ async function getProgressStatusOrder(plant, order) {
     const sfcStatusRequest = buildRequest("SfcStepStatus", "/mdo/SFC_STEP_STATUS", sfcStatusFilter);
 
     const resultSfcStatus = await dispatch(sfcStatusRequest);
-    const completedOps = resultSfcStatus.data?.value.map(row => row.OPERATION_ACTIVITY) || [];
+    const completedOps = resultSfcStatus?.data?.value ? resultSfcStatus.data.value.map(row => row.OPERATION_ACTIVITY) : [];
 
     // 2. Richiesta tempo pianificato totale
     const totalPlannedFilter = `PLANT eq '${plant}' and MFG_ORDER eq '${order}'`;

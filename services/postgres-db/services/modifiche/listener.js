@@ -5,12 +5,12 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/getModificheBySfc", async (req, res) => {
         const { plant, wbe, sfc, order } = req.body;
 
-        if (!plant || !wbe || !sfc || !order ) {
-            return res.status(400).json({ error: "Missing required query parameter: plant, wbe , sfc or order" });
+        if (!plant || !sfc || !order ) {
+            return res.status(400).json({ error: "Missing required query parameter: plant , sfc or order" });
         }
 
         try {
-            const modifcheData = await postgresdbService.getModificheData(plant, wbe, sfc, order);
+            const modifcheData = await postgresdbService.getModificheData(plant, sfc, order);
             var modificheMA = modifcheData.filter(el => {
                 if(el.type==="MA") return el;
             });

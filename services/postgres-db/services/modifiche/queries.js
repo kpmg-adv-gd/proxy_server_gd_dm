@@ -4,7 +4,7 @@ const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant
 
 const getModificheDataQuery = `SELECT *
                                 FROM z_modify
-                                WHERE plant = $1 AND wbe = $2 AND sfc = $3 AND "order" = $4
+                                WHERE plant = $1 AND sfc = $2 AND "order" = $3
                                 ORDER BY prog_eco ASC;`;
 
 const updateStatusModificaQuery = `UPDATE z_modify
