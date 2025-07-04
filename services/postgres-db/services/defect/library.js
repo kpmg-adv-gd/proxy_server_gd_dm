@@ -64,12 +64,12 @@ async function cancelDefectQN(defectId, userId) {
 async function sendApproveDefectQN(defectId, userId, dataForSap) {
     const data = await postgresdbService.executeQuery(queryDefect.sendApproveDefectQN, [defectId, userId]);
     if (data && data.rowCount > 0) {
-        await sendApproveQNToSap(dataForSap);
+        await sendApproveQNToSap(defectId, dataForSap);
     }
     return data;
 }   
 
-async function sendApproveQNToSap(dataForSap) {
+async function sendApproveQNToSap(defectId, dataForSap) {
     var pathApproveQN = await getZSharedMemoryData(plant,"APPROVE_QN");
     if(pathApproveQN.length>0) pathApproveQN = pathApproveQN[0].value;
     var url = hostname + pathApproveQN;
@@ -79,11 +79,19 @@ async function sendApproveQNToSap(dataForSap) {
     let response = await callPost(url,dataForSap);
     console.log("RESPONSE SAP: "+JSON.stringify(response));
 
+    if (response.qn_code) {
+        await postgresdbService.executeQuery(queryDefect.assignQNCode, [defectId, response.qn_code])
+    }
+
     return response;
 }
 
 async function closeDefect(defectId) {
     const data = await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+
+    /* todo: implementare chiamata a SAP per chiusura difetto */
+    // ...
+
     return data;
 }
 
@@ -93,16 +101,23 @@ async function checkAllDefectClose(sfc) {
     return data.length === 0;
 }
 
-async function receiveApproveDefectQN(jsonDefects) {
+async function receiveStatusDefectQN(jsonDefects) {
 
-    var id = jsonDefects.id;
-    var qn_code = jsonDefects.qn_code;
-    var qn_link = jsonDefects.qn_link;
-    var system_status = jsonDefects.system_status;
-    var user_status = jsonDefects.user_status;
+    console.log("receiveStatusDefectQN called with jsonDefects:", JSON.stringify(jsonDefects));
 
-    const data = await postgresdbService.executeQuery(queryDefect.receiveApproveDefectQN, [id, qn_code, qn_link, system_status, user_status]);
+    try {
+        var plant = jsonDefects.plant.split(":")[1];
+        var qn_code = jsonDefects.qn_code;
+        var qn_link = jsonDefects.qn_link;
+        var system_status = jsonDefects.system_status;
+        var user_status = jsonDefects.user_status;
+    } catch (error) {
+        console.error("Error parsing jsonDefects:", error);
+        throw new Error("Invalid input data");
+    }
+
+    const data = await postgresdbService.executeQuery(queryDefect.receiveStatusDefectQN, [plant, qn_code, qn_link, system_status, user_status]);
     return data;
 }
 
-module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusDefectQN };

@@ -26,10 +26,13 @@ const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, 
                     ORDER BY z_defects.creation_date DESC`;
 
 const cancelDefectQN = `UPDATE z_defects SET qn_annullata = TRUE, approval_user = $2 WHERE id = $1`;
+
 const sendApproveDefectQN = `UPDATE z_defects SET approval_user = $2 WHERE id = $1`;
-const receiveApproveDefectQN = `UPDATE z_defects SET qn_approvata = TRUE, qn_code = $2, qn_link = $3, system_status = $4, user_status = $5 WHERE id = $1`;
+const assignQNCode = `UPDATE z_defects SET qn_code = $2 WHERE id = $1`;
+
+const receiveStatusDefectQN = `UPDATE z_defects SET qn_link = $3, system_status = $4, user_status = $5 WHERE plant = $1 AND qn_code = $2`;
 
 const closeDefect = `UPDATE z_defects SET status = 'CLOSED' WHERE id = $1`;
 const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND sfc = $1`;
 
-module.exports = { insertZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode };

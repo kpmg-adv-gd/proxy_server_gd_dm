@@ -6,6 +6,7 @@ const iFlowManageElectricalBoxFromSAPService = require("./services/iFlow/MANAGE_
 const iFlowOperationsMarkingMAFromSAPService = require("./services/iFlow/OPERATIONS_MA_MARKING_FROM_SAP/listener");
 const iFlowManageModificheFromSAPService = require("./services/iFlow/MANAGE_MODIFICHE_FROM_SAP/listener");
 const iFlowManageMancantiFromSAPService = require("./services/iFlow/MANAGE_MANCANTI_FROM_SAP/listener");
+const iFlowManageDefectsFromSAPService = require("./services/iFlow/MANAGE_DEFECTS_FROM_SAP/listener");
 const iFlowPopulateZTablesService = require("./services/iFlow/POPULATE_Z_TABLES/listener");
 const iFlowUpdateCertificationService = require("./services/iFlow/UPDATE_CERTIFICATION/listener");
 const iFlowRelabelSfcService = require("./services/iFlow/RELABEL_SFC/listener");
@@ -40,6 +41,7 @@ const codingDbService = require("./services/postgres-db/services/coding/listener
 const responsibleDbService = require("./services/postgres-db/services/responsible/listener");
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 const defectDbService = require("./services/postgres-db/services/defect/listener");
+const unproductiveDbService = require("./services/postgres-db/services/unproductive/listener");
 
 
 const app = express();
@@ -63,6 +65,7 @@ iFlowOperationsMarkingMAFromSAPService.listenerSetup(app);
 iFlowManageModificheFromSAPService.listenerSetup(app);
 iFlowPopulateZTablesService.listenerSetup(app);
 iFlowManageMancantiFromSAPService.listenerSetup(app);
+iFlowManageDefectsFromSAPService.listenerSetup(app);
 iFlowUpdateCertificationService.listenerSetup(app);
 iFlowRelabelSfcService.listenerSetup(app);
 iFlowReleaseOrderSfcService.listenerSetup(app);
@@ -99,6 +102,7 @@ codingDbService.listenerSetup(app);
 responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
 defectDbService.listenerSetup(app);
+unproductiveDbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
