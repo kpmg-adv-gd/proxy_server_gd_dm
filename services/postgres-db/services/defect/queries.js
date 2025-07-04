@@ -5,6 +5,10 @@ const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly,
 const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant)
                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14)`; 
 
+const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priority = $4, variance = $5, blocking = $6, notification_type = $7,
+                        coding = $8, replaced_in_assembly = $9, defect_note = $10, responsible = $11
+                        WHERE id = $1`;
+
 const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description,
                     z_notification_type.description as notification_type_description, 
                     (select STRING_agg(system_status || ' - ' || description, ',') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description
@@ -32,4 +36,4 @@ const receiveApproveDefectQN = `UPDATE z_defects SET qn_approvata = TRUE, qn_cod
 const closeDefect = `UPDATE z_defects SET status = 'CLOSED' WHERE id = $1`;
 const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND sfc = $1`;
 
-module.exports = { insertZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, insertZDefectNoQN, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveApproveDefectQN };

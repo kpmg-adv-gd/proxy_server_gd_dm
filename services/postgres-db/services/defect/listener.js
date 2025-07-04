@@ -15,6 +15,17 @@ module.exports.listenerSetup = (app) => {
         }
     })
 
+    app.post("/db/updateDefect", async (req, res) => {
+        const { idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible } = req.body;
+        try {
+            const result = await postgresdbService.updateZDefect(idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    })
+
     app.post("/db/selectZDefect", async (req, res) => {
         const { listDefect, plant } = req.body;
         try {

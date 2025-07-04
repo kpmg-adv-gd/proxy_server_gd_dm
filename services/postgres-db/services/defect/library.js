@@ -17,6 +17,12 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
     }
 }
 
+async function updateZDefect(idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible){
+    const data = await postgresdbService.executeQuery(queryDefect.updateZDefect, 
+            [idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible]);
+    return data;
+}
+
 async function selectZDefect(listDefect) {
     const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect]);
     return data;
@@ -105,4 +111,4 @@ async function receiveApproveDefectQN(jsonDefects) {
     return data;
 }
 
-module.exports = { insertZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveApproveDefectQN };
