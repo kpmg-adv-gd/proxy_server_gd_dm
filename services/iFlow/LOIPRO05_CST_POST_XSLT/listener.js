@@ -8,7 +8,6 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/iFlow/LOIPRO05_CST_POST_XSLT", bodyParser.text({ type: "application/xml", limit: "20mb" }), async (req, res) => {
         try {
-
             // Converte una stringa XML in un oggetto DOM (Document Object Model).
             const doc = new DOMParser().parseFromString(req.body, "application/xml");
 

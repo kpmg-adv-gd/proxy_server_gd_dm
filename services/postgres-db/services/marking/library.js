@@ -49,8 +49,8 @@ async function updateZMarkingRecap(confirmation_number,cancelled_confirmation,ma
 async function updateCancelFlagOpConfirmation(confirmation_number,cancelled_confirmation,user_id) {
     await postgresdbService.executeQuery(queryMarking.updateCancelFlagOpConfirmationQuery, [confirmation_number,cancelled_confirmation,user_id]);
 }
-async function getModificationsBySfcService(plant,order) {
-    const data = await postgresdbService.executeQuery(queryMarking.getModificationsBySfcQuery, [plant,order]);
+async function getModificationsBySfcService(plant,order,sfc) {
+    const data = await postgresdbService.executeQuery(queryMarking.getModificationsBySfcQuery, [plant,order,sfc]);
     return data;
 }
 

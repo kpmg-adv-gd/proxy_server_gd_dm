@@ -1,7 +1,7 @@
 const { callGet, callPatch } = require("../../../utility/CommonCallApi");
+const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
 
-const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
-const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS } = require("../../postgres-db/services/mancanti/library");
+const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti } = require("../../postgres-db/services/mancanti/library");
 const { getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -77,9 +77,11 @@ async function getOrderObjectsToElaborate(jsonMancanti) {
 
         for (const order of wbs?.Order || []) {
             const orderNumber = order?.OrderNumber?.[0] || "";
+            const orderMaterial = order?.OrderMaterial?.[0] || "";
             const materialsArray = order?.Material || [];
             try{
                 await updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, null, orderNumber, materialsArray,false);
+                await manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray);
             } catch(e){
                 console.error("Error updateCustomFieldsOrderAndOrderComponent: "+e);
             }
@@ -133,7 +135,7 @@ async function getBomByOrderAndPlant(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
-    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X"));
     let parentOrderField = customValuesOrder.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
     let orderMaterial = orderResponse?.material?.material;
@@ -152,9 +154,6 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
         var missingMaterial = foundMaterial?.Missing?.[0] == "X" ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && foundMaterial ) {
-            console.log("missingMaterial= "+missingMaterial);
-            console.log("obj.quantity = "+obj.quantity );
-            console.log("checkMissingQuantityParentAssembly= "+checkMissingQuantityParentAssembly);
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
                 let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
                 console.log("checkQuantityComponentResponse= "+checkQuantityComponentResponse);
@@ -202,13 +201,16 @@ async function manageSpecialGroups(projectsArray) {
     let mancantiNotElabroated = await getZSpecialGroupsNotElbaoratedByWBS(projectsArray);
 
     // SEQUENZIALE
-
     for(let el of mancantiNotElabroated){
-        await updateCustomFieldsOrderAndOrderComponent(el.plant, el.wbe, el.project, el.order, el.parent_order, [{
-            "Missing": [false],
-            "MissingMaterial": [el.child_material],
-            "MissingQuantity": [""]
-        }],true); 
+        try{
+            await updateCustomFieldsOrderAndOrderComponent(el.plant, el.wbe, el.project, el.order, el.parent_order, [{
+                "Missing": [false],
+                "MissingMaterial": [el.child_material],
+                "MissingQuantity": [""]
+            }],true);
+        } catch(e){
+            console.log("updateCustomFieldsOrderAndOrderComponent error - "+e);
+        }
     }
 
     //PARALLELO
@@ -262,7 +264,7 @@ async function getOrderStatusMancanti(plant,order){
     const orderResponse = await callGet(url);
     var output = "";
 
-    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     if(isParentAssembly){
         let mancantiField = orderResponse?.customValues.find(obj => obj.attribute == "MANCANTI");
         let mancanti = mancantiField?.value || "";
@@ -274,20 +276,19 @@ async function getOrderStatusMancanti(plant,order){
     return output;
 }
 
-async function getPlantFromERPPlant(erpPlant){
-    if (plantMappingCache.has(erpPlant)) {
-        return plantMappingCache.get(erpPlant);
+async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray){
+    for(let mat of materialsArray){
+        let isMissing = mat?.Missing?.[0] == "X" || mat?.Missing?.[0] == "true";
+        let missing_material = mat?.MissingMaterial?.[0] || "";
+        let missing_quantity = mat?.MissingQuantity?.[0] || "";
+        let receipt_expected_date = mat?.ReceiptExpectedDate?.[0] || "";
+        let first_conf_date = mat?.FirstConfDate?.[0] || "";
+        let mrp_date = mat?.MrpDate?.[0] || "";
+        let date_from_workshop = mat?.DateFromWorkShop?.[0] || "";
+        let cover_element = mat?.CoverElement?.[0] || "";
+        let storage_location = mat?.StorageLocation?.[0] || "";
+        let component_order = mat?.ComponentOrder?.[0] || "";
+        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing);
     }
-
-    var plantSharedMemory = await getZSharedMemoryData("ALL","MAPPING_PLANT_ERP_DM");
-    var plantSharedMemoryJSON = JSON.parse(plantSharedMemory[0].value);
-
-    Object.entries(plantSharedMemoryJSON).forEach(([key, value]) => {
-        plantMappingCache.set(key, value);
-    });
-
-    return plantMappingCache.get(erpPlant) || "";
-
 }
-
 module.exports = { manageNewMancanti }

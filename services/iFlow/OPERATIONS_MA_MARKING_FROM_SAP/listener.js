@@ -9,7 +9,7 @@ module.exports.listenerSetup = (app) => {
             
             console.log("OPERATIONS_MA_MARKING_FROM_SAP= "+JSON.stringify(req.body))
             let jsonOperationsModificheMA = req.body;
-            await manageOpModificheMA(jsonOperationsModificheMA.OPERATION_LIST[0] || []);
+            await manageOpModificheMA(jsonOperationsModificheMA);
             res.set('Content-Type', 'text/xml; charset=utf-8');
             res.status(200).send(`
             <ns1:invokeResponse xmlns:ns1="http://cxf.component.camel.apache.org/">

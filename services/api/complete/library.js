@@ -59,27 +59,29 @@ async function manageMancantiCompleteSfc(plant,project,childOrder,childMaterial)
     let orderLinkRow = await getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant,project,childOrder,childMaterial);
     let parentOrder = orderLinkRow.length > 0 ? orderLinkRow[0]?.parent_order : null;
     let parentMaterial = orderLinkRow.length > 0 ? orderLinkRow[0]?.parent_material : null;
-    const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, parentOrder);
-    var bomDetailBodyParentOrder = await getBomDetail(plant,bom,type);
-    let response = await updateBomComponentParentOrder(plant,parentOrder,parentMaterial,childOrder,childMaterial,bomDetailBodyParentOrder);
-    //SE E' PARENT ASSEMBLY
-    if(isParentAssembly){
-        let grandParentLinkRow = await getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant,project,parentOrder,parentMaterial);
-        let grandParentOrder = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_order : null;
-        let grandParentMaterial = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_material : null;
-        const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, grandParentOrder);
-        let bomDetailBodyGrandParentOrder = await getBomDetail(plant,bom,type);
-        await updateBomComponentParentOrder(plant,grandParentOrder,grandParentMaterial,parentOrder,parentMaterial,bomDetailBodyGrandParentOrder);
+    if(!!parentOrder){
+        const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, parentOrder);
+        var bomDetailBodyParentOrder = await getBomDetail(plant,bom,type);
+        await updateBomComponentParentOrder(plant,parentOrder,parentMaterial,childOrder,childMaterial,bomDetailBodyParentOrder);
+        //SE E' PARENT ASSEMBLY
+        if(isParentAssembly){
+            let grandParentLinkRow = await getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant,project,parentOrder,parentMaterial);
+            let grandParentOrder = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_order : null;
+            let grandParentMaterial = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_material : null;
+            const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, grandParentOrder);
+            let bomDetailBodyGrandParentOrder = await getBomDetail(plant,bom,type);
+            await updateBomComponentParentOrder(plant,grandParentOrder,grandParentMaterial,parentOrder,parentMaterial,bomDetailBodyGrandParentOrder);
+        }
     }
 
-    return response;
+    return;
 }
 
 async function getBomByOrderAndPlant(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
-    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     let parentOrderField = customValuesOrder.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
     let sfc = orderResponse?.sfcs[0];

@@ -23,8 +23,6 @@ async function makeMDOCall(req, token) {
             params = params.substring(0, params.length - 1);
         }
 
-        console.log("PARAMS= " + params);
-        console.log("URL = " + credentials.DM_API_URL + "/dmci/v2/extractor" + mdoService + "?" + "$format=json" + (params ? "&" + params : ""));
         let mdoPromise = axios({
             url: credentials.DM_API_URL + "/dmci/v4/extractor" + mdoService + "?" + "$format=json" + (params ? "&" + params : ""),
             method: req["method"],
