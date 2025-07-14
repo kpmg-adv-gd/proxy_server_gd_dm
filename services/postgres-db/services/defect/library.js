@@ -2,17 +2,20 @@ const postgresdbService = require('../../connection');
 const queryDefect = require("./queries");
 const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
+const { callGet, callPost } = require("../../../../utility/CommonCallApi");
+const credentials = JSON.parse(process.env.CREDENTIALS);
+const hostname = credentials.DM_API_URL;
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant){
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder){
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder]);
         return data;
     }
 }
@@ -67,23 +70,27 @@ async function cancelDefectQN(defectId, userId) {
     return data;
 }
 
-async function sendApproveDefectQN(defectId, userId, dataForSap) {
+async function sendApproveDefectQN(dataForSap, defectId, userId, plant) {
     const data = await postgresdbService.executeQuery(queryDefect.sendApproveDefectQN, [defectId, userId]);
-    if (data && data.rowCount > 0) {
-        await sendApproveQNToSap(dataForSap);
+    if (data) {
+        var response = await sendApproveQNToSap(dataForSap, plant, defectId);
     }
-    return data;
+    return response;
 }   
 
-async function sendApproveQNToSap(dataForSap) {
+async function sendApproveQNToSap(dataForSap, plant, defectId) {
     var pathApproveQN = await getZSharedMemoryData(plant,"APPROVE_QN");
     if(pathApproveQN.length>0) pathApproveQN = pathApproveQN[0].value;
     var url = hostname + pathApproveQN;
-    console.log("URL SAP: "+url);
 
     console.log("SAP body:"+JSON.stringify(dataForSap));
     let response = await callPost(url,dataForSap);
     console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+    if (response.OUTPUT.esito == "OK") {
+        console.log("UPDATE DIFETTO: "+ defectId);
+        await postgresdbService.executeQuery(queryDefect.receiveQNCode, [defectId, response.OUTPUT.qmnum, response.OUTPUT.link_qn, response.OUTPUT.system_status, response.OUTPUT.user_status]);
+    }
 
     return response;
 }
@@ -99,16 +106,16 @@ async function checkAllDefectClose(sfc) {
     return data.length === 0;
 }
 
-async function receiveApproveDefectQN(jsonDefects) {
+async function receiveStatusByQNCode(jsonDefects) {
 
-    var id = jsonDefects.id;
+    var plant = jsonDefects.plant.split(":")[1];
     var qn_code = jsonDefects.qn_code;
     var qn_link = jsonDefects.qn_link;
     var system_status = jsonDefects.system_status;
     var user_status = jsonDefects.user_status;
 
-    const data = await postgresdbService.executeQuery(queryDefect.receiveApproveDefectQN, [id, qn_code, qn_link, system_status, user_status]);
+    const data = await postgresdbService.executeQuery(queryDefect.receiveStatusByQNCode, [plant, qn_code, qn_link, system_status, user_status]);
     return data;
 }
 
-module.exports = { insertZDefect, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode };

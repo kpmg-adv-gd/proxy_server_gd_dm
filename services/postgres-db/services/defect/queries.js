@@ -1,9 +1,9 @@
 const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, notification_type, coding, 
-                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19)`; 
+                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19, $20, $21)`; 
 
-const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14)`; 
+const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14, $15, $16)`; 
 
 const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priority = $4, variance = $5, blocking = $6, notification_type = $7,
                         coding = $8, replaced_in_assembly = $9, defect_note = $10, responsible = $11
@@ -31,9 +31,10 @@ const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, 
 
 const cancelDefectQN = `UPDATE z_defects SET qn_annullata = TRUE, approval_user = $2 WHERE id = $1`;
 const sendApproveDefectQN = `UPDATE z_defects SET approval_user = $2 WHERE id = $1`;
-const receiveApproveDefectQN = `UPDATE z_defects SET qn_approvata = TRUE, qn_code = $2, qn_link = $3, system_status = $4, user_status = $5 WHERE id = $1`;
+const receiveStatusByQNCode = `UPDATE z_defects SET qn_link = $3, system_status = $4, user_status = $5 WHERE plant = $1 and qn_code = $2`;
+const receiveQNCode = `UPDATE z_defects SET qn_code = $2, qn_link = $3, system_status = $4, user_status = $5, qn_approvata = true WHERE id = $1`;
 
 const closeDefect = `UPDATE z_defects SET status = 'CLOSED' WHERE id = $1`;
 const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND sfc = $1`;
 
-module.exports = { insertZDefect, insertZDefectNoQN, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveApproveDefectQN };
+module.exports = { insertZDefect, insertZDefectNoQN, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusByQNCode, receiveQNCode };

@@ -1,5 +1,5 @@
 const { authMiddlewareCPI } = require("../../../utility/authMiddlewareCPI");
-const { manageApprovalDefects } = require("./library");
+const { manageStatusDefects } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -11,7 +11,7 @@ module.exports.listenerSetup = (app) => {
             let jsonDefects = req.body;
            
             /* Qui sviluppo la logica per gestire i difetti ricevuti da SAP */
-            await manageApprovalDefects(jsonDefects);
+            await manageStatusDefects(jsonDefects);
 
             res.set('Content-Type', 'text/xml; charset=utf-8');
             res.status(200).send(`

@@ -170,13 +170,13 @@ module.exports.listenerSetup = (app) => {
     // Recupero WBE per lista di SFC
     app.post("/api/getWBEBySFCs", async (req, res) => {
         try {
-            const { sfcs, plant } = req.body;
-            if (!sfcs || !plant) {
-                return res.status(400).json({ error: "Missing required query parameters: sfcs, plant" });
+            const { orders, plant } = req.body;
+            if (!orders || !plant) {
+                return res.status(400).json({ error: "Missing required query parameters: orders, plant" });
             }
 
-            const sfcFilter = sfcs.map(sfc => `MFG_ORDER eq '${sfc}'`).join(' or ');
-            const filter = `(${sfcFilter}) and (DATA_FIELD eq 'WBE' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+            const ordersFilter = orders.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+            const filter = `(${ordersFilter}) and (DATA_FIELD eq 'WBE' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
             const mockReq = {
                 path: "/mdo/ORDER_CUSTOM_DATA",
                 query: { $apply: `filter(${filter})` },
