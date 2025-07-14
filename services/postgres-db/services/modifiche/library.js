@@ -10,8 +10,13 @@ async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, ord
     return data;
 }
 
-async function getModificheData(plant, sfc, order){
-    const data = await postgresdbService.executeQuery(queryModifiche.getModificheDataQuery, [plant, sfc, order]);
+async function getModificheData(plant, sfc){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheDataQuery, [plant, sfc]);
+    return data;
+}
+
+async function getModificheDataGroupMA(plant, child_order){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheDataGroupMAQuery, [plant, child_order]);
     return data;
 }
 
@@ -21,9 +26,14 @@ async function updateStatusModifica(plant, prog_eco, newStatus){
     return data;
 }
 
-async function updateResolutionModificaMA(plant, process_id, resolution){
+async function updateResolutionModificaMA(plant, wbe, process_id, child_material, resolution){
     let dateNow = new Date();
-    const data = await postgresdbService.executeQuery(queryModifiche.updateResolutionModificaMAQuery, [plant, process_id, resolution,dateNow]);
+    const data = await postgresdbService.executeQuery(queryModifiche.updateResolutionModificaMAQuery, [plant, wbe, process_id, child_material, resolution,dateNow]);
+    return data;
+}
+
+async function getIfModificaMAIsApplied(plant, wbe, process_id){
+    const data = await postgresdbService.executeQuery(queryModifiche.getIfModificaMAIsAppliedQuery, [plant, wbe, process_id]);
     return data;
 }
 
@@ -43,4 +53,4 @@ async function updateZModifyByOrder(plant,newSfc,newOrder,oldSfc,oldOrder){
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, updateStatusModifica, updateResolutionModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder }
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getIfModificaMAIsApplied, updateStatusModifica, updateResolutionModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder }

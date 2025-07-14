@@ -135,7 +135,7 @@ async function getBomByOrderAndPlant(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
-    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X"));
     let parentOrderField = customValuesOrder.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
     let orderMaterial = orderResponse?.material?.material;
@@ -154,9 +154,6 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
         var missingMaterial = foundMaterial?.Missing?.[0] == "X" ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && foundMaterial ) {
-            console.log("missingMaterial= "+missingMaterial);
-            console.log("obj.quantity = "+obj.quantity );
-            console.log("checkMissingQuantityParentAssembly= "+checkMissingQuantityParentAssembly);
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
                 let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
                 console.log("checkQuantityComponentResponse= "+checkQuantityComponentResponse);
@@ -204,13 +201,16 @@ async function manageSpecialGroups(projectsArray) {
     let mancantiNotElabroated = await getZSpecialGroupsNotElbaoratedByWBS(projectsArray);
 
     // SEQUENZIALE
-
     for(let el of mancantiNotElabroated){
-        await updateCustomFieldsOrderAndOrderComponent(el.plant, el.wbe, el.project, el.order, el.parent_order, [{
-            "Missing": [false],
-            "MissingMaterial": [el.child_material],
-            "MissingQuantity": [""]
-        }],true); 
+        try{
+            await updateCustomFieldsOrderAndOrderComponent(el.plant, el.wbe, el.project, el.order, el.parent_order, [{
+                "Missing": [false],
+                "MissingMaterial": [el.child_material],
+                "MissingQuantity": [""]
+            }],true);
+        } catch(e){
+            console.log("updateCustomFieldsOrderAndOrderComponent error - "+e);
+        }
     }
 
     //PARALLELO
@@ -264,7 +264,7 @@ async function getOrderStatusMancanti(plant,order){
     const orderResponse = await callGet(url);
     var output = "";
 
-    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     if(isParentAssembly){
         let mancantiField = orderResponse?.customValues.find(obj => obj.attribute == "MANCANTI");
         let mancanti = mancantiField?.value || "";

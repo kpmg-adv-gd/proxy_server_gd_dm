@@ -21,5 +21,3 @@ module.exports.listenerSetup = (app) => {
     });
 
 };
-
-

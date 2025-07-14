@@ -115,7 +115,7 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
         const orderTypeField = orderDetail?.customValues.find(obj => obj.attribute === "ORDER_TYPE");
         const orderTypeValue = orderTypeField?.value || "";
         //Se non è un gruppo non posso ricavare i componenti. Finisci
-        if (!orderTypeValue.startsWith("GRP")) return [];
+        //if (!orderTypeValue.startsWith("GRP")) return [];
         const bomComponents = await getBomComponents(plant, orderDetail?.bom?.bom, orderDetail?.bom?.type);
         const childrenComponents = bomComponents.map(comp => {
             const isMancantiField = (comp?.customValues || []).find(obj => obj.attribute === "COMPONENTE MANCANTE");

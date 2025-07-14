@@ -1,4 +1,4 @@
-const { updateStatusModifica, updateResolutionModificaMA } = require("../../postgres-db/services/modifiche/library");
+const { updateStatusModifica, getIfModificaMAIsApplied, updateResolutionModificaMA } = require("../../postgres-db/services/modifiche/library");
 const { sendModificaToSAP } = require("./library");
 
 module.exports.listenerSetup = (app) => {
@@ -17,7 +17,11 @@ module.exports.listenerSetup = (app) => {
             if(type=="MK" || type=="MT"){
                 await updateStatusModifica(plant,prog_eco,newStatus);
             } else if (type=="MA"){
-                await updateResolutionModificaMA(plant, process_id, resolution);
+                await updateResolutionModificaMA(plant, wbe, process_id, child_material, resolution);
+                let allModificaMaIsApplied = await getIfModificaMAIsApplied(plant, wbe, process_id);
+                if(allModificaMaIsApplied.length==0){
+                    await sendModificaToSAP(plant,wbe,process_id,prog_eco,newStatus,material,child_material,type,objOrder,item,resolution);
+                }
             }
             res.status(200).json(response);
 

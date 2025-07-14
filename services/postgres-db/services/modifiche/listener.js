@@ -3,18 +3,25 @@ const postgresdbService = require('./library');
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/getModificheBySfc", async (req, res) => {
-        const { plant, wbe, sfc, order } = req.body;
+        const { plant, sfc, order } = req.body;
 
         if (!plant || !sfc || !order ) {
             return res.status(400).json({ error: "Missing required query parameter: plant , sfc or order" });
         }
 
         try {
-            const modifcheData = await postgresdbService.getModificheData(plant, sfc, order);
-            var modificheMA = modifcheData.filter(el => {
-                if(el.type==="MA") return el;
-            });
-            var modificheMT_MK = modifcheData.filter(el => {
+            const modificheData = await postgresdbService.getModificheData(plant, sfc);
+            var hasModificheMa = modificheData.some(el => el.type=="MA");
+            var modificheMA = [];
+            if(!hasModificheMa){
+                modificheMA = await postgresdbService.getModificheDataGroupMA(plant, order);
+            } else{
+                modificheMA = modificheData.filter(el => {
+                                if(el.type==="MA") return el;
+                            });
+            }
+            
+            var modificheMT_MK = modificheData.filter(el => {
                 if(el.type!=="MA") return el;
             });
             var returnModifiche = {modificheMA:modificheMA,modificheMT_MK:modificheMT_MK};
@@ -49,7 +56,7 @@ module.exports.listenerSetup = (app) => {
         }
 
         try {
-            var resolution = "Modifica assieme applicata da " + userId;
+            var resolution = "MA applicata da " + userId;
             const responseUpdate = await postgresdbService.updateResolutionModificaMA(plant, process_id, resolution);
             res.status(200).json(responseUpdate); 
         } catch (error) {

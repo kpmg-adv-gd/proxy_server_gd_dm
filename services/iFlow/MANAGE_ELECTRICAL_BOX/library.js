@@ -1,4 +1,5 @@
 const { insertZElectricalBox } = require("../../postgres-db/services/electrical_box/library");
+const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -30,20 +31,18 @@ async function manageElectricalBoxes(jsonElectricalBox) {
 }
 
 async function manageElBox(newElectricalBox) {
-    var project = newElectricalBox.PROJECT?.[0] ?? "";
-    for(let elProject of newElectricalBox){
-        var project = elProject
-    }
+    var erpPlant = newElectricalBox.PLANT?.[0] ?? "";
+    var plantDM = await getPlantFromERPPlant(erpPlant);
+
     await insertZElectricalBox(
-        newElectricalBox.PLANT?.[0] ?? "",
+        plantDM,
         newElectricalBox.PROJECT?.[0] ?? "",
-        newElectricalBox.WBSELEMENT?.[0] ?? "",
+        newElectricalBox.WBS_ELEMENT?.[0] ?? "",
         newElectricalBox.SECTION?.[0] ?? "",
         newElectricalBox.ORDER_ID?.[0] ?? "",
-        newElectricalBox.MATERIAL?.[0] ?? "",
-        newElectricalBox.MATNR?.[0] ?? 0,
-        newElectricalBox.MATNR_DESCRIPTION?.[0] ?? "",
-        newElectricalBox.QUANTITY?.[0] ?? "",
+        newElectricalBox.MATERIAL_CODE?.[0] ?? "",
+        newElectricalBox.MATERIAL_DESCR?.[0] ?? "",
+        newElectricalBox.QUANTITY?.[0] ?? 0,
         newElectricalBox.UOM?.[0] ?? "",
         false
     );

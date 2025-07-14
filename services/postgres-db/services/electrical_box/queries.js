@@ -1,5 +1,5 @@
-const insertZElectricalBoxQuery = `INSERT INTO z_electrical_box (plant,project,wbs_element,machine_section,machine_order,order_material,eb_material,eb_material_description,quantity,uom,status,last_update)
-                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`;   
+const insertZElectricalBoxQuery = `INSERT INTO z_electrical_box (plant,project,wbs_element,machine_section,machine_order,eb_material,eb_material_description,quantity,uom,status,last_update)
+                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`;   
                                
 const getZElectricalBoxDataQuery = `SELECT *
                                 FROM z_electrical_box

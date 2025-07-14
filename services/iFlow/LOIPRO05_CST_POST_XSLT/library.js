@@ -1,4 +1,4 @@
-var { callPost } = require("../../../utility/CommonCallApi");
+var { callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 var { getWorkcenterDmByPlantGdAndWorkCenterErp } = require("../../postgres-db/services/loipro/library");
 var credentials = JSON.parse(process.env.CREDENTIALS);
@@ -22,8 +22,10 @@ async function managePostXSLTPhase(docXml){
         docXml = await manageWorkCenters(docXml);
     }
     await manageMaterials(docXml,plantValue,isMachvalue);
+    
     return docXml;
 }
+
 
 function manageDummyOrders(docXml){
     var orderIdNode = xpath.select("//*[local-name()='ManufacturingOrderActivityNetworkElement']/*[local-name()='MfgOrderNodeID']", docXml);
@@ -141,12 +143,16 @@ async function createMaterial(material,plant,isMach){
     // if(material?.materialValue) material.materialValue += "_1404_3";
     const mockReq = {
         path: "/mdo/MATERIAL",
-        query:  { $apply: "filter(PLANT eq '"+plant+"' and MATERIAL eq '"+material?.materialValue+"' and IS_CURRENT_VERSION eq 'true')"},
+        query:  { $apply: "filter(PLANT eq '"+plant+"' and MATERIAL eq '"+material?.materialValue+"' and IS_CURRENT_VERSION eq 'true' and IS_DELETED eq 'false')"},
         method: "GET"
     };
     var resultMDOMaterial = await dispatch(mockReq);
+    
     //se il materiale esiste già non lo creo
-    if(resultMDOMaterial?.data?.value && resultMDOMaterial?.data?.value.length>0) return;
+    if(resultMDOMaterial?.data?.value && resultMDOMaterial?.data?.value.length>0){
+        console.log("Materiale Trovato in MDO= "+JSON.stringify(resultMDOMaterial?.data?.value));
+        return;
+    } 
 
     var url = hostname+"/material/v1/materials"; // URL dell'API
     var body = [
@@ -181,7 +187,7 @@ async function createMaterial(material,plant,isMach){
     try{
         await callPost(url,body);
     } catch(e){
-        console.log("Error create material: "+e);
+        console.log("Error creazione materiale: "+JSON.stringify(e));
     }
 
 }

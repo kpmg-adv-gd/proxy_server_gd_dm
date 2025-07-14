@@ -35,6 +35,6 @@ const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
 
 const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
                                     FROM z_modify
-                                    WHERE plant=$1 AND ("order"= $2 OR child_order = $2)`;
+                                    WHERE plant=$1 AND (child_order = $2 OR sfc=$3)`;
                                     
 module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery};
