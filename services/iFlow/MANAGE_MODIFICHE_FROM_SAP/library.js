@@ -48,11 +48,14 @@ async function manageNewModifiche(jsonModifiche) {
 
 async function manageModifica(objModifica){
     var plant = await getPlantFromERPPlant(objModifica?.Plant?.[0]);
+    var order = objModifica?.Order?.[0] || "";
+    var childOrder = objModifica?.ChildOrder?.[0] || "";
+    var fluxType = objModifica?.FluxType?.[0] || "";
     let modificaType = objModifica?.Type?.[0] || "";
-    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,objModifica?.Order?.[0]) || "";
+    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
     var { bom, bomType, material, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
 
-    await insertZModifiche(objModifica?.ProgEco?.[0], objModifica?.ProcessId?.[0], plant, objModifica?.Wbe?.[0], objModifica?.Type?.[0], sfc, podOrder, objModifica?.Material?.[0], objModifica?.ChildOrder?.[0], objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], objModifica?.Status?.[0], false)
+    await insertZModifiche(objModifica?.ProgEco?.[0], objModifica?.ProcessId?.[0], plant, objModifica?.Wbe?.[0], objModifica?.Type?.[0], sfc, podOrder, objModifica?.Material?.[0], childOrder, objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], objModifica?.Status?.[0], false)
 
     if(!modificaValue){
         modificaValue = modificaType;
@@ -62,9 +65,15 @@ async function manageModifica(objModifica){
 
     await updateCustomFieldModifiche(plant,podOrder,modificaValue);
     if(modificaType=="MT" || modificaType=="MA"){
-        let bomComponentResponse = await getBomComponents(plant,objModifica?.Order?.[0]);
-        await updateBomComponent(bomComponentResponse,plant, objModifica?.Order?.[0],material,objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], modificaType,parentOrderValue,isParentAssembly);
+        let bomComponentResponse = await getBomComponents(plant,order);
+        await updateBomComponent(bomComponentResponse,plant, order,material,objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], modificaType,parentOrderValue,isParentAssembly);
     }
+
+    //Vado ad aggionrare il campo custom delle modifiche (ECO_TYPE) dell'ordine eliminato dalla bom se la modifica assieme con flux type D
+    if(modificaType=="MA" && fluxType=="D"){
+        await updateCustomFieldModifiche(plant,childOrder,"MA");
+    }
+
 }
 
 async function getOrderFromApi(plant, order) {
@@ -92,8 +101,6 @@ async function getPodOrder(plant, order){
     const parentOrderField = orderResponse?.customValues.find(obj => obj.attribute == "ORDINE PADRE");
     const parentOrderValue = parentOrderField?.value || "";
 
-    
-
     if (orderResponse.executionStatus == "COMPLETED" && parentOrderValue) {
         const parentOrderResult = await getPodOrder(plant, parentOrderValue);
         podOrder = parentOrderResult.podOrder;
@@ -110,7 +117,7 @@ async function getOrderInfo(plant, order){
 
     let parentOrderField = orderResponse?.customValues.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
-    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && obj.value=="true");
+    let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     let material = orderResponse?.material?.material;
     let bom = orderResponse?.bom?.bom;
     let bomType = orderResponse?.bom?.type;

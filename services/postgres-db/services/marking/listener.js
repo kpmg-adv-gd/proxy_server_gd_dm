@@ -48,14 +48,14 @@ module.exports.listenerSetup = (app) => {
     })
 
     app.post("/db/getModificationsBySfc", async (req, res) => {
-        const { plant, order } = req.body;
+        const { plant, order, sfc } = req.body;
 
-        if (!plant || !order) {
+        if (!plant || !order || !sfc) {
             return res.status(400).json({ error: "Missing required query parameter: plant or order" });
         }
 
         try {
-            let responseDataModification = await postgresdbService.getModificationsBySfcService(plant,order);
+            let responseDataModification = await postgresdbService.getModificationsBySfcService(plant,order,sfc);
             res.status(200).json(responseDataModification); 
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });
