@@ -4,10 +4,10 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/db/insertDefect", async (req, res) => {
         const { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType, coding, replaceInAssembly, defectNote,
-            responsible, sfc, user, operation, plant, wbe, typeOrder } = req.body;
+            responsible, sfc, user, operation, plant, wbe, typeOrder, group, code } = req.body;
         try {
             const result = await postgresdbService.insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType,
-                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder);
+                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -16,9 +16,9 @@ module.exports.listenerSetup = (app) => {
     })
 
     app.post("/db/updateDefect", async (req, res) => {
-        const { idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible } = req.body;
+        const { idDefect, title, description, priority, variance, create_qn, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible } = req.body;
         try {
-            const result = await postgresdbService.updateZDefect(idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible);
+            const result = await postgresdbService.updateZDefect(idDefect, title, description, priority, variance, create_qn, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);

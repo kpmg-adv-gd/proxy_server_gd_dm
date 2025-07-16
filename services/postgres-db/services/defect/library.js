@@ -1,4 +1,5 @@
 const postgresdbService = require('../../connection');
+const { getErpPlantFromDMPlant, getPlantFromERPPlant } = require("../../../../utility/MappingPlant");
 const queryDefect = require("./queries");
 const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
@@ -7,22 +8,22 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder){
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code) {
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code]);
         return data;
     }
 }
 
-async function updateZDefect(idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible){
+async function updateZDefect(idDefect, title, description, priority, variance, create_qn, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible){
     const data = await postgresdbService.executeQuery(queryDefect.updateZDefect, 
-            [idDefect, title, description, priority, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible]);
+            [idDefect, title, description, priority, create_qn, variance, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible]);
     return data;
 }
 
@@ -83,9 +84,12 @@ async function sendApproveQNToSap(dataForSap, plant, defectId) {
     if(pathApproveQN.length>0) pathApproveQN = pathApproveQN[0].value;
     var url = hostname + pathApproveQN;
 
+    dataForSap.plant = await getErpPlantFromDMPlant(plant);
+
     console.log("SAP body:"+JSON.stringify(dataForSap));
     let response = await callPost(url,dataForSap);
     console.log("RESPONSE SAP: "+JSON.stringify(response));
+
 
     if (response.OUTPUT.esito == "OK") {
         console.log("UPDATE DIFETTO: "+ defectId);
@@ -95,13 +99,32 @@ async function sendApproveQNToSap(dataForSap, plant, defectId) {
     return response;
 }
 
-async function closeDefect(defectId) {
-    const data = await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+async function closeDefect(defectId, qnCode, plant) {
 
-    /* todo: implementare chiamata a SAP per chiusura difetto */
-    // ...
+    if (qnCode && qnCode != null && qnCode != "") {
+        var pathCloseDefect = await getZSharedMemoryData(plant, "CLOSE_DEFECT");
+        if (pathCloseDefect.length > 0) pathCloseDefect = pathCloseDefect[0].value;
+        var url = hostname + pathCloseDefect;
 
-    return data;
+        var dataForSap = {
+            qualityNotificationNumber: qnCode
+        }
+
+        console.log("SAP body:" + JSON.stringify(dataForSap));
+        let response = await callPost(url, dataForSap);
+        console.log("RESPONSE SAP: " + JSON.stringify(response));
+
+        if (response.OUTPUT.esito == "OK") {
+            await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+            return true;
+        }else{
+        return false;
+        }
+    }else{
+        await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+        return true;
+    }
+
 }
 
 async function checkAllDefectClose(sfc) {
@@ -112,14 +135,20 @@ async function checkAllDefectClose(sfc) {
 
 async function receiveStatusByQNCode(jsonDefects) {
 
-    var plant = jsonDefects.plant.split(":")[1];
-    var qn_code = jsonDefects.qn_code;
-    var qn_link = jsonDefects.qn_link;
-    var system_status = jsonDefects.system_status;
-    var user_status = jsonDefects.user_status;
-
-    const data = await postgresdbService.executeQuery(queryDefect.receiveStatusByQNCode, [plant, qn_code, qn_link, system_status, user_status]);
-    return data;
+    var result = [];
+    if (jsonDefects && jsonDefects.qn && jsonDefects.qn.length > 0) {
+        for (var i=0; i < jsonDefects.qn.length; i++) {
+            var item = jsonDefects.qn[i];
+            var plant = await getPlantFromERPPlant(item.plant);
+            var qn_code = item.qn_code;
+            var qn_link = item.qn_link;
+            var system_status = item.system_status;
+            var user_status = item.user_status;
+            var data = await postgresdbService.executeQuery(queryDefect.receiveStatusByQNCode, [plant, qn_code, qn_link, system_status, user_status]);
+            result.push(data);
+        }
+    }
+    return result;
 }
 
 module.exports = { insertZDefect, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode };

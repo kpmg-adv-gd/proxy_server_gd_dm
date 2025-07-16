@@ -3,7 +3,6 @@ const cors = require('cors');
 const port = process.env.PORT || 3000;
 
 const iFlowManageElectricalBoxFromSAPService = require("./services/iFlow/MANAGE_ELECTRICAL_BOX/listener");
-const iFlowManageDefectsFromSAPService = require("./services/iFlow/MANAGE_DEFECTS_FROM_SAP/listener");
 const iFlowOperationsMarkingMAFromSAPService = require("./services/iFlow/OPERATIONS_MA_MARKING_FROM_SAP/listener");
 const iFlowManageModificheFromSAPService = require("./services/iFlow/MANAGE_MODIFICHE_FROM_SAP/listener");
 const iFlowManageMancantiFromSAPService = require("./services/iFlow/MANAGE_MANCANTI_FROM_SAP/listener");
@@ -66,7 +65,6 @@ app.use(cors({
 
 //Mi metto in ascolto su tutti i listener
 iFlowManageElectricalBoxFromSAPService.listenerSetup(app);
-iFlowManageDefectsFromSAPService.listenerSetup(app);
 iFlowOperationsMarkingMAFromSAPService.listenerSetup(app);
 iFlowManageModificheFromSAPService.listenerSetup(app);
 iFlowPopulateZTablesService.listenerSetup(app);

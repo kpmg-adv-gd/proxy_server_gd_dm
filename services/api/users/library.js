@@ -16,4 +16,20 @@ async function getPersonnelNumber(plant, userId) {
     }
 }
 
-module.exports = { getPersonnelNumber }
+async function getUserGroup(plant, userId) {
+    try {
+        var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+        const response = await callGet(url);
+        const customValue = response.customValues.filter(item => item.attribute === "USER GROUP");
+        if (customValue.length === 0) {
+            return "";
+        }
+        return customValue[0].value;
+
+    } catch (error) {
+        let errorMessage = error.message || "Error service getUserGroup";
+        throw { status: 500, message: errorMessage }
+    }
+}
+
+module.exports = { getPersonnelNumber, getUserGroup }

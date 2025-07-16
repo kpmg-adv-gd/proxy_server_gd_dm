@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
-const { sendCloseDefectToSap, updateCustomDefectOrder } = require("./library");
+const { updateCustomDefectOrder } = require("./library");
 const { closeDefect, checkAllDefectClose } = require("../../postgres-db/services/defect/library");
 
 // Carica le credenziali da variabili d'ambiente
@@ -97,7 +97,7 @@ module.exports.listenerSetup = (app) => {
                 return res.status(400).json({ error: "Missing required query parameters: plant, sfc" });
             }
 
-            var url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + sfc;
+            var url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + sfc + "&size=1000";
 
             if (routingStepId && routing) {
                 url += "&routingStepId=" + routingStepId + "&routing=" + routing;
@@ -116,7 +116,7 @@ module.exports.listenerSetup = (app) => {
     // Chiusura del difetto
     app.post("/api/nonconformance/v1/close", async (req, res) => {
         try {
-            const { id, plant, comments, sfc, order } = req.body;
+            const { id, plant, comments, sfc, order, qnCode } = req.body;
             var url = hostname + "/nonconformance/v1/close";
 
             var params = {
@@ -125,13 +125,23 @@ module.exports.listenerSetup = (app) => {
                 "comments": comments,
             }
 
-            var response = await callPost(url, params);
-            await closeDefect(id);             // Chiudo il difetto in tabella z_defects
-            if (await checkAllDefectClose(sfc)) {
-                // Aggiorno campo custom, sbiancandolo
-                await updateCustomDefectOrder(plant, order, "false");
-            } // Controllo se tutti i difetti sono chiusi per l'ordine
-            res.status(200).json(response);
+             // Chiamata a SAP per chiudere il difetto
+            var result = await closeDefect(id, qnCode, plant);            
+
+            if (result) {
+                // SAP ERP OK: chiudo il difetto in tabella z_defects e lancio chiamata a SAP per chiusura su Standard
+                var response = await callPost(url, params);
+
+                if (await checkAllDefectClose(sfc)) {
+                    // Aggiorno campo custom, sbiancandolo
+                    await updateCustomDefectOrder(plant, order, "false");
+                }
+
+                res.status(200).json(response);
+            }else {
+                res.status(400).json({ error: "Error closed defect on SAP ERP" });
+            }
+
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
@@ -236,26 +246,6 @@ module.exports.listenerSetup = (app) => {
                 extension: fileName.split(".")[fileName.split(".").length - 1]
             });
             console.log("File downloaded successfully:", JSON.stringify(response));
-        } catch (error) {
-            let status = error.status || 500;
-            let errMessage = error.message || "Internal Server Error";
-            console.error("Error calling external API:", errMessage);
-            res.status(status).json({ error: errMessage });
-        }
-    });
-
-    // Send chiusura difetto a SAP
-    app.post("/api/nonconformance/v1/sap/close", async (req, res) => {
-        try {
-            const { plant, defectId, qnCode } = req.body;
-
-            var dataForSap = {
-                "defectId": defectId,
-                "qnCode": qnCode
-            };
-
-            var response = await sendCloseDefectToSap(plant, dataForSap);
-            res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
