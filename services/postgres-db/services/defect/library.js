@@ -8,15 +8,15 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code) {
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder) {
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder]);
         return data;
     }
 }
@@ -114,11 +114,11 @@ async function closeDefect(defectId, qnCode, plant) {
         let response = await callPost(url, dataForSap);
         console.log("RESPONSE SAP: " + JSON.stringify(response));
 
-        if (response.OUTPUT.esito == "OK") {
+        if (response.OUTPUT && response.OUTPUT.outcome == "OK") {
             await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
             return true;
         }else{
-        return false;
+            return false;
         }
     }else{
         await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);

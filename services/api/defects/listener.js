@@ -126,7 +126,7 @@ module.exports.listenerSetup = (app) => {
             }
 
              // Chiamata a SAP per chiudere il difetto
-            var result = await closeDefect(id, qnCode, plant);            
+            var result = await closeDefect(id, qnCode, plant);  
 
             if (result) {
                 // SAP ERP OK: chiudo il difetto in tabella z_defects e lancio chiamata a SAP per chiusura su Standard
