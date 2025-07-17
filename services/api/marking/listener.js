@@ -1,4 +1,4 @@
-const { getFilterMarkingReport, mangeConfirmationMarking } = require("./library");
+const { getFilterMarkingReport, mangeConfirmationMarking, sendZDMConfirmations } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -21,9 +21,7 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/api/sendMarkingToSapAndUpdateZTable", async (req, res) => {
-
         try {
-
             const { plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,
                 user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project, defectId } = req.body;
 
@@ -38,6 +36,22 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
+
+    app.post("/api/sendZDMConfirmations", async (req, res) => {
+        try {
+            const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation } = req.body;
+            
+            var response = await sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation);
+            res.status(200).json(response);
+
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error?.message || "Internal Server Error";
+            console.error("Error api sendZDMConfirmations:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
 };
 
 

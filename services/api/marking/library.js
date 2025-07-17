@@ -108,5 +108,34 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
     return response;
 }
 
+async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation) {
+    var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
+    if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
+    var url = hostname + pathZDMConfirmations;      
+
+    var body = {
+        "personalNumber": personalNumber,
+        "activityNumber": activityNumber,
+        "activityNumberId": activityNumberId,
+        "cancellation": cancellation,
+        "confirmation": confirmation,
+        "confirmationCounter": confirmationCounter,
+        "confirmationNumber": confirmationNumber,
+        "date": date,
+        "duration": duration,
+        "durationUom": durationUom,
+        "reasonForVariance": reasonForVariance,
+        "unCancellation": unCancellation,
+        "unConfirmation": unConfirmation
+    };
+
+    console.log("SAP body:"+JSON.stringify(body));
+    let response = await callPost(url,body);
+    console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+   return response;
+
+}
+
 // Esporta la funzione
-module.exports = { getFilterMarkingReport,mangeConfirmationMarking };
+module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations };
