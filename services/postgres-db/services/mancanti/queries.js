@@ -66,25 +66,27 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                     missing_material,
                                     cast(missing_quantity as integer),
                                     CASE 
-                                        WHEN cover_element IN (
-                                            'INSPECTED STOCK', 'INSPE COMPLETED', 'QUALITY INSPECTION', 'RECEIVING STOCK',
-                                            'PRJ STOCK AND INSP', 'PRJ STOCK', 'INSP', 'PRJ STOCK', 'STOCK'
+	                                    WHEN cover_element IN (
+											'RECEIVING STOCK', 'PRJ STOCK', 'STOCK'
                                         ) THEN (
                                             CASE 
-                                                WHEN storage_location IN ('RCP5', 'RCA5', 'RCS5', 'RCM5', 'RCP5', 'RCPU') 
-                                                THEN 'LOGISITCO IN ATTESA DI CARICO'
-                                                ELSE 'LOGISITCO CARICATO E NON PRELEVATO'
+                                                WHEN storage_location IN ('PLT5') THEN 'IN ATTESA DI PRELIEVO'
+                                                ELSE 'CARICATO MA NON PRELEVABILE'
                                             END
                                         )
-                                        ELSE 'PRODUTTIVO'
+                                        WHEN cover_element IN (
+											'INSPECTED STOCK', 'PRJ STOCK INSP'
+                                        ) THEN (
+                                            CASE 
+                                                WHEN storage_location IN ('RCP2','RCP5') THEN 'RICEVUTO IN ATTESA DI CARICO'
+                                                WHEN storage_location IN ('RCP1') or  storage_location like 'QI%' THEN 'COLLAUDO PEZZI'
+                                                ELSE ''
+                                            END
+                                        )
+                                        WHEN cover_element IN ('PURCHASE REQUISITION', 'PURCHASE ORDER', 'PLANNED ORDER', 'PROD') THEN 'PRODUTTIVO'
+                                        ELSE ''
                                     END AS type_mancante,
-                                    CASE 
-                                        WHEN cover_element not IN (
-                                            'INSPECTED STOCK', 'INSPE COMPLETED', 'QUALITY INSPECTION', 'RECEIVING STOCK',
-                                            'PRJ STOCK AND INSP', 'PRJ STOCK', 'INSP', 'PRJ STOCK', 'STOCK'
-                                        ) THEN cover_element 
-                                        else ''
-                                    END AS type_cover_element,
+                                    cover_element as type_cover_element,
                                     case when cover_element IN ( --Ordine di Acuisto
                                             'PURCHASE REQUISITION', 'PURCHASE ORDER'
                                         ) then (case when receipt_expected_date is not null then TO_CHAR(receipt_expected_date, 'DD/MM/YYYY')
@@ -114,5 +116,11 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                 from MANCANTI_REPORT
                                 WHERE plant = $1 `;
 
+const getMancantiInfoDataQuery = `select plant,project,"order",count(*) as tot_mancanti
+                                    from z_report_mancanti
+                                    where active = true and plant = $1 and project = $2 and "order" = $3
+                                    group by plant,project,"order"
+                                `;
 
-module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery };
+
+module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery };

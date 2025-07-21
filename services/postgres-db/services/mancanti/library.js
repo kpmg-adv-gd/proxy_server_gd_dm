@@ -1,5 +1,6 @@
 const postgresdbService = require('../../connection');
 const queryLoipro = require("./queries");
+const { getBomInfoByOrder } = require('../../../../utility/CommonFunction');
 
 async function updateZSpecialGroups(plant,project,wbe,order,isElaborated){
     const data = await postgresdbService.executeQuery(queryLoipro.updateZSpecialGroupsQuery, [isElaborated,plant, project, wbe, order]);
@@ -41,6 +42,18 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     return data;
 }
 
+async function getMancantiInfoData(plant,project,orderGroup){
+    const responseQuery = await postgresdbService.executeQuery(queryLoipro.getMancantiInfoDataQuery, [plant,project,orderGroup]);
+    let responseBom = await getBomInfoByOrder(plant,orderGroup);
+    let numberGroupComponents = responseBom[0].components.length;
+    let numberMancanti = responseQuery[0].tot_mancanti;
+    let response = {
+        numberGroupComponents: numberGroupComponents,
+        numberMancanti: numberMancanti
+    }
+    return response;
+}
+
 // Gestire le date "00000000"
 function formatDate(date) {
     // Se la data è "00000000" o "falsy", restituisci NULL
@@ -55,4 +68,4 @@ function formatDate(date) {
     // Se la data è già nel formato corretto, la restituisco così com'è
     return date;
 }
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData }
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData }
