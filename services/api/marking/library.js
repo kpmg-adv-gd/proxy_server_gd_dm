@@ -108,7 +108,7 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
     return response;
 }
 
-async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation) {
+async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -132,6 +132,15 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
     console.log("SAP body:"+JSON.stringify(body));
     let response = await callPost(url,body);
     console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+    if (response.OUTPUT && response.OUTPUT.esito == "OK") {
+        // Se la risposta è OK, aggiorno le conferme in ZDM
+        await postgresdbService.executeQuery(insertOpConfirmation, [plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, null, durationUom, null, userId, personalNumber, null, null, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs]);
+    } else {
+        // Se la risposta non è OK, lancio un errore
+        let errorMessage = "Error sending confirmations to ZDM";
+        throw { status: 500, message: errorMessage };
+    }
 
    return response;
 

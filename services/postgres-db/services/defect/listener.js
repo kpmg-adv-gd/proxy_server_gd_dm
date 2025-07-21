@@ -29,7 +29,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/selectZDefect", async (req, res) => {
         const { listDefect, plant } = req.body;
         try {
-            const result = await postgresdbService.selectZDefect(listDefect);
+            const result = await postgresdbService.selectZDefect(listDefect, plant);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -40,7 +40,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/selectDefectToApprove", async (req, res) => {
         const { plant } = req.body;
         try {   
-            const result = await postgresdbService.selectDefectToApprove();   
+            const result = await postgresdbService.selectDefectToApprove(plant);   
             for (var i = 0; i < result.length; i++) {
                 var element = result[i];
                 var customData = await postgresdbService.getOrderCustomDataDefect(element.sfc, plant);
@@ -107,7 +107,7 @@ module.exports.listenerSetup = (app) => {
                         + "left join z_coding on z_defects.coding = z_coding.coding " 
                         + "left join z_priority on z_defects.priority = z_priority.priority "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
-                        + "WHERE 1=1";
+                        + "WHERE plant = '" + plant + "'";
             if (wbe) {
                 query += ` AND z_defects.wbe = '${wbe}'`;
             }

@@ -27,13 +27,13 @@ async function updateZDefect(idDefect, title, description, priority, variance, c
     return data;
 }
 
-async function selectZDefect(listDefect) {
-    const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect]);
+async function selectZDefect(listDefect, plant) {
+    const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect, plant]);
     return data;
 }
 
-async function selectDefectToApprove() {
-    const data = await postgresdbService.executeQuery(queryDefect.selectDefectToApprove);
+async function selectDefectToApprove(plant) {
+    const data = await postgresdbService.executeQuery(queryDefect.selectDefectToApprove, [plant]);
     return data;
 }   
 
@@ -116,6 +116,9 @@ async function closeDefect(defectId, qnCode, plant) {
 
         if (response.OUTPUT && response.OUTPUT.outcome == "OK") {
             await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+            if (response.OUTPUT.message) {
+                await postgresdbService.executeQuery(queryDefect.updateStatusCloseDefect, [defectId, response.OUTPUT.message]);
+            }
             return true;
         }else{
             return false;
