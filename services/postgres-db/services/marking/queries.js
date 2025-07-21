@@ -36,5 +36,7 @@ const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
 const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
                                     FROM z_modify
                                     WHERE plant=$1 AND (child_order = $2 OR sfc=$3)`;
-                                    
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery};
+
+const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE project IS NOT NULL AND project <> '' ORDER BY project`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery };

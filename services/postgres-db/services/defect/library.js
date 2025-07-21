@@ -9,14 +9,24 @@ const hostname = credentials.DM_API_URL;
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
     notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder) {
+    
+    // Devo recuperare il campo custom del defect type, per salvarlo nella tabella z_defect
+    let sapCode = await getOrderCustomDataDefectType(code, plant);
+    console.log("SAP CODE: " + JSON.stringify(sapCode));
+    if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
+        sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
+    }else{
+        sapCode = null;
+    }
+
     if (createQN) {
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode]);
         return data;
     }else{
         const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode]);
         return data;
     }
 }
@@ -27,13 +37,13 @@ async function updateZDefect(idDefect, title, description, priority, variance, c
     return data;
 }
 
-async function selectZDefect(listDefect) {
-    const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect]);
+async function selectZDefect(listDefect, plant) {
+    const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect, plant]);
     return data;
 }
 
-async function selectDefectToApprove() {
-    const data = await postgresdbService.executeQuery(queryDefect.selectDefectToApprove);
+async function selectDefectToApprove(plant) {
+    const data = await postgresdbService.executeQuery(queryDefect.selectDefectToApprove, [plant]);
     return data;
 }   
 
@@ -48,6 +58,29 @@ async function getOrderCustomDataDefect(sfc, plant) {
         const mockReq = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: "filter((DATA_FIELD eq 'ORDER_TYPE' or DATA_FIELD eq 'PURCHASE_ORDER') and MFG_ORDER eq '" + sfc + "' and PLANT eq '" + plant + "')" },
+            method: "GET"
+        };
+        try {
+            //chiamo l'api del mdo con quella request
+            var result = await dispatch(mockReq);
+            //ritorno un oggetto con chiave della chiamta e il suo risultato
+            return result
+        } catch (error) {
+            return { error: true, message: error.message, code: error.code || 500 }; // Errore
+        }
+
+    } catch (e) {
+        console.error("Errore in getOrderCustomDataDefect: " + e);
+        throw new Error("Errore in getOrderCustomDataDefect:" + e);
+    }
+
+}
+
+async function getOrderCustomDataDefectType(code, plant) {
+    try {
+        const mockReq = {
+            path: "/mdo/NON_CONFORMANCE_CODE_CUSTOM_DATA",
+            query: { $apply: "filter(DATA_FIELD eq 'SAP CODE' and NC_CODE eq '" + code + "' and PLANT eq '" + plant + "')" },
             method: "GET"
         };
         try {
@@ -116,6 +149,9 @@ async function closeDefect(defectId, qnCode, plant) {
 
         if (response.OUTPUT && response.OUTPUT.outcome == "OK") {
             await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
+            if (response.OUTPUT.message) {
+                await postgresdbService.executeQuery(queryDefect.updateStatusCloseDefect, [defectId, response.OUTPUT.message]);
+            }
             return true;
         }else{
             return false;
