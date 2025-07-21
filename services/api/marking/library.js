@@ -1,6 +1,6 @@
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost } = require("../../../utility/CommonCallApi");
-const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation } = require("../../postgres-db/services/marking/library");
+const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData } = require("../../postgres-db/services/marking/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -11,7 +11,7 @@ async function getFilterMarkingReport(plant){
         // Definisci i dettagli delle richieste come oggetti che simulano `req`
         const requests = [
             { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            //{ key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "UserId", path: "/mdo/USER_CERTIFICATION_ASSIGNMENT", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((USER_ID))"}, method: "GET" },
         ];
 
@@ -46,6 +46,14 @@ async function getFilterMarkingReport(plant){
             }
             return acc;
         }, {});
+
+        // Aggiungo l'oggetto "Project" con il risultato di z_op_confirmation
+        const projectData = await getProjectData(plant);
+        consolidatedData.Project = [];
+        projectData.forEach((item) => {
+            consolidatedData.Project.push({ DATA_FIELD_VALUE: item.project });
+        });
+
         // Restituisci il dato consolidato
         return consolidatedData;
     } catch(e){
@@ -133,9 +141,9 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
     let response = await callPost(url,body);
     console.log("RESPONSE SAP: "+JSON.stringify(response));
 
-    if (response.OUTPUT && response.OUTPUT.esito == "OK") {
+    if (response.OUTPUT && response.OUTPUT.type == "S") {
         // Se la risposta è OK, aggiorno le conferme in ZDM
-        await postgresdbService.executeQuery(insertOpConfirmation, [plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, null, durationUom, null, userId, personalNumber, null, null, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs]);
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = "Error sending confirmations to ZDM";
@@ -146,5 +154,54 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
 
 }
 
+
+async function sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
+    var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
+    if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
+    var url = hostname + pathZDMConfirmations;      
+
+    var body = {
+        "personalNumber": personalNumber,
+        "activityNumber": activityNumber,
+        "activityNumberId": activityNumberId,
+        "cancellation": cancellation,
+        "confirmation": confirmation,
+        "confirmationCounter": confirmationCounter,
+        "confirmationNumber": confirmationNumber,
+        "date": date,
+        "duration": duration,
+        "durationUom": durationUom,
+        "reasonForVariance": reasonForVariance,
+        "unCancellation": unCancellation,
+        "unConfirmation": unConfirmation
+    };
+
+    console.log("SAP body:"+JSON.stringify(body));
+    let response = await callPost(url,body);
+    console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+
+    if (response.OUTPUT && response.OUTPUT.type == "S") {
+        // Se la risposta è OK, aggiorno le conferme in ZDM
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, confirmationCounter, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+    } else {
+        // Se la risposta non è OK, lancio un errore
+        let errorMessage = "Error sending confirmations to ZDM";
+        throw { status: 500, message: errorMessage };
+    }
+
+   return response;
+
+}
+
+async function getAccessUserGroupWBS (plant) {
+    var pathAccessUserGroupWVS = await getZSharedMemoryData(plant, "USER_GROUP_WBS");
+    if (pathAccessUserGroupWVS.length > 0) {
+        pathAccessUserGroupWVS = pathAccessUserGroupWVS[0].value;
+        return pathAccessUserGroupWVS.split("-");
+    }
+    return [];
+}
+
 // Esporta la funzione
-module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations };
+module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations, sendStornoUnproductive, getAccessUserGroupWBS };

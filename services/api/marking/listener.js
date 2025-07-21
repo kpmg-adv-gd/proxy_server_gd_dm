@@ -1,4 +1,4 @@
-const { getFilterMarkingReport, mangeConfirmationMarking, sendZDMConfirmations } = require("./library");
+const { getFilterMarkingReport, mangeConfirmationMarking, sendZDMConfirmations, getAccessUserGroupWBS, sendStornoUnproductive } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -39,15 +39,47 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/sendZDMConfirmations", async (req, res) => {
         try {
-            const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation } = req.body;
-            
-            var response = await sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation);
+            const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId } = req.body;
+
+            var response = await sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId);
             res.status(200).json(response);
 
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error?.message || "Internal Server Error";
             console.error("Error api sendZDMConfirmations:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/stornoUnproductive", async (req, res) => {
+        try {
+            const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId } = req.body;
+            var response = await sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId);
+            res.status(200).json(response);
+
+
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error api stornoUnproductive:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getAccessUserGroupWBS", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            // Verifica che i parametri richiesti siano presenti
+            if (!plant) {
+                return res.status(400).json({ error: "Missing required parameters: plant" });
+            }
+            var response = await getAccessUserGroupWBS(plant);
+            return res.status(200).json(response);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

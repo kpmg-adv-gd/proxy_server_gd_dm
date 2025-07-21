@@ -62,5 +62,19 @@ module.exports.listenerSetup = (app) => {
         }
     });
    
-
+    app.post("/db/getUnproductiveByConfirmationNumber", async (req, res) => {
+        try {
+            const { plant, confirmationNumber } = req.body;
+            if (!plant || !confirmationNumber) {
+                return res.status(400).json({ error: "Missing required parameters: plant, confirmationNumber" });
+            }
+            let response = await postgresdbService.getUnproductiveByConfirmationNumber(plant, confirmationNumber);
+            res.status(200).json(response);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error api getUnproductiveByConfirmationNumber:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
 };

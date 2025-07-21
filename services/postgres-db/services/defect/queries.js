@@ -1,9 +1,9 @@
 const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, notification_type, coding, 
-                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19, $20, $21, $22, $23, $24)`; 
+                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19, $20, $21, $22, $23, $24, $25)`; 
 
-const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14, $15, $16, $17, $18, $19)`; 
+const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14, $15, $16, $17, $18, $19, $20)`; 
 
 const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priority = $4, create_qn = $5, variance = $6, blocking = $7, notification_type = $8,
                         coding = $9, replaced_in_assembly = $10, defect_note = $11, responsible = $12

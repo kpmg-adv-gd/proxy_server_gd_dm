@@ -29,4 +29,9 @@ async function getMarcatureDayAndValue(plant, erpPersonnelNumber) {
     return data;
 }
 
-module.exports = { selectZUnproductive, insertWBS, deleteWBS, updateWBS, getMarcatureDayAndValue };
+async function getUnproductiveByConfirmationNumber(plant, confirmationNumber) {
+    const data = await postgresdbService.executeQuery(queryMark.getUnproductiveByConfirmationNumber, [plant, confirmationNumber]);
+    return data;
+}
+
+module.exports = { selectZUnproductive, insertWBS, deleteWBS, updateWBS, getMarcatureDayAndValue, getUnproductiveByConfirmationNumber };

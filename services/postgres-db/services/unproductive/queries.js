@@ -12,6 +12,8 @@ const updateWBS = `UPDATE z_unproductive_wbs SET wbe = $2, wbe_description = $3,
 const getMarcatureDayAndValue = `select marking_date as "DAY", sum(marked_labor + variance_labor) as "VALUE" from z_op_confirmations where plant = $1 and user_personal_number = $2 
     and cancellation_flag = false and cancelled_confirmation is null group by marking_date `;
 
-module.exports = { selectZUnproductive, insertWBS, deleteWBS, updateWBS, getMarcatureDayAndValue };
+const getUnproductiveByConfirmationNumber = `SELECT * FROM z_unproductive_wbs WHERE plant = $1 AND confirmation_number = $2`;
+
+module.exports = { selectZUnproductive, insertWBS, deleteWBS, updateWBS, getMarcatureDayAndValue, getUnproductiveByConfirmationNumber };
 
 

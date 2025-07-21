@@ -54,5 +54,9 @@ async function getModificationsBySfcService(plant,order,sfc) {
     return data;
 }
 
+async function getProjectData() {
+    const data = await postgresdbService.executeQuery(queryMarking.getProjectDataQuery, []);
+    return data;
+}
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService }
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData }
