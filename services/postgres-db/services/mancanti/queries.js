@@ -88,7 +88,7 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                     END AS type_mancante,
                                     cover_element as type_cover_element,
                                     case when cover_element IN ( --Ordine di Acuisto
-                                            'PURCHASE REQUISITION', 'PURCHASE ORDER'
+                                            'PURCHASE REQUISITION', 'PURCHASE ORDER','PURCHASE ORDER SUBCO'
                                         ) then (case when receipt_expected_date is not null then TO_CHAR(receipt_expected_date, 'DD/MM/YYYY')
                                                 when first_conf_date is not null then TO_CHAR(first_conf_date, 'DD/MM/YYYY')
                                                 when mrp_date is not null then TO_CHAR(mrp_date, 'DD/MM/YYYY')
