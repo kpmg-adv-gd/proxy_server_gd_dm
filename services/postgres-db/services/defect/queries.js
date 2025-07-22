@@ -10,27 +10,27 @@ const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priori
                         WHERE id = $1`;
 
 const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description,
-                    z_notification_type.description as notification_type_description, 
-                    (select STRING_agg(system_status || ' - ' || description, ',') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description
+                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding = z_coding.coding
                     left join z_priority on z_defects.priority = z_priority.priority
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    left join z_responsible on z_defects.responsible = z_responsible.id
                     WHERE z_defects.id = ANY($1) and plant = $2
                     ORDER BY z_defects.creation_date DESC`;
 
 const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, 
-                    z_notification_type.description as notification_type_description, 
-                    (select STRING_agg(system_status || ' - ' || description, ',') from z_system_status where '-' || z_defects.system_status || '-' like '%-' || system_status || '-%') as system_status_description 
+                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding = z_coding.coding
                     left join z_priority on z_defects.priority = z_priority.priority
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    left join z_responsible on z_defects.responsible = z_responsible.id
                     WHERE z_defects.create_qn = TRUE AND z_defects.qn_annullata != TRUE AND z_defects.qn_approvata != TRUE
                     AND z_defects.plant = $1
                     ORDER BY z_defects.creation_date DESC`;
 
-const cancelDefectQN = `UPDATE z_defects SET qn_annullata = TRUE, approval_user = $2 WHERE id = $1`;
+const cancelDefectQN = `UPDATE z_defects SET qn_annullata = TRUE, approval_user = $2, notification_type = null, coding = null, replaced_in_assembly = null, responsible = null, defect_note = null, create_qn = false WHERE id = $1`;
 
 const sendApproveDefectQN = `UPDATE z_defects SET approval_user = $2 WHERE id = $1`;
 const assignQNCode = `UPDATE z_defects SET qn_code = $2 WHERE id = $1`;

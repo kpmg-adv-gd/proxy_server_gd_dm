@@ -67,7 +67,7 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                     cast(missing_quantity as integer),
                                     CASE 
 	                                    WHEN cover_element IN (
-											'RECEIVING STOCK', 'PRJ STOCK', 'STOCK'
+											'RECEIVING STOCK', 'PRJ STOCK', 'STOCK', 'STO'
                                         ) THEN (
                                             CASE 
                                                 WHEN storage_location IN ('PLT5') THEN 'IN ATTESA DI PRELIEVO'
@@ -83,7 +83,7 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                                 ELSE ''
                                             END
                                         )
-                                        WHEN cover_element IN ('PURCHASE REQUISITION', 'PURCHASE ORDER', 'PLANNED ORDER', 'PROD') THEN 'PRODUTTIVO'
+                                        WHEN cover_element IN ('PURCHASE REQUISITION', 'PURCHASE ORDER', 'PURCHASE ORDER SUBCO', 'PLANNED ORDER', 'PROD') THEN 'PRODUTTIVO'
                                         ELSE ''
                                     END AS type_mancante,
                                     cover_element as type_cover_element,

@@ -101,12 +101,12 @@ module.exports.listenerSetup = (app) => {
         try {
             // Creo la query dinamina in base ai parametri ricevuti
             let query = "SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, "
-                        + "z_notification_type.description as notification_type_description, "
-                        + "z_defects.system_status as system_status_description  "
+                        + "z_notification_type.description as notification_type_description, z_responsible.description as responsible_description "
                         + "FROM z_defects "
                         + "left join z_coding on z_defects.coding = z_coding.coding " 
                         + "left join z_priority on z_defects.priority = z_priority.priority "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
+                        + "left join z_responsible on z_defects.responsible = z_responsible.id "
                         + "WHERE plant = '" + plant + "'";
             if (wbe) {
                 query += ` AND z_defects.wbe = '${wbe}'`;

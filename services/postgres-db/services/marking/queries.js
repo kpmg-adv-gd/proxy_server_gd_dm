@@ -22,10 +22,11 @@ const insertMarkingRecapQuery = `INSERT INTO z_marking_recap(plant,project,wbe_m
 
 const getMarkingByConfirmationNumberQuery = `SELECT * FROM z_marking_recap WHERE confirmation_number = $1`;
 
-const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,zrc.planned_labor,zrc.uom_planned_labor,zrc.marked_labor AS marked_labor_total,zrc.uom_marked_labor as uom_marked_labor_total,zrc.remaining_labor,zrc.uom_remaining_labor,zrc.variance_labor AS variance_labor_total,zrc.uom_variance AS uom_variance_total,zvt.description AS variance_description
+const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,zrc.planned_labor,zrc.uom_planned_labor,zrc.marked_labor AS marked_labor_total,zrc.uom_marked_labor as uom_marked_labor_total,zrc.remaining_labor,zrc.uom_remaining_labor,zrc.variance_labor AS variance_labor_total,zrc.uom_variance AS uom_variance_total,zvt.description AS variance_description,zdef.title AS defect_description
                                                 FROM z_op_confirmations zoc
                                                 LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number
                                                 LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
+                                                LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
                                                 `;
 
 const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
@@ -37,6 +38,6 @@ const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
                                     FROM z_modify
                                     WHERE plant=$1 AND (child_order = $2 OR sfc=$3)`;
 
-const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE project IS NOT NULL AND project <> '' ORDER BY project`;
+const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 
 module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery };

@@ -54,8 +54,8 @@ async function getModificationsBySfcService(plant,order,sfc) {
     return data;
 }
 
-async function getProjectData() {
-    const data = await postgresdbService.executeQuery(queryMarking.getProjectDataQuery, []);
+async function getProjectData(plant) {
+    const data = await postgresdbService.executeQuery(queryMarking.getProjectDataQuery, [plant]);
     return data;
 }
 
