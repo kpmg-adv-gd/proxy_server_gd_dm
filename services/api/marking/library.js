@@ -184,6 +184,10 @@ async function sendStornoUnproductive(plant, personalNumber, activityNumber, act
     if (response.OUTPUT && response.OUTPUT.type == "S") {
         // Se la risposta è OK, aggiorno le conferme in ZDM
         await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, confirmationCounter, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+        if (unCancellation == "X") {
+            // Se è un annullamento, aggiorno il flag di cancellazione
+            await updateCancelFlagOpConfirmation(confirmationNumber, confirmationCounter, userId);
+        }   
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = "Error sending confirmations to ZDM";
