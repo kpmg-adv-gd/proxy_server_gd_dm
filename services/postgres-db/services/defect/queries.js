@@ -10,13 +10,14 @@ const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priori
                         WHERE id = $1`;
 
 const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description,
-                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description
+                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description, z_variance_type.description as variance_description
                     FROM z_defects
                     left join z_coding on z_defects.coding = z_coding.coding
                     left join z_priority on z_defects.priority = z_priority.priority
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    WHERE z_defects.id = ANY($1) and plant = $2
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    WHERE z_defects.id = ANY($1) and z_defects.plant = $2
                     ORDER BY z_defects.creation_date DESC`;
 
 const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, 
@@ -44,4 +45,6 @@ const updateStatusCloseDefect = `UPDATE z_defects SET system_status = $2 WHERE i
 
 const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND sfc = $1`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect };
+const getDefectsWBE = `SELECT DISTINCT wbe from z_defects WHERE wbe IS NOT NULL AND wbe != '' AND plant = $1 ORDER BY wbe`;
+
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE };

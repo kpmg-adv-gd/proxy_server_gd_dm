@@ -112,6 +112,11 @@ async function sendApproveDefectQN(dataForSap, defectId, userId, plant) {
     return response;
 }   
 
+async function getDefectsWBE(plant) {
+    const data = await postgresdbService.executeQuery(queryDefect.getDefectsWBE, [plant]);
+    return data;
+}   
+
 async function sendApproveQNToSap(dataForSap, plant, defectId) {
     var pathApproveQN = await getZSharedMemoryData(plant,"APPROVE_QN");
     if(pathApproveQN.length>0) pathApproveQN = pathApproveQN[0].value;
@@ -187,4 +192,4 @@ async function receiveStatusByQNCode(jsonDefects) {
     return result;
 }
 
-module.exports = { insertZDefect, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode };
+module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode };
