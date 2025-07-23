@@ -4,8 +4,12 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/getZOpConfirmationData", async (req, res) => {
         const { plant,project,wbe,userId,startMarkingDate,endMarkingDate } = req.body;
 
-        if (!plant || !project) {
-            return res.status(400).json({ error: "Missing required query parameter: Project" });
+        if (!plant) {
+            return res.status(400).json({ error: "Missing required query parameter: Plant" });
+        }
+
+        if (!project && !userId) {
+            return res.status(400).json({ error: "Filter by Project or User ID" });
         }
 
         try {
