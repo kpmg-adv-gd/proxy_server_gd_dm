@@ -122,7 +122,7 @@ async function sendApproveQNToSap(dataForSap, plant, defectId) {
     if(pathApproveQN.length>0) pathApproveQN = pathApproveQN[0].value;
     var url = hostname + pathApproveQN;
 
-    dataForSap.plant = await getErpPlantFromDMPlant(plant);
+    dataForSap.materialPlant = await getErpPlantFromDMPlant(plant);
 
     console.log("SAP body:"+JSON.stringify(dataForSap));
     let response = await callPost(url,dataForSap);
