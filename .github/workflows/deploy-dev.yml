@@ -1,0 +1,48 @@
+name: Deploy to Dev (Cloud Foundry)
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: CI-CD-DEV
+
+    steps:
+      - name: 🔄 Checkout codice
+        uses: actions/checkout@v4
+
+      - name: 🧪 Installa dipendenze e lancia i test
+        run: |
+          echo "📦 Installo dipendenze..."
+          npm install
+          echo "🧪 Eseguo test unitari..."
+          npm test
+
+      - name: Usa manifest per ambiente Dev
+        run: cp .staging/manifest-dev.yml manifest.yml
+
+
+      - name: 🔧 Installa cf CLI via dpkg
+        run: |
+          echo "📦 Scarico pacchetto Debian cf CLI..."
+          curl -L "https://packages.cloudfoundry.org/stable?release=debian64" -o cf.deb
+          sudo dpkg -i cf.deb
+          cf version
+
+      - name: 🔐 Login su Cloud Foundry
+        run: |
+          set -e
+          echo "🌐 API endpoint: ${{ vars.CF_API }}"
+          echo "👤 Login con utente: ${{ vars.CF_USERNAME }}"
+          cf login -a '${{ vars.CF_API }}' -u '${{ vars.CF_USERNAME }}' -p '${{ secrets.CF_PASSWORD }}' -o '${{ vars.CF_ORG }}' -s '${{ vars.CF_SPACE_DEV }}'
+
+      - name: 🚀 Deploy su ambiente Dev
+        run: |
+          set -e
+          echo "📂 Lista file in workspace:"
+          ls -la
+          echo "📦 Avvio cf push..."
+          cf push --var ENV=dev

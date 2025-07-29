@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "mocha \"unit-test/*.test.js\"",
     "build": "cf create-service xsuaa application proxy_server_gd_dm-uaa -c xs-security.json",
     "deploy": "cf push"
   },
