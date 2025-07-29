@@ -9,10 +9,10 @@ const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priori
                         coding = $9, replaced_in_assembly = $10, defect_note = $11, responsible = $12
                         WHERE id = $1`;
 
-const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description,
+const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description,
                     z_notification_type.description as notification_type_description, z_responsible.description as responsible_description, z_variance_type.description as variance_description
                     FROM z_defects
-                    left join z_coding on z_defects.coding = z_coding.coding
+                    left join z_coding on z_defects.coding = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
@@ -20,10 +20,10 @@ const selectZDefect = `SELECT z_defects.*, z_coding.coding_description, z_coding
                     WHERE z_defects.id = ANY($1) and z_defects.plant = $2
                     ORDER BY z_defects.creation_date DESC`;
 
-const selectDefectToApprove = `SELECT z_defects.*, z_coding.coding_description, z_coding.coding_group, z_priority.description as priority_description, 
+const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
                     z_notification_type.description as notification_type_description, z_responsible.description as responsible_description
                     FROM z_defects
-                    left join z_coding on z_defects.coding = z_coding.coding
+                    left join z_coding on z_defects.coding = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
@@ -45,6 +45,6 @@ const updateStatusCloseDefect = `UPDATE z_defects SET system_status = $2 WHERE i
 
 const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND sfc = $1`;
 
-const getDefectsWBE = `SELECT DISTINCT wbe from z_defects WHERE wbe IS NOT NULL AND wbe != '' AND plant = $1 ORDER BY wbe`;
+const getDefectsWBE = `SELECT DISTINCT z_defects.wbe from z_defects WHERE z_defects.wbe IS NOT NULL AND z_defects.wbe != '' AND z_defects.plant = $1 ORDER BY z_defects.wbe`;
 
 module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE };

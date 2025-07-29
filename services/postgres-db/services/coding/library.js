@@ -1,8 +1,8 @@
 const postgresdbService = require('../../connection');
 const queryCoding = require("./queries");
 
-async function getZCodingData(){
-    const data = await postgresdbService.executeQuery(queryCoding.getZCodingDataQuery, []);
+async function getZCodingData(plant){
+    const data = await postgresdbService.executeQuery(queryCoding.getZCodingDataQuery, [plant]);
     return data;
 }
 
