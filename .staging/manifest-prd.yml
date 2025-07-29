@@ -1,6 +1,6 @@
 ---
 applications:
-  - name: proxyServerGdDm
+  - name: proxyServerGdDm-prd
     path: .
     memory: 2000M
     instances: 32
