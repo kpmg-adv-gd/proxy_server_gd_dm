@@ -102,7 +102,7 @@ async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, chi
     await updateBomComponent(updatedBomBody);
 
     //Controllo che l'ordine non abbia più BOM Component mancanti ed in tal caso aggiorniamo il campo custom dell'ordine
-    const orderHasMancanti = hasComponentMancante(bomDetailBody[0].components);
+    const orderHasMancanti = hasComponentMancante(updatedBomBody[0].components);
     await updateCustomMancanteOrder(plant, orderNumber, orderHasMancanti);
 
     //Se l'ordine parent assembly allora faccio quasi la stessa procedura sull'ordine padre
@@ -118,7 +118,7 @@ async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, chi
             "MissingQuantity": [""]
         }], plant, true);
         await updateBomComponent(updatedParentBomBody);
-        const parentOrderHasMancanti = hasComponentMancante(parentBomDetailBody[0].components);
+        const parentOrderHasMancanti = hasComponentMancante(updatedParentBomBody[0].components);
         await updateCustomMancanteOrder(plant, parentOrder, parentOrderHasMancanti);
         if(!parentOrderData.bom) hasFoundParent=false;
         //Nel caso in cui mi arriva un gruppo dal servizio dei mancanti Parent Assembly, allora sarà anche nella tabella speical groupo e vado ad aggiornarlo come elaborato
@@ -152,7 +152,7 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
     if(bomDetailBody.length == 0) return;
     for(let obj of bomDetailBody[0]?.components){
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
-        var missingMaterial = foundMaterial?.Missing?.[0] == "X" ? "true" : "false";
+        var missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && foundMaterial ) {
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
                 let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
@@ -192,7 +192,7 @@ async function updateCustomMancanteOrder(plant,order,value){
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>
-            cv.attribute === "COMPONENTE MANCANTE" && (cv.value === "true" || cv.value === true)
+            cv.attribute === "COMPONENTE MANCANTE" && cv.value === "true"
         )
     ) ? "true":"false";
 }
