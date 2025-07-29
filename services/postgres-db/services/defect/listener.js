@@ -103,7 +103,7 @@ module.exports.listenerSetup = (app) => {
             let query = "SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, "
                         + "z_notification_type.description as notification_type_description, z_responsible.description as responsible_description "
                         + "FROM z_defects "
-                        + "left join z_coding on z_defects.coding = z_coding.id " 
+                        + "left join z_coding on z_defects.coding_id = z_coding.id " 
                         + "left join z_priority on z_defects.priority = z_priority.priority "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "left join z_responsible on z_defects.responsible = z_responsible.id "
