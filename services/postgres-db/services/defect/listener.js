@@ -89,7 +89,10 @@ module.exports.listenerSetup = (app) => {
         const { dataForSap, defectId, userId, plant } = req.body;
         try {
             const result = await postgresdbService.sendApproveDefectQN(dataForSap, defectId, userId, plant);
-            res.status(200).json(result);
+            if (result.OUTPUT.esito == "OK")
+                res.status(200).json(result);
+            else
+                res.status(400).json({error: result.OUTPUT.message || result.OUTPUT.error || "Error while approving defect"});
         } catch (error) {
             console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });

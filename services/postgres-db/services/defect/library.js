@@ -157,13 +157,13 @@ async function closeDefect(defectId, qnCode, plant) {
             if (response.OUTPUT.message) {
                 await postgresdbService.executeQuery(queryDefect.updateStatusCloseDefect, [defectId, response.OUTPUT.message]);
             }
-            return true;
+            return response;
         }else{
-            return false;
+            return response;
         }
     }else{
         await postgresdbService.executeQuery(queryDefect.closeDefect, [defectId]);
-        return true;
+        return "OK";
     }
 
 }
