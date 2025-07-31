@@ -128,7 +128,7 @@ module.exports.listenerSetup = (app) => {
              // Chiamata a SAP per chiudere il difetto
             var result = await closeDefect(id, qnCode, plant);  
 
-            if (result) {
+            if (result == "OK" || result.OUTPUT.outcome == "OK") {
                 // SAP ERP OK: chiudo il difetto in tabella z_defects e lancio chiamata a SAP per chiusura su Standard
                 var response = await callPost(url, params);
 
@@ -139,7 +139,7 @@ module.exports.listenerSetup = (app) => {
 
                 res.status(200).json(response);
             }else {
-                res.status(400).json({ error: "Error closed defect on SAP ERP" });
+                res.status(400).json({ error: result.OUTPUT.message || result.OUTPUT.error || "Error closing defect in SAP" });
             }
 
         } catch (error) {

@@ -146,8 +146,8 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
         await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
     } else {
         // Se la risposta non è OK, lancio un errore
-        let errorMessage = "Error sending confirmations to ZDM";
-        throw { status: 500, message: errorMessage };
+        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
+        throw { status: 400, message: errorMessage };
     }
 
    return response;
@@ -190,8 +190,8 @@ async function sendStornoUnproductive(plant, personalNumber, activityNumber, act
         }   
     } else {
         // Se la risposta non è OK, lancio un errore
-        let errorMessage = "Error sending confirmations to ZDM";
-        throw { status: 500, message: errorMessage };
+        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
+        throw { status: 400, message: errorMessage };
     }
 
    return response;

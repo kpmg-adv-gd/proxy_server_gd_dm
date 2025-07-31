@@ -89,7 +89,10 @@ module.exports.listenerSetup = (app) => {
         const { dataForSap, defectId, userId, plant } = req.body;
         try {
             const result = await postgresdbService.sendApproveDefectQN(dataForSap, defectId, userId, plant);
-            res.status(200).json(result);
+            if (result.OUTPUT.esito == "OK")
+                res.status(200).json(result);
+            else
+                res.status(400).json({error: result.OUTPUT.message || result.OUTPUT.error || "Error while approving defect"});
         } catch (error) {
             console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });
@@ -103,7 +106,7 @@ module.exports.listenerSetup = (app) => {
             let query = "SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, "
                         + "z_notification_type.description as notification_type_description, z_responsible.description as responsible_description "
                         + "FROM z_defects "
-                        + "left join z_coding on z_defects.coding = z_coding.id " 
+                        + "left join z_coding on z_defects.coding_id = z_coding.id " 
                         + "left join z_priority on z_defects.priority = z_priority.priority "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "left join z_responsible on z_defects.responsible = z_responsible.id "
