@@ -26,7 +26,7 @@ const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,zrc.planned_labor,zrc.
                                                 FROM z_op_confirmations zoc
                                                 LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number
                                                 LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order AND zol.plant = zrc.plant
-                                                LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
+                                                LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause AND zol.plant = zvt.plant
                                                 LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
                                                 `;
 

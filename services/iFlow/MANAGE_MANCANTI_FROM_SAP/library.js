@@ -10,8 +10,10 @@ const plantMappingCache = new Map();
 
 async function manageNewMancanti(jsonMancanti){
 
+    let projectsArray = jsonMancanti?.WBS.map( obj => obj?.Project);
+    await manageSpecialGroups(projectsArray);
+    
     await getOrderObjectsToElaborate(jsonMancanti);
-
 
     // PARALLELO    
     
@@ -35,8 +37,7 @@ async function manageNewMancanti(jsonMancanti){
     //     throw { status: 500, message: errorMessage};
     // }
 
-    let projectsArray = jsonMancanti?.WBS.map( obj => obj?.Project);
-    await manageSpecialGroups(projectsArray);
+
     plantMappingCache.clear();
 
 }
@@ -202,6 +203,9 @@ async function manageSpecialGroups(projectsArray) {
 
     // SEQUENZIALE
     for(let el of mancantiNotElabroated){
+        if(el.order == "REL_GR3"){
+            console.log("TROVATO IN SPECIAL GROUP REL_GR3. iL VALORE DI ELABORTED E'"+el.elaborated);
+        }
         try{
             await updateCustomFieldsOrderAndOrderComponent(el.plant, el.wbe, el.project, el.order, el.parent_order, [{
                 "Missing": [false],

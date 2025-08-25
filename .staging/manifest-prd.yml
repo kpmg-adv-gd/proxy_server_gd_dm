@@ -10,9 +10,9 @@ applications:
       - nodejs_buildpack
     env:
       {
-        CREDENTIALS: '{"GENERATE_TOKEN_URL":"https://sap-dmc-test-96ypknc8.authentication.eu20.hana.ondemand.com/oauth/token", "DM_API_URL":"https://api.test.eu20.dmc.cloud.sap", "client_id":"sb-e5ecf1c2-93b9-4e6f-90dd-9e33ff1509fe!b80807|dmc-services-quality!b330", "client_secret":"a469cd4d-ec45-4b07-8c95-7d43f514fadb$gkCTqnpNbowM4OE88vXl16LkNdDTO99_n4A4EyW49_Q=", "appKey":"f39d82a2f36f5ac8f8322a3d7c409d02a6f0e7d4b2181d09d243d70fe232c8cd"}',
-        WHITELIST: '["https://sap-dmc-test-96ypknc8.execution.eu20-quality.web.dmc.cloud.sap"]',
-        DB_CONNECTIONS: '[{"name":"MDO","type":"SAPHANACLOUD","connectionOption":{"serverNode":"31784b15-4b7e-4a20-99e0-5477f295aafb.hna0.prod-eu20.hanacloud.ondemand.com:443","UID":"13F402E5039C4C85AB2FDCFD4DBB2D25_AXEI9CNNJL5VP724QXQGEW2VI_RT","PWD":"Qd3opoUnAIyxZxthWYd0_CXrLne3OeyXIuL.ZZ-x42kIS_4HwDfREKSEN86g_0OukmtM4QHUr0ML8UcOnDFb-yJDJEjxtPM-Dj8ELEQA9MXYrYI2qLVob5m2t3wlr6ok","sslValidateCertificate":"false"}}]',
-        POSTGRES_DB_CONNECTION: '{"DB_NAME":"mYYWwlzpzhgb","DB_HOST":"postgres-61e64e5d-a776-4e26-9799-54f9e911f9b4.postgres.database.azure.com","DB_PORT":"5432","DB_USER":"45f51836e8df","DB_PASSWORD":"65191a344122f5d12b7107bcfcf3a"}',
-        CPI_CRED: '{"USERNAME":"CPI_TEC_USER", "PASSWORD":"TEST1234"}'
+        CREDENTIALS: '{"GENERATE_TOKEN_URL":"https://sap-dmc-prod-gm0mzuut.authentication.eu20.hana.ondemand.com", "DM_API_URL":"https://api.eu20.dmc.cloud.sap", "client_id":"sb-9bcd7980-5a17-46c0-97a3-0a5cabcf13d3!b115724|dmc-services!b330", "client_secret":"496ac109-6d22-49cb-806c-6ccba010c859$JdsGMjMZ1F7M-IQtPOGelCd8NlYqped_M0BlJXOfmoM=", "appKey":"f39d82a2f36f5ac8f8322a3d7c409d02a6f0e7d4b2181d09d243d70fe232c8cd"}',
+        WHITELIST: '["https://sap-dmc-prod-gm0mzuut.execution.eu20-prod.web.dmc.cloud.sap"]',
+        DB_CONNECTIONS: '[{"name":"MDO","type":"SAPHANACLOUD","connectionOption":{"serverNode":"d5cbafbf-f74b-4666-9a37-87d967a72347.hna1.prod-eu20.hanacloud.ondemand.com:443","UID":"D94A237F1D474E67ACCE0D970DB5D4F6","PWD":"Lw4Qh64ch0lmJmq5jHihtnWzL5DfizeqxEO7v1A-EvakWws8GVH2SH7l38BcNHUmVviynjEsHylJ4DOnKOXcO2jO6a_4TqftYqlEoeQ5riFxPHI4E3NZrHCvkotKX5hI","sslValidateCertificate":"false"}}]',
+        POSTGRES_DB_CONNECTION: '{"DB_NAME":"EGRvxIWjzFVD","DB_HOST":"postgres-9805f001-d537-41ba-8eb2-7e0bda0c91ad.postgres.database.azure.com","DB_PORT":"5432","DB_USER":"33e12f112b2a","DB_PASSWORD":"4aeb517ef2c88015ea2a8fba"}',
+        CPI_CRED: '{"USERNAME":"CPI_TEC_USER", "PASSWORD":"PROD1234!"}'
       }

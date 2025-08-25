@@ -8,12 +8,12 @@ module.exports.listenerSetup = (app) => {
 
         try {
             
-            const { plant } = req.body;
+            const { plant, userId } = req.body;
             // Verifica che i parametri richiesti siano presenti
             if (!plant) {
                 return res.status(400).json({ error: "Missing required parameter: plant" });
             }
-            var responseFilterData = await getFilterPOD(plant);
+            var responseFilterData = await getFilterPOD(plant,userId);
             // Restituisci i getFilterPODdati della risposta
             res.status(200).json(responseFilterData);
         } catch (error) {

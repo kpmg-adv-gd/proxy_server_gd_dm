@@ -3,16 +3,16 @@ const { callGet } = require("../../../utility/CommonCallApi");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function getFilterPOD(plant){
+async function getFilterPOD(plant,userId){
 
     try{
         // Definisci i dettagli delle richieste come oggetti che simulano `req`
         const requests = [
-            { key: "WorkCenters", path: "/mdo/WORKCENTER", query: { $apply: "filter(PLANT eq '"+plant+"' and WORKCENTER ne 'DUMMY_WORKCENTER')/groupby((WORKCENTER, DESCRIPTION))"}, method: "GET" },
+            //{ key: "WorkCenters", path: "/mdo/WORKCENTER", query: { $apply: "filter(PLANT eq '"+plant+"' and WORKCENTER ne 'DUMMY_WORKCENTER')/groupby((WORKCENTER, DESCRIPTION))"}, method: "GET" },
             { key: "WBS", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'WBE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Project", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "ParentMaterial", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'MATERIALE PADRE' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
-            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
+            { key: "MachineSection", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '"+plant+"')/groupby((DATA_FIELD_VALUE))"}, method: "GET" },
             { key: "Materials",  path: "/mdo/SFC", query: { $apply: "filter(PLANT eq '"+plant+"')/groupby((MATERIAL))"}, method: "GET" },
         ];
 
@@ -56,6 +56,11 @@ async function getFilterPOD(plant){
             }
             return acc;
         }, {});
+
+        var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+        let responseGetUser = await callGet(url);
+        let workCenters = responseGetUser?.workCenters || [];
+        consolidatedData.WorkCenters = workCenters;
         // Restituisci il dato consolidato
         return consolidatedData;
     } catch(e){
