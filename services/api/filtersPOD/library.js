@@ -60,6 +60,10 @@ async function getFilterPOD(plant,userId){
         var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
         let responseGetUser = await callGet(url);
         let workCenters = responseGetUser?.workCenters || [];
+        // Ordinamento
+        workCenters.sort((a, b) => {
+            return a.description.localeCompare(b.description);
+        });
         consolidatedData.WorkCenters = workCenters;
         // Restituisci il dato consolidato
         return consolidatedData;
