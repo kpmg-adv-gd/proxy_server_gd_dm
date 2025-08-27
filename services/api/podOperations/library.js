@@ -55,6 +55,17 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 let macrofaseB = macrofaseBField?.value || "MF0";
                 return macrofaseA.localeCompare(macrofaseB);
             });
+        } else if(orderType=="AGGR"){
+            enrichedResponseData.sort((objA, objB) => {
+                let customValuesA = objA?.routingOperation?.customValues;
+                let customValuesB = objB?.routingOperation?.customValues;
+                let orderFieldA = customValuesA.find(obj => obj.attribute == "ORDER");
+                let orderFieldB = customValuesB.find(obj => obj.attribute == "ORDER");
+                let orderValueA = orderFieldA?.value || "";
+                let orderValueB = orderFieldB?.value || "";
+                return orderValueA.localeCompare(orderValueB);
+            });
+
         }
         return enrichedResponseData;
 
