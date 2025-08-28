@@ -8,6 +8,7 @@ module.exports.listenerSetup = (app) => {
             const macroPhase = await postgresdbService.getMacroPhase(plant);
             res.status(200).json(macroPhase);
         } catch (error) {
+            console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });
         }
     })  

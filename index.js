@@ -46,6 +46,7 @@ const responsibleDbService = require("./services/postgres-db/services/responsibl
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 const defectDbService = require("./services/postgres-db/services/defect/listener");
 const unproductiveDbService = require("./services/postgres-db/services/unproductive/listener");
+const macrophaseDbService = require("./services/postgres-db/services/macrophase/listener");
 
 
 const app = express();
@@ -111,6 +112,7 @@ responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
 defectDbService.listenerSetup(app);
 unproductiveDbService.listenerSetup(app);
+macrophaseDbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {

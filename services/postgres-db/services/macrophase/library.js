@@ -1,8 +1,8 @@
 const postgresdbService = require('../../connection');
-const queryVariance = require("./queries");
+const queryMacroPhase = require("./queries");
 
 async function getMacroPhase(plant) {
-    const data = await postgresdbService.executeQuery(queryVariance.getMacroPhaseQuery(plant));
+    const data = await postgresdbService.executeQuery(queryMacroPhase.queryMacroPhaseQuery, [plant]);
     return data;
 }
 
