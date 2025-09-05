@@ -30,11 +30,13 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
 
     const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
     const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+    const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
+    const hasModificheValue = (hasModificheField?.value || "");
 
     const isHighlighted = order ? order === childOrder : false;
 
     var progressStatusOrder=100;
-    if(progressStatus.totalPlannedTime > 0){
+    if(progressStatus.totalPlannedTime){
         progressStatusOrder = Math.round((progressStatus.totalCompletedTime / progressStatus.totalPlannedTime) * 100);
     }
 
@@ -43,7 +45,9 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
         SFC: sfc,
         Order: childOrder,
         OrderType: "MACH",
+        ParentAssembly: false,
         MissingParts: hasMancantiValue,
+        EngChanges: hasModificheValue,
         ProgressStatus: progressStatusOrder,
         isHighlighted,
         Children: children
@@ -66,7 +70,9 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                         SFC: "",
                         Order: comp.child_order,
                         OrderType: "",
+                        ParentAssembly: false,
                         MissingParts: "",
+                        EngChanges: "",
                         ProgressStatus: "",
                         isHighlighted:"",
                         Children: []
@@ -75,9 +81,11 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
 
                 const sfc = orderDetail?.sfcs[0] || "";
 
+                const parentAssemblyField = orderDetail?.customValues.find(obj => obj.attribute === "PARENT_ASSEMBLY");
+                const isParentAssembly = parentAssemblyField?.value == "X" || parentAssemblyField?.value == "true";
                 // Parallelizziamo ProgressStatus e children
                 const [ progressStatus, children] = await Promise.all([
-                    getProgressStatusOrder(plant, comp.child_order),
+                    getProgressStatusOrder(plant, comp.child_order,isParentAssembly),
                     getChildrenOrder(plant, project, comp.child_order, highlightOrder)
                 ]);
 
@@ -85,10 +93,12 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                 const orderTypeValue = orderTypeField?.value || "";
                 const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
                 const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+                const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
+                const hasModificheValue = (hasModificheField?.value || "");
 
                 const isHighlighted = highlightOrder ? highlightOrder === comp.child_order : false;
-                var progressStatusOrder=100;
-                if(progressStatus.totalPlannedTime > 0){
+                var progressStatusOrder=0;
+                if(progressStatus && progressStatus.totalPlannedTime && progressStatus.totalPlannedTime > 0){
                     progressStatusOrder = Math.round((progressStatus.totalCompletedTime / progressStatus.totalPlannedTime) * 100);
                 }
                 
@@ -97,7 +107,9 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                     SFC: sfc,
                     Order: comp.child_order || "",
                     OrderType: orderTypeValue,
+                    ParentAssembly: isParentAssembly,
                     MissingParts: hasMancantiValue,
+                    EngChanges: hasModificheValue,
                     ProgressStatus: progressStatusOrder,
                     isHighlighted,
                     Children: children
@@ -125,7 +137,9 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                 SFC: "",
                 Order: "",
                 OrderType: "COMP",
+                ParentAssembly: false,
                 MissingParts: isMancantiValue,
+                EngChanges: "",
                 isHighlighted: false,
                 ProgressStatus: null,
                 Children: []
@@ -220,8 +234,14 @@ async function getFilterSinotticoBom(plant){
 
 }
 
-async function getProgressStatusOrder(plant, order) {
+async function getProgressStatusOrder(plant, order, isParentAssembly) {
   try {
+    if(isParentAssembly){
+        return {
+            totalPlannedTime:0,
+            totalCompletedTime:0
+        }; 
+    }
     const buildRequest = (key, path, filter, aggregateField, alias) => ({
       key,
       path,

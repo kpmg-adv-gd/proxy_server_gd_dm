@@ -1,5 +1,6 @@
 const { callGet, callPatch } = require("../../../utility/CommonCallApi");
 const { insertZModifiche } = require("../../postgres-db/services/modifiche/library");
+const { getZOrdersLinkByPlantProjectOrderType } = require("../../postgres-db/services/orders_link/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -50,12 +51,26 @@ async function manageModifica(objModifica){
     var plant = await getPlantFromERPPlant(objModifica?.Plant?.[0]);
     var order = objModifica?.Order?.[0] || "";
     var childOrder = objModifica?.ChildOrder?.[0] || "";
+    var progEco = objModifica?.ProgEco?.[0] || "";
+    var processId = objModifica?.ProcessId?.[0] || "";
+    var wbe = objModifica?.Wbe?.[0] || "";
+    var modificaType = objModifica?.Type?.[0] || "";
+    var material = objModifica?.Material?.[0] || "";
+    var childMaterial = objModifica?.ChildMaterial?.[0] || "";
+    var qty = objModifica?.Qty?.[0] || "";
     var fluxType = objModifica?.FluxType?.[0] || "";
-    let modificaType = objModifica?.Type?.[0] || "";
-    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
-    var { bom, bomType, material, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
+    var status = objModifica?.Status?.[0] || "";
+    var isCO2 = await isOrderCO2(plant,order);
 
-    await insertZModifiche(objModifica?.ProgEco?.[0], objModifica?.ProcessId?.[0], plant, objModifica?.Wbe?.[0], objModifica?.Type?.[0], sfc, podOrder, objModifica?.Material?.[0], childOrder, objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], objModifica?.Status?.[0], false)
+    if(isCO2){
+        await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2);
+        return;
+    }
+
+    var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
+    var { bom, bomType, materialOrder, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
+
+    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2)
 
     if(!modificaValue){
         modificaValue = modificaType;
@@ -66,7 +81,7 @@ async function manageModifica(objModifica){
     await updateCustomFieldModifiche(plant,podOrder,modificaValue);
     if(modificaType=="MT" || modificaType=="MA"){
         let bomComponentResponse = await getBomComponents(plant,order);
-        await updateBomComponent(bomComponentResponse,plant, order,material,objModifica?.ChildMaterial?.[0], objModifica?.Qty?.[0], objModifica?.FluxType?.[0], modificaType,parentOrderValue,isParentAssembly);
+        await updateBomComponent(bomComponentResponse,plant,order,materialOrder,childMaterial,qty,fluxType,modificaType,parentOrderValue,isParentAssembly);
     }
 
     //Vado ad aggionrare il campo custom delle modifiche (ECO_TYPE) dell'ordine eliminato dalla bom se la modifica assieme con flux type D
@@ -77,17 +92,24 @@ async function manageModifica(objModifica){
 }
 
 async function getOrderFromApi(plant, order) {
-    const cacheKey = `${plant}_${order}`;
+    // const cacheKey = `${plant}_${order}`;
 
-    if (orderCache.has(cacheKey)) {
-        return orderCache.get(cacheKey);
-    }
+    // if (orderCache.has(cacheKey)) {
+    //     return orderCache.get(cacheKey);
+    // }
 
     const url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     const orderResponse = await callGet(url);
 
-    orderCache.set(cacheKey, orderResponse);
+    //orderCache.set(cacheKey, orderResponse);
     return orderResponse;
+}
+
+async function isOrderCO2(plant,order){
+    const orderResponse = await getOrderFromApi(plant, order);
+    let isCO2Field = orderResponse?.customValues.find(obj => obj.attribute == "CO2");
+    let isCO2 = isCO2Field && isCO2Field.value == "X";
+    return isCO2;
 }
 
 async function getPodOrder(plant, order){
@@ -204,6 +226,7 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
         }
     }
     var urlUpdateBom = hostname + "/bom/v1/boms";
+    console.log("NEw Bom Component Update modifiche con il seguente body: "+bomComponentResponse);
     await callPatch(urlUpdateBom,bomComponentResponse);
 }
 
@@ -234,6 +257,68 @@ function updateBodyBomComponentMaterial(plant,bomDetailBody,material,value){
     }
     return bomDetailBody;
 }
+
+async function manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2) {
+    const orderResponse = await getOrderFromApi(plant, order);
+    const executionStatus = orderResponse?.executionStatus;
+    const baseSfc = orderResponse?.sfcs?.[0] || "";
+    const materialOrder = orderResponse?.material?.material || "";
+    const project = orderResponse?.customValues.find(obj => obj.attribute === "COMMESSA")?.value || "";
+
+    if (executionStatus === "COMPLETED") {
+        const linkedOrders = await getZOrdersLinkByPlantProjectOrderType(plant, project, "MACH");
+
+        for (const el of linkedOrders) {
+            const orderMach = el.child_order;
+            const childOrderResponse = await getOrderFromApi(plant, orderMach);
+            const sfc = childOrderResponse?.sfcs?.[0] || "";
+
+            let modificaValue = childOrderResponse?.customValues?.find(obj => obj.attribute === "ECO_TYPE")?.value || "";
+
+            // Insert modifica
+            await insertZModifiche(
+                progEco, processId, plant, wbe, modificaType, sfc,
+                order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2
+            );
+
+            // Update modifica value
+            if (!modificaValue) {
+                modificaValue = modificaType;
+            } else if (!modificaValue.split(',').includes(modificaType)) {
+                modificaValue += "," + modificaType;
+            }
+
+            await updateCustomFieldModifiche(plant, orderMach, modificaValue);
+        }
+
+    } else {
+        // SFC e modificaValue dell’ordine principale
+        let modificaValue = orderResponse?.customValues?.find(obj => obj.attribute === "ECO_TYPE")?.value || "";
+
+        // Insert modifica
+        await insertZModifiche(
+            progEco, processId, plant, wbe, modificaType, baseSfc,
+            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2
+        );
+
+        // Update modifica value
+        if (!modificaValue) {
+            modificaValue = modificaType;
+        } else if (!modificaValue.split(',').includes(modificaType)) {
+            modificaValue += "," + modificaType;
+        }
+
+        await updateCustomFieldModifiche(plant, order, modificaValue);
+    }
+
+    // Gestione BOM se necessario
+    if (modificaType === "MT" || modificaType === "MA") {
+        const bomComponentResponse = await getBomComponents(plant, order);
+        await updateBomComponent(bomComponentResponse, plant, order, materialOrder, childMaterial, qty, fluxType, modificaType, "", false);
+    }
+}
+
+
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>

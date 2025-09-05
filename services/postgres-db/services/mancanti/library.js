@@ -26,16 +26,16 @@ async function upsertZReportMancanti(plant,project,wbs_element,order,material,mi
 async function getZMancantiReportData(plant,project,wbe,typeMancante,startDeliveryDate,endDeliveryDate){
     let whereCondition = "";
     if(!!project){
-        whereCondition += " AND project LIKE '%"+project+"%'";
+        whereCondition += " AND mr.project LIKE '%"+project+"%'";
     } 
     if(!!wbe){
-        whereCondition += " AND wbs_element LIKE '%"+wbe+"%'";
+        whereCondition += " AND mr.wbs_element LIKE '%"+wbe+"%'";
     }
     if(!!typeMancante){
-        whereCondition += " AND type_mancante LIKE '%"+typeMancante+"%'";
+        whereCondition += " AND mr.type_mancante LIKE '%"+typeMancante+"%'";
     }
     if(!!startDeliveryDate && endDeliveryDate){
-        whereCondition += " AND TO_DATE(delivery_date, 'DD/MM/YYYY') BETWEEN TO_DATE('"+startDeliveryDate+"', 'DD/MM/YYYY') AND TO_DATE('"+endDeliveryDate+"', 'DD/MM/YYYY')";
+        whereCondition += " AND TO_DATE(mr.delivery_date, 'DD/MM/YYYY') BETWEEN TO_DATE('"+startDeliveryDate+"', 'DD/MM/YYYY') AND TO_DATE('"+endDeliveryDate+"', 'DD/MM/YYYY')";
     }
     const fullQuery = queryLoipro.getZMancantiReportDataQuery+whereCondition;
     const data = await postgresdbService.executeQuery(fullQuery, [plant]);

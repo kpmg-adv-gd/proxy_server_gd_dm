@@ -6,6 +6,11 @@ async function insertZOrdersLink(plant,project,parentOrder,parentMaterial,order,
     return data;
 }
 
+async function getZOrdersLinkByPlantProjectOrderType(plant,project,orderType){
+    const data = await postgresdbService.executeQuery(queryOrdersLink.getZOrdersLinkByPlantProjectOrderTypeQuery, [plant,project,orderType]);
+    return data;
+}
+
 async function getZOrdersLinkMachByPlantProjectOrderTypeMachineSection(plant,project,orderType,machineMaterial){
     const data = await postgresdbService.executeQuery(queryOrdersLink.getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, [plant,project,orderType,machineMaterial]);
     return data;
@@ -28,4 +33,4 @@ async function getMachOrderByComponentOrder(plant,project,orderComponent){
 }
 
 
-module.exports = { insertZOrdersLink, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder }
+module.exports = { insertZOrdersLink, getZOrdersLinkByPlantProjectOrderType, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder }

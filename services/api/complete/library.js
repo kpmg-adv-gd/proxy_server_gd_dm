@@ -6,37 +6,47 @@ const hostname = credentials.DM_API_URL;
 
 async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operation,resource,sfc,checkModificheLastOperation,valueModifica,checkMancantiLastOperation){
     if(checkMancantiLastOperation) await hasMancanti(plant,order);
-    if(checkModificheLastOperation) await modificheHasDone(plant,sfc,order,valueModifica);
+    if(checkModificheLastOperation) await modificheHasDone(plant,project,sfc,order,valueModifica);
     let responseCompleteSfc = await completeSfc(plant,operation,resource,sfc);
     let statusCode = await getSfcStatus(plant,sfc);
     if(statusCode==="405") await manageMancantiCompleteSfc(plant,project,order,orderMaterial);
     return responseCompleteSfc;
 }
 
-async function modificheHasDone(plant,sfc,order,valueModifica){
-    let responseHasModificheToDo = await getModificheToDo(plant,sfc,order);
+async function modificheHasDone(plant,project,sfc,order,valueModifica){
+    let responseHasModificheToDo = await getModificheToDo(plant,sfc);
     if(responseHasModificheToDo.length > 0 ){
-        await addModificheToParent(plant,order,valueModifica,sfc,order);
+        await addModificheToParent(plant,project,order,valueModifica,sfc,order);
     }
 
 }
 
-async function addModificheToParent(plant,order,valueModifica,sfcCompleted,orderCompleted){
-    const { parentOrder } = await getBomByOrderAndPlant(plant,order);
+async function addModificheToParent(plant,project,order,valueModifica,sfcCompleted,orderCompleted){
+    const { parentOrder, isCO2 } = await getBomByOrderAndPlant(plant,order);
 
     if(!parentOrder){
         let errorMessage = "Impossibile concludere l'SFC, sono presenti modifiche non applicate!";
         throw { status: 500, message: errorMessage};
     }
-    const { parentSfc } = await getBomByOrderAndPlant(plant,parentOrder);
+
+    const { parentSfc, ecoType } = await getBomByOrderAndPlant(plant,parentOrder);
     const sfcStatusCode = await getSfcStatus(plant,parentSfc);
     
     if(sfcStatusCode!=="405"){ //Stato non Done (compleato)
-        await updateZModifyByOrder(plant,parentSfc,parentOrder,sfcCompleted,orderCompleted);
-        await updateCustomModificaOrder(plant,parentOrder,valueModifica);
+        await updateZModifyByOrder(plant,parentSfc,sfcCompleted);
+        await updateCustomModificaOrder(plant,parentOrder,ecoType,valueModifica);
     } else {
-        await addModificheToParent(plant,parentOrder,valueModifica,sfcCompleted,orderCompleted);
+        await addModificheToParent(plant,project,parentOrder,valueModifica,sfcCompleted,orderCompleted);
     }
+    //Se CO2 le modifiche non ha senso mandarle agli ordini macchina in quanto i gruppi CO2 non vengono montati in macchina => errore
+    // if(isCO2){
+    //     const linkedOrders = await getZOrdersLinkByPlantProjectOrderType(plant, project, "MACH");
+    //     for (const el of linkedOrders) {
+    //         const { parentSfc } = await getBomByOrderAndPlant(plant,el.child_order);
+    //         await updateZModifyCO2ByOrder(plant,parentSfc,sfcCompleted);
+    //         await updateCustomModificaOrder(plant,el.child_order,valueModifica);
+    //     }
+    // } else{
 
 }
 
@@ -82,10 +92,13 @@ async function getBomByOrderAndPlant(plant,order){
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
     let isParentAssembly = customValuesOrder.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
+    let isCO2 = customValuesOrder.some(obj => obj.attribute == "CO2" && (obj.value=="true" || obj.value=="X") );
     let parentOrderField = customValuesOrder.find(obj => obj.attribute == "ORDINE PADRE");
     let parentOrderValue = parentOrderField?.value || "";
+    let ecoTypeField = customValuesOrder.find(obj => obj.attribute == "ECO_TYPE");
+    let ecoType = ecoTypeField?.value || "";
     let sfc = orderResponse?.sfcs[0];
-    return { bom: orderResponse?.bom?.bom, type: orderResponse?.bom?.type, isParentAssembly: isParentAssembly, parentSfc: sfc, parentOrder: parentOrderValue };
+    return { bom: orderResponse?.bom?.bom, type: orderResponse?.bom?.type, isParentAssembly: isParentAssembly, parentSfc: sfc, parentOrder: parentOrderValue, ecoType: ecoType, isCO2: isCO2 };
 }
 
 async function getBomDetail(plant,bom,type){
@@ -148,11 +161,18 @@ async function updateCustomMancanteOrder(plant,order,value){
     let response = await callPatch(url,body);
 }
 
-async function updateCustomModificaOrder(plant,order,value){
+async function updateCustomModificaOrder(plant,order,ecoType,value){
+    //Se l'ordine ha già una modifica la concateno con la mia nuova
+    if (!ecoType) {
+        ecoType = value;
+    } else if (!ecoType.split(',').includes(value)) {
+        ecoType += "," + value;
+    }
+
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
         "attribute":"ECO_TYPE",
-        "value": value
+        "value": ecoType
     };
     let body={
         "plant":plant,

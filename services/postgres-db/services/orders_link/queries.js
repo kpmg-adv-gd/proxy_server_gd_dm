@@ -2,6 +2,9 @@ const insertZOrdersLinkQuery = `INSERT INTO z_orders_link(plant,project,parent_o
                                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                                 ON CONFLICT (plant,project,child_order) DO NOTHING;`;
 
+const getZOrdersLinkByPlantProjectOrderTypeQuery = `SELECT *
+                                                        FROM z_orders_link
+                                                        WHERE plant = $1 AND project = $2 AND child_order_type = $3`;
 const getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery = `SELECT *
                                                                 FROM z_orders_link
                                                                 WHERE plant = $1 AND project = $2 AND child_order_type = $3 AND child_material = $4 AND (parent_order IS NULL OR parent_order = '')`;
@@ -37,4 +40,4 @@ SELECT *
 FROM order_hierarchy
 WHERE child_order_type='MACH' `;
 
-module.exports = { insertZOrdersLinkQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getMachOrderByComponentOrderQuery};
+module.exports = { insertZOrdersLinkQuery, getZOrdersLinkByPlantProjectOrderTypeQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getMachOrderByComponentOrderQuery};
