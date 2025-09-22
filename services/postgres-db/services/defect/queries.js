@@ -10,7 +10,9 @@ const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priori
                         WHERE id = $1`;
 
 const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description,
-                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description, z_variance_type.description as variance_description
+                    z_notification_type.description as notification_type_description, 
+                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description,
+                    z_variance_type.description as variance_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority
@@ -21,7 +23,8 @@ const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.co
                     ORDER BY z_defects.creation_date DESC`;
 
 const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
-                    z_notification_type.description as notification_type_description, z_responsible.description as responsible_description
+                    z_notification_type.description as notification_type_description, 
+                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority

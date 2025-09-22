@@ -1,8 +1,8 @@
 const postgresdbService = require('../../connection');
 const queryResponsible = require("./queries");
 
-async function getZResponsibleData(){
-    const data = await postgresdbService.executeQuery(queryResponsible.getZResponsibleDataQuery, []);
+async function getZResponsibleData(plant) {
+    const data = await postgresdbService.executeQuery(queryResponsible.getZResponsibleDataQuery, [plant]);
     return data;
 }
 
