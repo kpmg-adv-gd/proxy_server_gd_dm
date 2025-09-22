@@ -3,7 +3,7 @@ applications:
   - name: proxyServerGdDm
     path: .
     memory: 512M
-    instances: 3
+    instances: 1
     timeout: 300 # timeout in secondi (5 minuti)
     disk_quota: 512M
     buildpacks:

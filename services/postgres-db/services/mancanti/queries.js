@@ -114,7 +114,7 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                 ) 
                                 select mr.* ,zol.parent_material,TO_DATE(mr.delivery_date, 'DD/MM/YYYY') AS delivery_date_sort
                                 from MANCANTI_REPORT mr
-                                left join z_orders_link zol ON zol.child_order = mr."order"
+                                left join z_orders_link zol ON zol.child_order = mr."order" and zol.plant =  $1
                                 WHERE mr.plant = $1 `;
 
 const getMancantiInfoDataQuery = `select plant,project,"order",count(*) as tot_mancanti
