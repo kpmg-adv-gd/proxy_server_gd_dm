@@ -15,7 +15,8 @@ async function manageRouting(plantValue,order,routingRef,bomRef,customValues){
     }
 
     if(orderTypeValue=="MACH"){
-        await doUpdateMachRouting(responseGetRouting,routingSteps);
+        // await doUpdateMachRouting(responseGetRouting,routingSteps); //per gli ordini macchina creavamo il routing con 2 simultaneous all'interno
+        await doUpdateNoMachRouting(responseGetRouting,routingSteps);
     } else{
         await doUpdateNoMachRouting(responseGetRouting,routingSteps);
     }

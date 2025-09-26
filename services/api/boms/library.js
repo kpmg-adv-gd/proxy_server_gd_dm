@@ -12,12 +12,14 @@ async function getBomMultilivelloTreeTableData(order,plant){
         let materialComponents = await Promise.all(
                 bomComponents.map(async (comp) => {
                 let children = await getChildMaterials(responseBom.customValueCommessa,order,plant, comp.material.material);
+                let materialDescription = comp?.customValues.find(obj => obj.attribute === "DESCRIZIONE COMPONENTE")?.value || "";
                 let mancanteField = comp?.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE");
                 let missingParts = mancanteField?.value == "true" ? "X" : "";
                 let fluxTypeField = comp?.customValues.find(obj => obj.attribute == "FLUX_TYPE");
                 let fluxType = fluxTypeField?.value || "";
                 return {
                     Material: comp.material.material,
+                    MaterialDescription: materialDescription,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
                     MissingParts: missingParts,
@@ -27,7 +29,7 @@ async function getBomMultilivelloTreeTableData(order,plant){
             })
         );
         //Ordino i figli di primo livello con i mancanti prima
-        return { Material: responseBom.material, Children: materialComponents.sort((a, b) => (b.MissingParts === "X" ? 1 : 0) - (a.MissingParts === "X" ? 1 : 0)) } ;
+        return { Material: responseBom.material, MaterialDescription: responseBom.materialDescription, Children: materialComponents.sort((a, b) => (b.MissingParts === "X" ? 1 : 0) - (a.MissingParts === "X" ? 1 : 0)) } ;
     } catch(error){
         let errorMessage = error.message || "Error service getBomMultilivelloTreeTableData";
         throw { status: 500, message: errorMessage};
@@ -50,6 +52,7 @@ async function getChildMaterials(customValueCommessa,order, plant, parentMateria
             // Mappiamo i componenti correttamente
             return bomComponents.map(comp => ({
                 Material: comp.material.material,
+                MaterialDescription: comp?.customValues.find(obj => obj.attribute === "DESCRIZIONE COMPONENTE")?.value || "",
                 Quantity: comp.quantity,
                 Sequence: comp.sequence,
                 MissingParts: comp?.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE").value == "true" ? "X" : "",
@@ -71,9 +74,13 @@ async function getBom(order,plant){
         var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
         var bomResponse = await callGet(url);
         var customCommessa = bomResponse.customValues.find(obj => obj.attribute == "COMMESSA");
+        var orderType = bomResponse.customValues.find(obj => obj.attribute == "ORDER_TYPE").value;
+        var materialDescription = "";
+        if(orderType !== "AGGR") materialDescription = bomResponse.material.description;
+        
         const customValueCommessa = customCommessa && customCommessa.value || "";
 
-        return { bom: bomResponse.bom.bom, bomType: bomResponse.bom.type, material: bomResponse.material.material, customValueCommessa }
+        return { bom: bomResponse.bom.bom, bomType: bomResponse.bom.type, material: bomResponse.material.material, materialDescription: materialDescription, customValueCommessa }
     } catch(error){
         let errorMessage = error.message || "Error service getBom";
         throw { status: 500, message: errorMessage};
