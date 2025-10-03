@@ -1,6 +1,6 @@
 const postgresdbService = require('../../connection');
 const queryLoipro = require("./queries");
-const { getBomInfoByOrder } = require('../../../../utility/CommonFunction');
+const { getBomInfoByOrder, getMaterial } = require('../../../../utility/CommonFunction');
 
 async function updateZSpecialGroups(plant,project,wbe,order,isElaborated){
     const data = await postgresdbService.executeQuery(queryLoipro.updateZSpecialGroupsQuery, [isElaborated,plant, project, wbe, order]);
@@ -39,8 +39,18 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     }
     const fullQuery = queryLoipro.getZMancantiReportDataQuery+whereCondition;
     const data = await postgresdbService.executeQuery(fullQuery, [plant]);
+    data = await enrichedWithComponentMaterialDescription(plant,data);
     return data;
 }
+
+async function getMancantiInfoData(plant,data){
+    for(const el of data){
+        let responseMaterial = await getMaterial(plant,el.missing_material);
+        el.missingMaterialDescription = responseMaterial?.[0]?.description || "";
+    }
+    return data;
+}
+
 
 async function getMancantiInfoData(plant,project,orderGroup){
     const responseQuery = await postgresdbService.executeQuery(queryLoipro.getMancantiInfoDataQuery, [plant,project,orderGroup]);

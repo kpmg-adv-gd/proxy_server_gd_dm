@@ -20,4 +20,10 @@ async function getBomInfoByBom(plant,bom,bomType){
     return bomResponse;
 }
 
-module.exports = { getBomInfoByOrder, getOrderInfoByOrder, getBomInfoByBom }
+async function getMaterial(plant,material){
+    var url = hostname + "/material/v1/materials?plant=" + plant + "&material=" + material;
+    var materialResponse = await callGet(url);
+    return materialResponse;
+}
+
+module.exports = { getBomInfoByOrder, getOrderInfoByOrder, getBomInfoByBom, getMaterial }
