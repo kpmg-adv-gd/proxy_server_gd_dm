@@ -43,7 +43,7 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     return data;
 }
 
-async function getMancantiInfoData(plant,data){
+async function enrichedWithComponentMaterialDescription(plant,data){
     for(const el of data){
         let responseMaterial = await getMaterial(plant,el.missing_material);
         el.missingMaterialDescription = responseMaterial?.[0]?.description || "";
