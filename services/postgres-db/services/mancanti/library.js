@@ -38,13 +38,13 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
         whereCondition += " AND TO_DATE(mr.delivery_date, 'DD/MM/YYYY') BETWEEN TO_DATE('"+startDeliveryDate+"', 'DD/MM/YYYY') AND TO_DATE('"+endDeliveryDate+"', 'DD/MM/YYYY')";
     }
     const fullQuery = queryLoipro.getZMancantiReportDataQuery+whereCondition;
-    const data = await postgresdbService.executeQuery(fullQuery, [plant]);
+    var data = await postgresdbService.executeQuery(fullQuery, [plant]);
     data = await enrichedWithComponentMaterialDescription(plant,data);
     return data;
 }
 
 async function enrichedWithComponentMaterialDescription(plant,data){
-    for(const el of data){
+    for(let el of data){
         let responseMaterial = await getMaterial(plant,el.missing_material);
         el.missingMaterialDescription = responseMaterial?.[0]?.description || "";
     }
