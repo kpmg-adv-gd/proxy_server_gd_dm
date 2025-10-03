@@ -45,8 +45,12 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
 
 async function enrichedWithComponentMaterialDescription(plant,data){
     for(let el of data){
+        try{
         let responseMaterial = await getMaterial(plant,el.missing_material);
         el.missingMaterialDescription = responseMaterial?.[0]?.description || "";
+        } catch(e){
+            console.log("enrichedWithComponentMaterialDescription - error: "+e);
+        }
     }
     return data;
 }
