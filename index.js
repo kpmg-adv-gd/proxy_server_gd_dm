@@ -7,6 +7,7 @@ const iFlowOperationsMarkingMAFromSAPService = require("./services/iFlow/OPERATI
 const iFlowManageModificheFromSAPService = require("./services/iFlow/MANAGE_MODIFICHE_FROM_SAP/listener");
 const iFlowManageMancantiFromSAPService = require("./services/iFlow/MANAGE_MANCANTI_FROM_SAP/listener");
 const iFlowManageDefectsFromSAPService = require("./services/iFlow/MANAGE_DEFECTS_FROM_SAP/listener");
+const iFlowCoordinamentoFromSAPService = require("./services/iFlow/MANAGE_COORDINAMENTO_FROM_SAP/listener");
 const iFlowPopulateZTablesService = require("./services/iFlow/POPULATE_Z_TABLES/listener");
 const iFlowUpdateCertificationService = require("./services/iFlow/UPDATE_CERTIFICATION/listener");
 const iFlowRelabelSfcService = require("./services/iFlow/RELABEL_SFC/listener");
@@ -70,6 +71,7 @@ iFlowManageModificheFromSAPService.listenerSetup(app);
 iFlowPopulateZTablesService.listenerSetup(app);
 iFlowManageMancantiFromSAPService.listenerSetup(app);
 iFlowManageDefectsFromSAPService.listenerSetup(app);
+iFlowCoordinamentoFromSAPService.listenerSetup(app);
 iFlowUpdateCertificationService.listenerSetup(app);
 iFlowRelabelSfcService.listenerSetup(app);
 iFlowReleaseOrderSfcService.listenerSetup(app);

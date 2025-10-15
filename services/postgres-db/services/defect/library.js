@@ -181,7 +181,6 @@ async function receiveStatusByQNCode(jsonDefects) {
         for (var i=0; i < jsonDefects.qn.length; i++) {
             var item = jsonDefects.qn[i];
             var plant = await getPlantFromERPPlant(item.plant);
-            console.log("PLANT MAPPING: " + item.plant + " -> " + plant);
             var qn_code = item.qn_code;
             var qn_link = item.qn_link;
             var system_status = item.system_status;
