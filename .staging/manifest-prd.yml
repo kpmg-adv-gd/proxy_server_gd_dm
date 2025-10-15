@@ -12,7 +12,7 @@ applications:
       {
         CREDENTIALS: '{"GENERATE_TOKEN_URL":"https://sap-dmc-prod-gm0mzuut.authentication.eu20.hana.ondemand.com", "DM_API_URL":"https://api.eu20.dmc.cloud.sap", "client_id":"sb-9bcd7980-5a17-46c0-97a3-0a5cabcf13d3!b115724|dmc-services!b330", "client_secret":"496ac109-6d22-49cb-806c-6ccba010c859$JdsGMjMZ1F7M-IQtPOGelCd8NlYqped_M0BlJXOfmoM=", "appKey":"f39d82a2f36f5ac8f8322a3d7c409d02a6f0e7d4b2181d09d243d70fe232c8cd"}',
         WHITELIST: '["https://sap-dmc-prod-gm0mzuut.execution.eu20-prod.web.dmc.cloud.sap"]',
-        DB_CONNECTIONS: '[{"name":"MDO","type":"SAPHANACLOUD","connectionOption":{"serverNode":"d5cbafbf-f74b-4666-9a37-87d967a72347.hna1.prod-eu20.hanacloud.ondemand.com:443","UID":"D94A237F1D474E67ACCE0D970DB5D4F6","PWD":"Lw4Qh64ch0lmJmq5jHihtnWzL5DfizeqxEO7v1A-EvakWws8GVH2SH7l38BcNHUmVviynjEsHylJ4DOnKOXcO2jO6a_4TqftYqlEoeQ5riFxPHI4E3NZrHCvkotKX5hI","sslValidateCertificate":"false"}}]',
+        DB_CONNECTIONS: '[{"name":"MDO","type":"SAPHANACLOUD","connectionOption":{"serverNode":"d5cbafbf-f74b-4666-9a37-87d967a72347.hna1.prod-eu20.hanacloud.ondemand.com:443","UID":"D94A237F1D474E67ACCE0D970DB5D4F6_2NQCK2NVT7JBFHJZXVNT7ZSQQ_RT","PWD":"Lw4Qh64ch0lmJmq5jHihtnWzL5DfizeqxEO7v1A-EvakWws8GVH2SH7l38BcNHUmVviynjEsHylJ4DOnKOXcO2jO6a_4TqftYqlEoeQ5riFxPHI4E3NZrHCvkotKX5hI","sslValidateCertificate":"false"}}]',
         POSTGRES_DB_CONNECTION: '{"DB_NAME":"EGRvxIWjzFVD","DB_HOST":"postgres-9805f001-d537-41ba-8eb2-7e0bda0c91ad.postgres.database.azure.com","DB_PORT":"5432","DB_USER":"33e12f112b2a","DB_PASSWORD":"4aeb517ef2c88015ea2a8fba"}',
         CPI_CRED: '{"USERNAME":"CPI_TEC_USER", "PASSWORD":"PROD1234!"}'
       }
