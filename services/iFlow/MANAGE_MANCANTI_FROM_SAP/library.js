@@ -283,6 +283,7 @@ async function getOrderStatusMancanti(plant,order){
 async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray){
     for(let mat of materialsArray){
         let isMissing = mat?.Missing?.[0] == "X" || mat?.Missing?.[0] == "true";
+        let materialDescription = mat?.MaterialDescr?.[0] || "";
         let missing_material = mat?.MissingMaterial?.[0] || "";
         let missing_quantity = mat?.MissingQuantity?.[0] || "";
         let receipt_expected_date = mat?.ReceiptExpectedDate?.[0] || "";
@@ -292,7 +293,7 @@ async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial
         let cover_element = mat?.CoverElement?.[0] || "";
         let storage_location = mat?.StorageLocation?.[0] || "";
         let component_order = mat?.ComponentOrder?.[0] || "";
-        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing);
+        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing);
     }
 }
 module.exports = { manageNewMancanti }

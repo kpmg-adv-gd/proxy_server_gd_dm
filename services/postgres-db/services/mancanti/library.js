@@ -12,14 +12,14 @@ async function getZSpecialGroupsNotElbaoratedByWBS(pojectsArray){
     return data;
 }
 
-async function upsertZReportMancanti(plant,project,wbs_element,order,material,missing_material,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing){
+async function upsertZReportMancanti(plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing){
     // Applicare formattazione data per ogni data
     receipt_expected_date = formatDate(receipt_expected_date);
     first_conf_date = formatDate(first_conf_date);
     mrp_date = formatDate(mrp_date);
     date_from_workshop = formatDate(date_from_workshop);
 
-    const data = await postgresdbService.executeQuery(queryLoipro.upsertZReportMancantiQuery, [plant,project,wbs_element,order,material,missing_material,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing]);
+    const data = await postgresdbService.executeQuery(queryLoipro.upsertZReportMancantiQuery, [plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing]);
     return data;
 }
 
@@ -39,22 +39,8 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     }
     const fullQuery = queryLoipro.getZMancantiReportDataQuery+whereCondition;
     var data = await postgresdbService.executeQuery(fullQuery, [plant]);
-    data = await enrichedWithComponentMaterialDescription(plant,data);
     return data;
 }
-
-async function enrichedWithComponentMaterialDescription(plant,data){
-    for(let el of data){
-        try{
-        let responseMaterial = await getMaterial(plant,el.missing_material);
-        el.missingMaterialDescription = responseMaterial?.[0]?.description || "";
-        } catch(e){
-            console.log("enrichedWithComponentMaterialDescription - error: "+e);
-        }
-    }
-    return data;
-}
-
 
 async function getMancantiInfoData(plant,project,orderGroup){
     const responseQuery = await postgresdbService.executeQuery(queryLoipro.getMancantiInfoDataQuery, [plant,project,orderGroup]);

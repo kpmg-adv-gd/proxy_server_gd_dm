@@ -14,7 +14,8 @@ const upsertZReportMancantiQuery =  `INSERT INTO z_report_mancanti (
                                         wbs_element,
                                         "order",
                                         material,
-                                        missing_material,
+                                        missing_component,
+                                        component_description,
                                         missing_quantity,
                                         receipt_expected_date,
                                         first_conf_date,
@@ -30,18 +31,19 @@ const upsertZReportMancantiQuery =  `INSERT INTO z_report_mancanti (
                                         $3,  -- wbs_element
                                         $4,  -- order
                                         $5,  -- material
-                                        $6,  -- missing_material
-                                        $7,  -- missing_quantity
-                                        $8,  -- receipt_expected_date
-                                        $9,  -- first_conf_date
-                                        $10, -- mrp_date
-                                        $11, -- date_from_workshop
-                                        $12, -- cover_element
-                                        $13, -- storage_location
-                                        $14, -- component_order
-                                        $15  -- active
+                                        $6,  -- missing_component
+                                        $7,  -- component_description
+                                        $8,  -- missing_quantity
+                                        $9,  -- receipt_expected_date
+                                        $10,  -- first_conf_date
+                                        $11, -- mrp_date
+                                        $12, -- date_from_workshop
+                                        $13, -- cover_element
+                                        $14, -- storage_location
+                                        $15, -- component_order
+                                        $16  -- active
                                     )
-                                    ON CONFLICT (plant,project,wbs_element,"order",material,missing_material)
+                                    ON CONFLICT (plant,project,wbs_element,"order",material,missing_component)
                                     DO UPDATE SET
                                         project = EXCLUDED.project,
                                         wbs_element = EXCLUDED.wbs_element,
@@ -63,7 +65,8 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                     wbs_element,
                                     "order",
                                     material,
-                                    missing_material,
+                                    missing_component,
+                                    component_description,
                                     cast(missing_quantity as integer),
                                     CASE 
 	                                    WHEN cover_element IN (
