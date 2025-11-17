@@ -32,6 +32,8 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
     const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
     const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
     const hasModificheValue = (hasModificheField?.value || "");
+    const hasDefectsFields = orderDetail?.customValues.find(obj => obj.attribute === "DEFECTS");
+    const hasDefectsValue = (hasDefectsFields?.value || "");
 
     const isHighlighted = order ? order === childOrder : false;
 
@@ -48,6 +50,7 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
         ParentAssembly: false,
         MissingParts: hasMancantiValue,
         EngChanges: hasModificheValue,
+        Defects: hasDefectsValue,
         ProgressStatus: progressStatusOrder,
         isHighlighted,
         Children: children
@@ -73,6 +76,7 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                         ParentAssembly: false,
                         MissingParts: "",
                         EngChanges: "",
+                        Defects: "",
                         ProgressStatus: "",
                         isHighlighted:"",
                         Children: []
@@ -95,6 +99,8 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                 const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
                 const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
                 const hasModificheValue = (hasModificheField?.value || "");
+                const hasDefectsFields = orderDetail?.customValues.find(obj => obj.attribute === "DEFECTS");
+                const hasDefectsValue = (hasDefectsFields?.value || "");
 
                 const isHighlighted = highlightOrder ? highlightOrder === comp.child_order : false;
                 var progressStatusOrder=0;
@@ -110,6 +116,7 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                     ParentAssembly: isParentAssembly,
                     MissingParts: hasMancantiValue,
                     EngChanges: hasModificheValue,
+                    Defects: hasDefectsValue,
                     ProgressStatus: progressStatusOrder,
                     isHighlighted,
                     Children: children
@@ -140,6 +147,7 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                 ParentAssembly: false,
                 MissingParts: isMancantiValue,
                 EngChanges: "",
+                Defects: "",
                 isHighlighted: false,
                 ProgressStatus: null,
                 Children: []

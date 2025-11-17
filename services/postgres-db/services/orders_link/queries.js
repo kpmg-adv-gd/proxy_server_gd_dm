@@ -32,12 +32,13 @@ const getMachOrderByComponentOrderQuery = `WITH RECURSIVE order_hierarchy AS (
         o.*,
         oh.level + 1 AS level
     FROM z_orders_link o
-    JOIN order_hierarchy oh ON o.child_order = oh.parent_order
+    JOIN order_hierarchy oh ON o.child_order = oh.parent_order and o.plant = oh.plant
 )
 
 -- Seleziona solo l'ultima riga risalita
 SELECT *
 FROM order_hierarchy
-WHERE child_order_type='MACH' `;
+WHERE child_order_type='MACH'
+LIMIT 1 `;
 
 module.exports = { insertZOrdersLinkQuery, getZOrdersLinkByPlantProjectOrderTypeQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getMachOrderByComponentOrderQuery};

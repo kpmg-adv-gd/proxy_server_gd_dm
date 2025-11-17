@@ -75,12 +75,16 @@ async function manageMancantiCompleteSfc(plant,project,childOrder,childMaterial)
         await updateBomComponentParentOrder(plant,parentOrder,parentMaterial,childOrder,childMaterial,bomDetailBodyParentOrder);
         //SE E' PARENT ASSEMBLY
         if(isParentAssembly){
-            let grandParentLinkRow = await getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant,project,parentOrder,parentMaterial);
-            let grandParentOrder = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_order : null;
-            let grandParentMaterial = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_material : null;
-            const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, grandParentOrder);
-            let bomDetailBodyGrandParentOrder = await getBomDetail(plant,bom,type);
-            await updateBomComponentParentOrder(plant,grandParentOrder,grandParentMaterial,parentOrder,parentMaterial,bomDetailBodyGrandParentOrder);
+            let bomDetailBodyParentOrderUpdated = await getBomDetail(plant,bom,type);
+            let hasParentOrderMancanti = hasComponentMancante(bomDetailBodyParentOrderUpdated[0]?.components);
+            if(!hasParentOrderMancanti){
+                let grandParentLinkRow = await getZOrdersLinkByPlantProjectChildOrderChildMaterial(plant,project,parentOrder,parentMaterial);
+                let grandParentOrder = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_order : null;
+                let grandParentMaterial = grandParentLinkRow.length > 0 ? grandParentLinkRow[0]?.parent_material : null;
+                const { bom, type, isParentAssembly } = await getBomByOrderAndPlant(plant, grandParentOrder);
+                let bomDetailBodyGrandParentOrder = await getBomDetail(plant,bom,type);
+                await updateBomComponentParentOrder(plant,grandParentOrder,grandParentMaterial,parentOrder,parentMaterial,bomDetailBodyGrandParentOrder);
+            }
         }
     }
 
@@ -107,7 +111,7 @@ async function getBomDetail(plant,bom,type){
     return bomComponentsResponse;
 }
 
-async function updateBomComponentParentOrder(plant, parentOrder,parentMaterial, childOrder, childMaterial, bomDetailBodyParentOrder) {
+async function updateBomComponentParentOrder(plant, parentOrder,parentMaterial, childOrder, childMaterial, bomDetailBodyParentOrder,valueManacantiToUpdateBomComp) {
     var url = hostname + "/bom/v1/boms";
     let componentFound = false;
     for(let obj of bomDetailBodyParentOrder[0]?.components){
