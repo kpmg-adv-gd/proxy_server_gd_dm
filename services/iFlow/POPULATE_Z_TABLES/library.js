@@ -137,7 +137,7 @@ async function insertZCertificationTable(plant, workCenterErpNodes, operationNod
 }
 
 async function insertZSpecialGroupsTable(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,elaborated){
-    if( ((orderTypeValue.includes("GRP") || orderTypeValue.includes("ZPA1")  || orderTypeValue.includes("ZPF1") ) && parentAssemblyValue) || (orderTypeValue=="ZMGF") ){
+    if( ((orderTypeValue.includes("GRP") || orderTypeValue.includes("ZPA1")  || orderTypeValue.includes("ZPF") ) && parentAssemblyValue) || (orderTypeValue=="ZMGF") ){
         await insertZSpecialGroups(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,elaborated);
     }
 }

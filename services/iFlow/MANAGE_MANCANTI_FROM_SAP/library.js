@@ -171,14 +171,12 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
     for(let obj of bomDetailBody[0]?.components){
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
         var missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
-        console.log("updateBodyBomComponentMaterials - missingMaterial= "+foundMaterial?.MissingMaterial[0] +" - foundMaterial?.Missing?.[0]= "+foundMaterial?.Missing?.[0]+ " - !!foundMaterial= "+!!foundMaterial);
         if (obj?.material && obj.material.plant === plant && !!foundMaterial ) {
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
                 let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
                 missingMaterial = checkQuantityComponentResponse ? "false" : "true";
             }
             for(let customValueObj of obj.customValues){
-                console.log("updateBodyBomComponentMaterials let customValueObj of obj.customValues - missingMaterial= "+foundMaterial?.MissingMaterial[0] +" - foundMaterial?.Missing?.[0]= "+foundMaterial?.Missing?.[0]+ " - !!foundMaterial= "+!!foundMaterial);
                 if (customValueObj.attribute === "COMPONENTE MANCANTE") {
                     customValueObj.value = missingMaterial;
                 }
