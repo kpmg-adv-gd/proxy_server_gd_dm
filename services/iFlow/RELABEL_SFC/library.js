@@ -5,6 +5,7 @@ const hostname = credentials.DM_API_URL;
 async function manageRelabelSfc(plant,order,sfcs){
 
     var responseGetOrder = await getOrderResponse(plant,order);
+    let material =  responseGetOrder?.material?.material || "";
     var customValues = responseGetOrder?.customValues;
     let wbsField = customValues.find(obj => obj.attribute == "WBE");
     let wbsValue = wbsField.value || "";
@@ -14,21 +15,25 @@ async function manageRelabelSfc(plant,order,sfcs){
     let parentAssemblyValueFromSAP = parentAssemblyField.value || "";
     let parentAssemblyValue = parentAssemblyValueFromSAP === "X";
 
-    let newSfcs = await manageSfc(sfcs,wbsValue,plant);
+    let newSfcs = await manageSfc(sfcs,wbsValue,material,plant);
     if(parentAssemblyValue || orderTypeValue=="ZMGF"){
         await manageParentAssemblyMGFOrder(newSfcs,plant);
     }
 
 }
 
-async function manageSfc(sfcs,wbsValue,plant){
+async function manageSfc(sfcs,wbsValue,material,plant){
     if(!wbsValue || sfcs.length==0){
         return;
     }
     var sfcArray = [];
     for(let sfc of sfcs){
         let sfcOld = sfc.sfc;
-        let sfcNew = wbsValue + "_" + sfcOld;
+        let sfcNew = wbsValue + "_" + material + "_" + sfcOld;
+        // Convertiamo a MAIUSCOLO perché la regex accetta solo lettere maiuscole
+        sfcNew = sfcNew.toUpperCase();
+        // Puliamo i caratteri non validi
+        sfcNew = sanitizeSfc(sfcNew);
         let url = hostname + "/sfc/v1/sfcs/relabel";
         let body = {
             "plant": plant,
@@ -67,5 +72,24 @@ async function getOrderResponse(plant,order) {
     const orderResponse = await callGet(url);
     return orderResponse;
 }
+
+function sanitizeSfc(input) {
+    // Caratteri ammessi secondo la regex sap di creazione sfc
+    const allowedChars = /[0-9A-Z_$!)(+~@^=\-*. ]/;
+
+    let result = "";
+
+    for (let char of input) {
+        if (allowedChars.test(char)) {
+            result += char;
+        }
+    }
+
+    // Rimuove eventuali spazi iniziali o finali (vietati dalla regex)
+    result = result.trim();
+
+    return result;
+}
+
 
 module.exports = { manageRelabelSfc }
