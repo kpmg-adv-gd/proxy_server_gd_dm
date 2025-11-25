@@ -1,5 +1,6 @@
 const { getPodOperations } = require("./library");
 const { callGet } = require("../../../utility/CommonCallApi");
+const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;

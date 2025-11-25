@@ -1,5 +1,3 @@
-const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
-
 function getPodOperations(responseRouting, responseSfcDetails, responseWorkCenter, orderType, body, ordersGroup){
     try{
         const { workcenter, routing, version } = body;
