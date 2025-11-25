@@ -1,4 +1,6 @@
-function getPodOperations(responseRouting, responseSfcDetails, responseWorkCenter, orderType, body){
+const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
+
+function getPodOperations(responseRouting, responseSfcDetails, responseWorkCenter, orderType, body, ordersGroup){
     try{
         const { workcenter, routing, version } = body;
         if ( responseRouting.length>0 && responseRouting[0].routingSteps && responseSfcDetails.steps && responseWorkCenter.length>0 ){
@@ -56,8 +58,9 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 return macrofaseA.localeCompare(macrofaseB);
             });
         }
-        //Nel caso degli ordini gruppo ordino per campo custom squence
-        if(orderType==="GRPF" || orderType.startsWith("ZPA") || orderType.startsWith("ZPF") ) {
+        //Nel caso degli ordini gruppo ordino per campo custom sequence
+        const orderGrouplist = ordersGroup.split(";"); 
+        if(orderGrouplist.includes(orderType)) {
             enrichedResponseData.sort((objA, objB) => {
                 const a = Number(objA?.routingOperation?.customValues?.find(v => v.attribute === "SEQUENCE")?.value || 0);
                 const b = Number(objB?.routingOperation?.customValues?.find(v => v.attribute === "SEQUENCE")?.value || 0);

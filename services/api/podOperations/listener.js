@@ -21,7 +21,9 @@ module.exports.listenerSetup = (app) => {
             var responseRouting = await callGet(urlRouting);
             var responseSfcDetails = await callGet(urlSfcDetails);
             
-            var filteredData = getPodOperations(responseRouting,responseSfcDetails,responseWorkCenter,orderType,req.body);
+            var ordersGroup = await getZSharedMemoryData("ALL", "ORDERS_GROUP");
+            if (ordersGroup.length > 0) ordersGroup = ordersGroup[0].value;
+            var filteredData = getPodOperations(responseRouting,responseSfcDetails,responseWorkCenter,orderType,req.body,ordersGroup);
             res.status(200).json({result: filteredData});
         } catch (error) {
             let status = error.status || 500;
