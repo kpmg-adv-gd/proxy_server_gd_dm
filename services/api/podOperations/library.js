@@ -56,6 +56,18 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 return macrofaseA.localeCompare(macrofaseB);
             });
         }
+        //Nel caso degli ordini gruppo ordino per campo custom squence
+        if(orderType==="GRPF" || orderType.startsWith("ZPA") || orderType.startsWith("ZPF") ) {
+            enrichedResponseData.sort((objA, objB) => {
+                let customValuesA = objA?.routingOperation?.customValues;
+                let customValuesB = objB?.routingOperation?.customValues;
+                let sequenceAField = customValuesA.find(obj => obj.attribute == "SEQUENCE");
+                let sequenceBField = customValuesB.find(obj => obj.attribute == "SEQUENCE");
+                let sequenceA = sequenceAField?.value || "0";
+                let sequenceB = sequenceBField?.value || "0";
+                return sequenceA.localeCompare(sequenceB, undefined, { numeric: true })
+            });
+        }
         return enrichedResponseData;
 
     } catch(error){
