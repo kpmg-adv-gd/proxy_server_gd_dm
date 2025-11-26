@@ -15,7 +15,11 @@ const getZOrdersLinkByPlantProjectAndParentOrderQuery = `SELECT *
 
 const getAllMachMaterialsQuery = `SELECT DISTINCT child_material
                             FROM z_orders_link
-                            WHERE plant = $1 AND child_order_type=$2 AND (parent_order IS NULL OR parent_order='') `;                  
+                            WHERE plant = $1 AND child_order_type=$2 AND (parent_order IS NULL OR parent_order='') `;
+                            
+const getAllMaterialsNoParentAssemblyQuery = `SELECT DISTINCT child_material
+                                        FROM z_orders_link
+                                        WHERE plant = $1 AND parent_assembly_flag = false`;      
 
 const getMachOrderByComponentOrderQuery = `WITH RECURSIVE order_hierarchy AS (
     -- Punto di partenza
@@ -41,4 +45,4 @@ FROM order_hierarchy
 WHERE child_order_type='MACH'
 LIMIT 1 `;
 
-module.exports = { insertZOrdersLinkQuery, getZOrdersLinkByPlantProjectOrderTypeQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getMachOrderByComponentOrderQuery};
+module.exports = { insertZOrdersLinkQuery, getZOrdersLinkByPlantProjectOrderTypeQuery, getZOrdersLinkMachByPlantProjectOrderTypeMachineSectionQuery, getZOrdersLinkByPlantProjectAndParentOrderQuery, getAllMachMaterialsQuery,getAllMaterialsNoParentAssemblyQuery,getMachOrderByComponentOrderQuery};

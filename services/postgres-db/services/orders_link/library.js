@@ -27,10 +27,15 @@ async function getAllMachMaterials(plant){
     return data;
 }
 
+async function getAllMaterialsNoParentAssembly(plant){
+    const data = await postgresdbService.executeQuery(queryOrdersLink.getAllMaterialsNoParentAssemblyQuery, [plant]);
+    return data;
+}
+
 async function getMachOrderByComponentOrder(plant,project,orderComponent){
     const data = await postgresdbService.executeQuery(queryOrdersLink.getMachOrderByComponentOrderQuery, [plant,project,orderComponent]);
     return data;
 }
 
 
-module.exports = { insertZOrdersLink, getZOrdersLinkByPlantProjectOrderType, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder }
+module.exports = { insertZOrdersLink, getZOrdersLinkByPlantProjectOrderType, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getAllMaterialsNoParentAssembly, getMachOrderByComponentOrder }
