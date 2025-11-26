@@ -30,8 +30,7 @@ async function getFilterPOD(plant, userId) {
       (async () => {
         try {
           const materialResponse = await getAllMaterialsNoParentAssembly(plant);
-          // Ti costruisci un array [{ Material: 'xxx' }]
-          const materials = materialResponse?.data?.map(m => ({ Material: m.child_material })) || [];
+          const materials = materialResponse.map(m => ({ MATERIAL: m.child_material })) || [];
           return { key: "Materials", result: materials };
         } catch (error) {
           return { key: "Materials", result: { error: true, message: error.message || "", code: error.code || 500 } };
