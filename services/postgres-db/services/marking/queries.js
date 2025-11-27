@@ -39,6 +39,15 @@ const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
                                     FROM z_modify
                                     WHERE plant=$1 AND (child_order = $2 OR sfc=$3)`;
 
+const getModificationsByWBEQuery = `SELECT prog_eco,process_id,flux_type,"type"
+                                    FROM z_modify   
+                                    WHERE plant=$1 AND wbe = $2`;
+
 const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery };
+const updateZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
+                               SET marked_labor = marked_labor + $3,
+                                   variance_labor = variance_labor + $4
+                               WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsByWBEQuery, getModificationsBySfcQuery, getProjectDataQuery, updateZUnproductiveWBSQuery };

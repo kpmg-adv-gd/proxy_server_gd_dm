@@ -1,6 +1,6 @@
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost } = require("../../../utility/CommonCallApi");
-const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData } = require("../../postgres-db/services/marking/library");
+const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData, updateZUnproductiveWBS } = require("../../postgres-db/services/marking/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -116,7 +116,8 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
     return response;
 }
 
-async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
+async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, 
+    duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId,modification, defectId) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -132,7 +133,7 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
         "date": date,
         "duration": duration,
         "durationUom": durationUom,
-        "reasonForVariance": reasonForVariance,
+        "reasonForVariance": reasonForVariance == null ? "" : reasonForVariance,
         "unCancellation": unCancellation,
         "unConfirmation": unConfirmation
     };
@@ -143,7 +144,25 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
 
     if (response.OUTPUT && response.OUTPUT.type == "S") {
         // Se la risposta è OK, aggiorno le conferme in ZDM
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+        if (reasonForVariance != null) {
+            var varianceLabor = duration;
+            var markedLabor = 0;
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+                markedLabor, durationUom, 
+                varianceLabor, // variance labor
+                durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
+                rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defectId);
+        }else{
+            var varianceLabor = 0;
+            var markedLabor = duration;
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+                markedLabor, durationUom, 
+                varianceLabor, // variance labor
+                durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
+                rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defectId);
+        }
+        // Entro in z_unproductive_wbs con confirmation number, plant e sommo alle colonne marked labor e variance labor il loro valore
+        await updateZUnproductiveWBS(plant, confirmationNumber, markedLabor, varianceLabor);
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
