@@ -80,6 +80,20 @@ module.exports.listenerSetup = (app) => {
             res.status(500).json({ error: "Error while executing query" });
         }
     }) 
+
+    app.post("/db/getModificheToTesting", async (req, res) => {
+        const { plant, project } = req.body;
+        if (!plant || !project) {
+            return res.status(400).json({ error: "Missing required query parameter: plant , sfc or order" });
+        }
+        try {
+            const modificheToTesting = await postgresdbService.getModificheToTesting(plant, project);
+            res.status(200).json(modificheToTesting);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }) 
         
 };
 

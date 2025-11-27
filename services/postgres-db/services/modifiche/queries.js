@@ -1,6 +1,6 @@
 
-const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2) 
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17); `;
+const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project) 
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20); `;
 
 const getModificheDataQuery = `SELECT *
                                 FROM z_modify
@@ -37,7 +37,10 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         last_update,
                                         resolution,
                                         note,
-                                        co2
+                                        co2,
+                                        wbe_machine,
+                                        machine_section,
+                                        project
                                     )
                                     select
                                         prog_eco
@@ -58,7 +61,10 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         $4,
                                         resolution,
                                         note,
-                                        co2
+                                        co2,
+                                        wbe_machine,
+                                        machine_section,
+                                        project
                                     from z_modify
                                     where plant = $1 and sfc=$3 and co2=true `;
 
@@ -86,4 +92,6 @@ const updateZModifyByOrderQuery = `UPDATE z_modify
                                     last_update = $4
                                     WHERE plant = $1 AND sfc=$3 `;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery };
+const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND closed_in_assembly = false AND closed_in_testing = false ORDER BY prog_eco ASC;`;                             
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery };

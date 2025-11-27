@@ -65,4 +65,29 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
 
 }
 
-module.exports = { getPodOperations };
+function getPodOperationsTI(responseRouting){
+    try{
+        var operations = [];
+        if (responseRouting.length==0 || !responseRouting[0].routingOperationGroups){
+            return operations;
+        }
+        responseRouting[0].routingOperationGroups.forEach(group => {
+            group.routingOperationGroupSteps.forEach(operation => {
+                operations.push({
+                    id: operation.routingStep.stepId,
+                    operation: operation.routingStep.routingOperation.operationActivity.operationActivity,
+                    description: operation.routingStep.description,
+                    datetime: operation.routingStep.routingOperation.customValues.find(obj => obj.attribute == "DATE_LEV2")?.value || ""
+                });
+            });
+        });
+        return operations;
+
+    } catch(error){
+        console.log("Internal Server Error:"+error);
+        throw { status: 500, message: "Error service getPodOperations: "+error};
+    }
+}
+
+
+module.exports = { getPodOperations, getPodOperationsTI };

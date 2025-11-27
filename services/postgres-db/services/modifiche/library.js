@@ -1,13 +1,14 @@
 const postgresdbService = require('../../connection');
 const queryModifiche = require("./queries");
+const { dispatch } = require("../../../mdo/library");
 
-async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2){
+async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project) {
     let dateNow = new Date();
     if(!prog_eco) prog_eco="";
     if(!process_id) process_id="";
     if(!qty) qty=0;
     if(!status) status=0;
-    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2]);
+    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project]);
     return data;
 }
 
@@ -62,4 +63,56 @@ async function updateZModifyCO2ByOrder(plant,newSfc,oldSfc){
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder }
+async function getModificheToTesting(plant, project){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheToTestingQuery, [plant, project]);
+    // Recupero descrizione materiali
+    for (var i=0;i<data.length;i++) {
+        var filter = `PLANT eq '${plant}' and (MATERIAL eq '${data[i].material}' or MATERIAL eq '${data[i].child_material}')`;
+        var mockReq = {
+            path: "/mdo/MATERIAL_TEXT",
+            query: { $apply: `filter(${filter})` },
+            method: "GET"
+        };
+        var result = await dispatch(mockReq);
+        if (result && result.length > 0) {
+            data[i].material_description = result.find(item => item.MATERIAL == data[i].material)?.DESCRIPTION || "";
+            data[i].child_material_description = result.find(item => item.MATERIAL == data[i].child_material)?.DESCRIPTION || "";
+        }
+    }
+    // Creazione TreeTable
+    var treeTable = [], childId = 0;
+    for (var i=0;i<data.length;i++) {
+        var child = {
+            level: 2,
+            wbe: data[i].wbe,
+            childMaterial: data[i].child_material,
+            childMaterialDescription: data[i].child_material_description,
+            qty: data[i].qty,
+            fluxType: data[i].flux_type,
+            status: data[i].status,
+            order: data[i].order,
+            resolution: data[i].resolution,
+            note: data[i].note,
+            mark: data[i].type == "MA",
+            childId: childId++
+        }
+        if (treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material).length == 0) {
+            treeTable.push({
+                level: 1,
+                type: data[i].type,
+                progEco: data[i].prog_eco,
+                processId: data[i].process_id,
+                material: data[i].material,
+                materialDescription: data[i].material_description,
+                mark: data[i].type == "MT" || data[i].type == "MK",
+                Children: [child]
+            });
+        }else{
+            treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material)[0]
+                .Children.push(child);
+        }
+    }
+    return treeTable;
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting }

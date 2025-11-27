@@ -3,11 +3,12 @@ const postgresdbService = require('./library');
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/insertDefect", async (req, res) => {
-        const { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType, coding, replaceInAssembly, defectNote,
-            responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder } = req.body;
+        var { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, cause, notificationType, coding, replaceInAssembly, defectNote,
+            responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, project, phase, idLev1, idLev2, idLev3 } = req.body;
+        if (!cause) cause = null;
         try {
             const result = await postgresdbService.insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType,
-                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder);
+                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -181,7 +182,6 @@ module.exports.listenerSetup = (app) => {
         }
     });
     
-
     app.post("/db/getDefectsWBE", async (req, res) => {
         const { plant } = req.body;
         try {
@@ -192,5 +192,38 @@ module.exports.listenerSetup = (app) => {
             res.status(500).json({ error: "Error while executing query" });
         }
     });
+    
+    app.post("/db/getCauses", async (req, res) => {
+        const { plant } = req.body;
+        try {
+            const result = await postgresdbService.getCauses(plant);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing parsing: "+error);
+            res.status(500).json({ error: "Error while executing parsing" });
+        }
+    });
 
-};
+    app.post("/db/getFiltersDefectsTI", async (req, res) => {
+        const { } = req.body;
+        try {
+            const result = await postgresdbService.getFiltersDefectsTI();
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+    app.post("/db/getDefectsTI", async (req, res) => {
+        const { plant, project } = req.body;
+        try {
+            const result = await postgresdbService.getDefectsTI(plant, project);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+}

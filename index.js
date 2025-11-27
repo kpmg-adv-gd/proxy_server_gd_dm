@@ -14,6 +14,7 @@ const iFlowReleaseOrderSfcService = require("./services/iFlow/RELEASE_ORDER_SFC/
 const iFlowUpdateRoutingService = require("./services/iFlow/UPDATE_ROUTING/listener");
 const iFlowServiceLOIPROPostService = require("./services/iFlow/LOIPRO05_CST_POST_SERVICE/listener");
 const iFlowServiceLOIPROPostXSLT = require("./services/iFlow/LOIPRO05_CST_POST_XSLT/listener");
+const iFlowManageOrderTestingService = require("./services/iFlow/MANAGE_ORDER_TESTING/listener");
 const apiServiceModifiche = require("./services/api/modifiche/listener");
 const apiServiceSinotticoBomReport = require("./services/api/sinottico/listener");
 const apiServiceFilterMancantiReport = require("./services/api/mancanti/listener");
@@ -46,6 +47,10 @@ const responsibleDbService = require("./services/postgres-db/services/responsibl
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 const defectDbService = require("./services/postgres-db/services/defect/listener");
 const unproductiveDbService = require("./services/postgres-db/services/unproductive/listener");
+const verbaleLev2DbService = require("./services/postgres-db/services/verbali/listener");
+const bomDbService = require("./services/postgres-db/services/bom/listener");
+const additionalOperationsService = require("./services/postgres-db/services/additional_operations/listener");
+const markgingTestingService = require("./services/postgres-db/services/marking_testing/listener");
 
 
 const app = express();
@@ -80,6 +85,7 @@ apiServiceFilterMancantiReport.listenerSetup(app);
 apiServiceFilterMarkingReport.listenerSetup(app);
 iFlowServiceLOIPROPostService.listenerSetup(app);
 iFlowServiceLOIPROPostXSLT.listenerSetup(app);
+iFlowManageOrderTestingService.listenerSetup(app);
 apiServiceOrderBom.listenerSetup(app);
 apiServiceWorkInstructionFile.listenerSetup(app);
 apiServiceCompleteOperation.listenerSetup(app);
@@ -111,8 +117,13 @@ responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
 defectDbService.listenerSetup(app);
 unproductiveDbService.listenerSetup(app);
+verbaleLev2DbService.listenerSetup(app);
+bomDbService.listenerSetup(app);
+additionalOperationsService.listenerSetup(app);
+markgingTestingService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+    
