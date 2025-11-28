@@ -245,7 +245,6 @@ module.exports.listenerSetup = (app) => {
                 contentType: response.headers['content-type'],
                 extension: fileName.split(".")[fileName.split(".").length - 1]
             });
-            console.log("File downloaded successfully:", JSON.stringify(response));
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
