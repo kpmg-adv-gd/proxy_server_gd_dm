@@ -119,4 +119,32 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    // ------------- SVILUPPO TILE SUPERIVISORE ASSEMBLY ------------------
+    
+    // Endepoint per ottenere la tabella custom NC
+    app.post("/db/getCustomTableNC", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            var result = await postgresdbService.getCustomTableNC(plant, order);
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+    // Endepoint per ottenere la tabella custom Results
+    app.post("/db/getCustomTableResults", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            var result = await postgresdbService.getCustomTableResults(plant, order);
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+
 };

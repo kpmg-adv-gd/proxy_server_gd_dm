@@ -17,7 +17,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs) {
         var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
         for (var i = 0; i < orders.length; i++) {
             var mfg_order = orders[i].MFG_ORDER;
-            var data = {};
+            var data = { order: mfg_order };
             // Recupero progetto
             var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
             var mockReqProject = {
@@ -113,6 +113,7 @@ function generateTreeTable(data) {
     console.log("MARCO TREE: " + JSON.stringify(data));
     for (var i = 0; i < data.length; i++) {
         var child = {
+            project_parent: data[i].project,
             wbs: data[i].wbs,
             sfc: data[i].sfc,
             material: data[i].material,

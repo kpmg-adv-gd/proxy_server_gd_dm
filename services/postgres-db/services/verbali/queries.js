@@ -81,5 +81,15 @@ const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_
 const insertZVerbaleLev3 = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'New', false)`;
 
+const getChildsOrders = `SELECT child_order FROM z_orders_link WHERE plant = $1 AND parent_order = $2`;
 
-module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3 };
+const getGroupByPriorityDefects = `SELECT DISTINCT z_priority.priority, z_priority.description, z_priority.weight,
+	count(*) as quantity, z_priority.weight * count(*) AS value FROM z_defects
+    INNER JOIN z_priority ON z_defects.priority = z_priority.priority 
+    WHERE plant = $1 AND mes_order IN ($2)
+    GROUP BY z_priority.priority, z_priority.description, z_priority.weight
+    ORDER BY z_priority.priority`;
+
+
+module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects };

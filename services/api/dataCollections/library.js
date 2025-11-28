@@ -56,7 +56,30 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
                 }
                 data.parameters.push(dataParameter);
             }
-            console.log("RESULT DC_GROUP: " + JSON.stringify(data));
+            // Aggiungo informazione sulla visibilità delle tabelle custom
+            var sharedResultCustomNC = await getZSharedMemoryData(plant, "CUSTOM_TABLE_NC");
+            if (sharedResultCustomNC.length > 0) {
+                try {
+                    sharedResultCustomNC = JSON.parse(sharedResultCustomNC[0].value);
+                    if (sharedResultCustomNC.some(item => item.group === dc.group)) data.viewCustomTableNC = true;
+                    else data.viewCustomTableNC = false;
+                } catch (error) {
+                    console.log("Error parsing CUSTOM_TABLE_NC from shared memory: " + error.message);
+                    data.viewCustomTableNC = false;
+                }
+            }
+            // Aggiungo informazione sulla visibilità delle tabelle custom
+            var sharedResultCustomResults = await getZSharedMemoryData(plant, "CUSTOM_TABLE_RESULTS");
+            if (sharedResultCustomResults.length > 0) {
+                try {
+                    sharedResultCustomResults = JSON.parse(sharedResultCustomResults[0].value);
+                    if (sharedResultCustomResults.some(item => item.group === dc.group)) data.viewCustomTableResults = true;
+                    else data.viewCustomTableResults = false;
+                } catch (error) {
+                    console.log("Error parsing CUSTOM_TABLE_RESULTS from shared memory: " + error.message);
+                    data.viewCustomTableResults = false;
+                }
+            }
             results.push(data);
         }
         return results;

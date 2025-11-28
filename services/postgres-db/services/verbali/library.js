@@ -198,4 +198,32 @@ async function insertZVerbaleLev3(order, id_lev_1, id_lev_2, id_lev_3, lev_3, ma
     }
 }
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3 }
+async function getCustomTableNC(plant, order) {
+    try {
+        var ordersToCheck = [order], index = 0;
+        while (index < ordersToCheck.length) {
+            var currentOrder = ordersToCheck[index];            
+            var childOrders = await postgresdbService.executeQuery(queryVerbali.getChildsOrders, [plant, currentOrder]);
+            for (var i = 0; i < childOrders.length; i++) {
+                if (!ordersToCheck.includes(childOrders[i].child_order)) { 
+                    ordersToCheck.push(childOrders[i].child_order);
+                }
+            }
+            index++;
+        }
+        var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, "'" + ordersToCheck.join("','") + "'"]);      
+        // Aggiungo riga con totale
+        var total = { priority: "TOTAL", description: "Total", weight: 0, quantity: 0 };
+        for (var i = 0; i < data.length; i++) {
+            total.weight += parseInt(data[i].weight);
+            total.quantity += parseInt(data[i].quantity);
+        }  
+        data.push(total);
+        return data;
+    } catch (error) {
+        return false;
+    }
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC }
