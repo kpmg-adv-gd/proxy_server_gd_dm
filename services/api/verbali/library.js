@@ -40,8 +40,8 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs) {
             var wbsData = outMockWbs?.data?.value.length>0 ? outMockWbs.data.value : [];
             if (wbsData.length > 0) data.wbs = wbsData[0].DATA_FIELD_VALUE;
             else continue;
-            // Recupero SFC - Material - Status
-            var sfcFilter = `(MFG_ORDER eq '${mfg_order}')`;
+            // Recupero SFC - Material - Status (diverso di INVALID)
+            var sfcFilter = `(MFG_ORDER eq '${mfg_order}' and STATUS ne 'INVALID' and PLANT eq '${plant}')`;
             var mockReqSfc = {
                 path: "/mdo/SFC",
                 query: { $apply: `filter(${sfcFilter})` },
@@ -69,7 +69,6 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs) {
             results.push(data);
         }
         // Una volta estratti i dati, genero la TreeTable
-        console.log("MARCO VERBALI RESULTS: " + JSON.stringify(results));
         return generateTreeTable(results);
     } catch (error) {
         return false

@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly } = require("./library");
+const { elaborateDataCollectionsSupervisoreAssembly } = require("./library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -15,12 +15,14 @@ module.exports.listenerSetup = (app) => {
             const datacollectionsResponse = await callGet(url);
             if (datacollectionsResponse && datacollectionsResponse.length > 0) {
                 var results = await elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource, datacollectionsResponse);
+                if (!results) {
+                    res.status(500).json({ error: "Error while executing query" });
+                    return;
+                }
             }else{
                 var results = [];
             }
             res.status(200).json(results);
-
-
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
