@@ -2,15 +2,16 @@ const { callGet } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { getReportWeight } = require("../../postgres-db/services/report_weights/library");
+const { autoCompileFieldsDataCollectionDispatcher } = require("../dataCollections/autoCompileDataCollections");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 // Elaborazione delle data collections per il supervisore assembly
-async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource, datacollections) {
+async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollections) {
     var results = [];
     try {
         for (var i = 0; i < datacollections.length; i++) {
-            var dc = datacollections[i].group, data = { group: dc.group, version: dc.version, operation: datacollections[i].operation, description: dc.description, parameters: [] };
+            var dc = datacollections[i].group, data = { group: dc.group, version: dc.version, operation: datacollections[i].operation, description: dc.description, parameters: [], voteSection: null };
             for (var j = 0; j < dc.parameters.length; j++) {
                 var param = dc.parameters[j];
                 var dataParameter = { parameterName: param.parameterName, description: param.description };
@@ -38,7 +39,7 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
                     dataParameter.listValues = listValues;
                 }
                 // Estraggo valore più recente per la data collection
-                var dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${sfc}' AND RESOURCE eq '${resource}' and DC_GROUP eq '${dc.group}' and DC_PARAMETER_NAME eq '${param.parameterName}' and IS_DELETED eq 'false')`;
+                var dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${selected.sfc}' AND RESOURCE eq '${resource}' and DC_GROUP eq '${dc.group}' and DC_PARAMETER_NAME eq '${param.parameterName}' and IS_DELETED eq 'false')`;
                 var mockReqDC = {
                     path: "/mdo/DATA_COLLECTION",
                     query: { $apply: `filter(${dataCollectionFilter})` },
@@ -88,26 +89,21 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
                 }
             }
             // Aggiungo informazione sulla viisbilità del voto sezione
-            /* da capire - si incasina con tabella custom NC
             var sections = await getReportWeight("Assembly");
             if (sections.find(item => item.section === dc.group)) {
                 var sharedVoti = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
                 if (sharedVoti.length > 0) {
                     try {
                         var votiSezione = JSON.parse(sharedVoti[0].value);
-                    } catch (error) {
-                        
-                    }
-                } else {
-                    votiSezione = [];
+                        if (votiSezione.some(item => item.group === dc.group)) 
+                            moveDcVotoSezione(data, votiSezione.find(item => item.group === dc.group).parameterName);
+                    } catch (error) { }
                 }
-            } else {
-                data.voteSection = "";
             }
-            */
             results.push(data);
         }
         // Ordinare le data collection in base al nome del gruppo
+        results = await autoCompileFieldsDataCollection(results, selected);
         results.sort((a, b) => a.group.localeCompare(b.group));
         return results;
     } catch (error) {
@@ -203,5 +199,30 @@ async function generateJsonParameters(parameters) {
     return result;
 }
 
+// Funzione per l'auto compilazione di campi specifici delle data collections estratte
+async function autoCompileFieldsDataCollection(data, selected) {
+    var sharedParametri = await getZSharedMemoryData(plant, "PARAMETRI_AUTO");
+    if (sharedParametri.length > 0) {
+        try {
+            var parametriAuto = JSON.parse(sharedParametri[0].value);
+            data = await autoCompileFieldsDataCollectionDispatcher(data, parametriAuto, selected);
+        } catch (error) { 
+            console.log("Error parsing PARAMETRI_AUTO from shared memory: " + error.message);
+        }
+    }
+    return data;
+}
+
+// Toglo il parametro dalla lista, e lo salvo in un campo apposito
+function moveDcVotoSezione(data, parameterName) {
+    for (var i = 0; i < data.parameters.length; i++) {
+        if (data.parameters[i].parameterName === parameterName) {
+            data.voteSection = data.parameters[i].valueText || data.parameters[i].valueData || data.parameters[i].valueNumber || data.parameters[i].valueBoolean || data.parameters[i].valueList || "";
+            data.parameters.splice(i, 1);
+            return;
+        }
+    }
+}
+
 // Esporta la funzione
-module.exports = { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters }
+module.exports = { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, autoCompileFieldsDataCollection, moveDcVotoSezione }
