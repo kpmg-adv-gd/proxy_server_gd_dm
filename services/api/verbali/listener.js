@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder } = require("./library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -31,6 +31,23 @@ module.exports.listenerSetup = (app) => {
                 return;
             }
             res.status(200).json(projects);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/generateInspection", async (req, res) => {
+        try {
+            const { plant, order, user } = req.body;
+            // Salvo campi custom ASSEMBLY_REPORT_STATUS e ASSEMBLY_REPORT_USER
+            await updateCustomAssemblyReportStatusOrderDone(plant, order, user);
+            // Salvo campo custom SENT_TO_TESTING su ordine e su figli/nipoti...
+            await updateCustomSentTotTestingOrder(plant, order, user);
+            // Logica di dettaglio per il passaggio al testing
+            // todo...
+            res.status(200).json({ message: "Update successful" });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

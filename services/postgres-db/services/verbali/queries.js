@@ -90,6 +90,8 @@ const getGroupByPriorityDefects = `SELECT DISTINCT z_priority.priority, z_priori
     GROUP BY z_priority.priority, z_priority.description, z_priority.weight
     ORDER BY z_priority.priority`;
 
+const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;
+
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode };

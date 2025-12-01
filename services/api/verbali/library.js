@@ -1,5 +1,6 @@
-const { callGet } = require("../../../utility/CommonCallApi");
+const { callPatch } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
+const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -107,6 +108,48 @@ async function getProjectsVerbaliSupervisoreAssembly(plant) {
     }
 }
 
+async function updateCustomAssemblyReportStatusOrderInWork(plant,order) {
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValues = [
+        { "attribute":"ASSEMBLY_REPORT_STATUS", "value": "IN_WORK" },
+    ];
+    let body={
+        "plant":plant,
+        "order":order,
+        "customValues": customValues
+    };
+    await callPatch(url,body);
+}
+
+async function updateCustomAssemblyReportStatusOrderDone(plant,order,user){
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValues = [
+        { "attribute":"ASSEMBLY_REPORT_STATUS", "value": "DONE" },
+        { "attribute":"ASSEMBLY_REPORT_USER", "value": user },
+    ];
+    let body={
+        "plant":plant,
+        "order":order,
+        "customValues": customValues
+    };
+    await callPatch(url,body);
+}
+
+async function updateCustomSentTotTestingOrder(plant,order,user) {
+    var ordersToCheck = await ordersChildrenRecursion(plant, order);
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValues = [ { "attribute":"SENT_TO_TESTING", "value": true } ];
+    // Salvo il campo custom per ogni ordine trovato
+    for (var i = 0; i < ordersToCheck.length; i++) {
+        let body={
+            "plant":plant,
+            "order":ordersToCheck[i],
+            "customValues": customValues
+        };
+        await callPatch(url,body);
+    }
+}
+
 // utils
 function generateTreeTable(data) { 
     var tree = [];
@@ -118,7 +161,8 @@ function generateTreeTable(data) {
             sfc: data[i].sfc,
             material: data[i].material,
             status: data[i].status,
-            reportStatus: data[i].reportStatus
+            reportStatus: data[i].reportStatus,
+            order: data[i].order
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });
@@ -129,5 +173,7 @@ function generateTreeTable(data) {
     return tree;
 }
 
+
+
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder };

@@ -200,7 +200,28 @@ async function insertZVerbaleLev3(order, id_lev_1, id_lev_2, id_lev_3, lev_3, ma
 
 async function getCustomTableNC(plant, order) {
     try {
-        var ordersToCheck = [order], index = 0;
+        var ordersToCheck = await ordersChildrenRecursion(plant, order);
+        var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, "'" + ordersToCheck.join("','") + "'"]);      
+        // Aggiungo riga con totale
+        var total = { priority: "TOTALE", description: "Totale", weight: 0, quantity: 0 };
+        for (var i = 0; i < data.length; i++) {
+            total.weight += parseInt(data[i].weight);
+            total.quantity += parseInt(data[i].quantity);
+        }  
+        total.value = total.weight * total.quantity;
+        data.push(total);
+        // una volta ottenuti i dati, estraggo anche il voto che rispetta il range in Z_REPORT_NC_TRANSCODE
+        var votoSezioneQuery = await postgresdbService.executeQuery(queryVerbali.getVotoNCTranscode, [total.value]);
+        if (votoSezioneQuery.length > 0) var votoSezione = votoSezioneQuery[0].voto;
+        else var votoSezione = "NA";
+        return { results: data, votoSezione: votoSezione };
+    } catch (error) {
+        return false;
+    }
+}
+
+async function ordersChildrenRecursion(plant, order) {
+    var ordersToCheck = [order], index = 0;
         while (index < ordersToCheck.length) {
             var currentOrder = ordersToCheck[index];            
             var childOrders = await postgresdbService.executeQuery(queryVerbali.getChildsOrders, [plant, currentOrder]);
@@ -211,19 +232,8 @@ async function getCustomTableNC(plant, order) {
             }
             index++;
         }
-        var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, "'" + ordersToCheck.join("','") + "'"]);      
-        // Aggiungo riga con totale
-        var total = { priority: "TOTAL", description: "Total", weight: 0, quantity: 0 };
-        for (var i = 0; i < data.length; i++) {
-            total.weight += parseInt(data[i].weight);
-            total.quantity += parseInt(data[i].quantity);
-        }  
-        data.push(total);
-        return data;
-    } catch (error) {
-        return false;
-    }
+    return ordersToCheck;
 }
 
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC }
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion }

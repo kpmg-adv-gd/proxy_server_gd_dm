@@ -126,6 +126,9 @@ module.exports.listenerSetup = (app) => {
         try {
             const { plant, order } = req.body;
             var result = await postgresdbService.getCustomTableNC(plant, order);
+            if (!result) {
+                res.status(500).json({ error: "Error while executing query" });
+            } else
             res.status(200).json(result);
         } catch (error) {
             let status = error.status || 500;

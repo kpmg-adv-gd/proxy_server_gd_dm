@@ -1,6 +1,7 @@
 const { callGet } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
+const { getReportWeight } = require("../../postgres-db/services/report_weights/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -9,28 +10,10 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
     var results = [];
     try {
         for (var i = 0; i < datacollections.length; i++) {
-            var dc = datacollections[i].group, data = { group: dc.group, description: dc.description, parameters: [] };
+            var dc = datacollections[i].group, data = { group: dc.group, version: dc.version, operation: datacollections[i].operation, description: dc.description, parameters: [] };
             for (var j = 0; j < dc.parameters.length; j++) {
                 var param = dc.parameters[j];
                 var dataParameter = { parameterName: param.parameterName, description: param.description };
-                var dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${sfc}' AND RESOURCE eq '${resource}' and DC_GROUP eq '${dc.group}' and DC_PARAMETER_NAME eq '${param.parameterName}' and IS_DELETED eq 'false')`;
-                var mockReqDC = {
-                    path: "/mdo/DATA_COLLECTION",
-                    query: { $apply: `filter(${dataCollectionFilter})` },
-                    method: "GET"
-                };
-                var outMock = await dispatch(mockReqDC);
-                var dcData = outMock?.data?.value.length>0 ? outMock.data.value : [];
-                if (dcData.length > 0) {
-                    dcData.sort((a, b) => new Date(b.REPORTED_AT) - new Date(a.REPORTED_AT));
-                    dataParameter.value = dcData[0].DC_PARAMETER_VALUE;
-                    dataParameter.reported_at = dcData[0].REPORTED_AT;
-                    dataParameter.comment = dcData[0].COMMENT;
-                } else {
-                    dataParameter.value = "";
-                    dataParameter.reported_at = "";
-                    dataParameter.comment = "";
-                }
                 // Estraggo dataType
                 if (param.dcParameterType == "TEXT" && (!param.unitOfMeasure || param.unitOfMeasure == "")) dataParameter.dataType = "TEXT";
                 else if (param.dcParameterType == "TEXT" && param.unitOfMeasure && param.unitOfMeasure == "TAG") dataParameter.dataType = "DATA";
@@ -54,6 +37,30 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
                     listValues.unshift({ key: "", value: "" });
                     dataParameter.listValues = listValues;
                 }
+                // Estraggo valore più recente per la data collection
+                var dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${sfc}' AND RESOURCE eq '${resource}' and DC_GROUP eq '${dc.group}' and DC_PARAMETER_NAME eq '${param.parameterName}' and IS_DELETED eq 'false')`;
+                var mockReqDC = {
+                    path: "/mdo/DATA_COLLECTION",
+                    query: { $apply: `filter(${dataCollectionFilter})` },
+                    method: "GET"
+                };
+                var outMock = await dispatch(mockReqDC);
+                var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
+                if (dcData.length > 0) {
+                    dcData.sort((a, b) => new Date(b.REPORTED_AT) - new Date(a.REPORTED_AT));
+                    var value = dcData[0].DC_PARAMETER_VALUE;
+                    dataParameter.reported_at = dcData[0].REPORTED_AT;
+                    dataParameter.comment = dcData[0].COMMENT;
+                } else {
+                    var value = "";
+                    dataParameter.reported_at = "";
+                    dataParameter.comment = "";
+                }
+                if (dataParameter.dataType == "TEXT") dataParameter.valueText = value;
+                else if (dataParameter.dataType == "DATA") dataParameter.valueData = value;
+                else if (dataParameter.dataType == "NUMBER") dataParameter.valueNumber = value;
+                else if (dataParameter.dataType == "BOOLEAN") dataParameter.valueBoolean = value;
+                else if (dataParameter.dataType == "LIST") dataParameter.valueList = value;
                 data.parameters.push(dataParameter);
             }
             // Aggiungo informazione sulla visibilità delle tabelle custom
@@ -80,8 +87,28 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
                     data.viewCustomTableResults = false;
                 }
             }
+            // Aggiungo informazione sulla viisbilità del voto sezione
+            /* da capire - si incasina con tabella custom NC
+            var sections = await getReportWeight("Assembly");
+            if (sections.find(item => item.section === dc.group)) {
+                var sharedVoti = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
+                if (sharedVoti.length > 0) {
+                    try {
+                        var votiSezione = JSON.parse(sharedVoti[0].value);
+                    } catch (error) {
+                        
+                    }
+                } else {
+                    votiSezione = [];
+                }
+            } else {
+                data.voteSection = "";
+            }
+            */
             results.push(data);
         }
+        // Ordinare le data collection in base al nome del gruppo
+        results.sort((a, b) => a.group.localeCompare(b.group));
         return results;
     } catch (error) {
         console.log("Error in elaborateDataCollectionsSupervisoreAssembly: " + error.message);
@@ -89,5 +116,92 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, sfc, resource,
     }
 }
 
+// Recupero i report weight delle data collections
+async function getReportWeightDataCollections(plant, sfc, resource, listSection) {
+    var sharedResult = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
+    if (sharedResult.length > 0) {
+        try {
+            var votiSezione = JSON.parse(sharedResult[0].value);
+        } catch (error) {
+            console.log("Error parsing DC_VOTO_SEZIONE from shared memory: " + error.message);
+            votiSezione = [];
+        }
+    } else {
+        votiSezione = [];
+    }
+    for (var i = 0; i < listSection.length; i++) {
+        if (votiSezione.some(item => item.section === listSection[i].section)) {
+            listSection[i].dcVotoSezione = votiSezione.find(item => item.section === listSection[i].section).value;
+        } else {
+            listSection[i].dcVotoSezione = "";
+            listSection[i].vote = "NA";
+            continue;
+        }
+        // Calcolo voto in base al dcVotoSezione - entro in MDO_DATA_COLLECTION con plant, sfc, resource, section e dcVotoSezione
+        if (listSection[i].dcVotoSezione != "") {
+            var dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${sfc}' AND RESOURCE eq '${resource}' and DC_GROUP eq '${listSection[i].section}' and DC_PARAMETER_NAME eq '${listSection[i].dcVotoSezione}' and IS_DELETED eq 'false')`;
+            var mockReqDC = {
+                path: "/mdo/DATA_COLLECTION",
+                query: { $apply: `filter(${dataCollectionFilter})` },
+                method: "GET"
+            };
+            var outMock = await dispatch(mockReqDC);
+            var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
+        } else var dcData = [];
+        if (dcData.length > 0) {
+            dcData.sort((a, b) => new Date(b.REPORTED_AT) - new Date(a.REPORTED_AT));
+            listSection[i].vote = dcData[0].DC_PARAMETER_VALUE;
+        } else {
+            listSection[i].vote = "NA";
+        }
+    }
+    // Aggiung una ultima riga con media ponderata dei voti sul peso (considero solo quelli numerici)
+    var media = { section: "RISULTATO DELL'ISPEZIONE MACCHINA", dcVotoSezione: ""};
+    var totalWeight = 0;
+    var totalScore = 0;
+    for (var j = 0; j < listSection.length; j++) {
+        var weight = parseFloat(listSection[j].weight);
+        var score = parseFloat(listSection[j].vote);
+        if (!isNaN(weight) && !isNaN(score)) {
+            totalWeight += weight;
+            totalScore += weight * score;
+        }
+    }
+    if (totalWeight > 0) {
+        media.weight = totalWeight.toFixed(2);
+        media.vote = (totalScore / totalWeight).toFixed(2);
+    } else {
+        media.weight = "NA";
+        media.vote = "NA";
+    }
+    listSection.push(media);
+    listSection.forEach(element => {
+        if (!isNaN(element.weight)) element.weight = element.weight + "%";
+    });
+    return listSection;
+}
+
+// Parto dei parametri nel formato con cui li restituisco nell'elaborazione nella funzione elaborateDataCollectionsSupervisoreAssembly
+async function generateJsonParameters(parameters) {
+    var result = [];
+    for (var i = 0; i < parameters.length; i++) {
+        var param = parameters[i];
+        var value = "";
+        // Estraggo il valore in base al dataType
+        if (param.dataType == "TEXT" && param.valueText) value = param.valueText;
+        else if (param.dataType == "DATA" && param.valueData) value = param.valueData;
+        else if (param.dataType == "NUMBER" && param.valueNumber) value = param.valueNumber;
+        else if (param.dataType == "BOOLEAN" && param.valueBoolean) value = param.valueBoolean;
+        else if (param.dataType == "LIST" && param.valueList) value = param.valueList;
+        if (value == "") continue;
+        result.push({
+            name: param.parameterName || "",
+            value: value || "",
+            comment: param.comment || ""
+        });
+    }
+    return result;
+}
+
 // Esporta la funzione
-module.exports = { elaborateDataCollectionsSupervisoreAssembly };
+module.exports = { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters }

@@ -53,6 +53,7 @@ const verbaleLev2DbService = require("./services/postgres-db/services/verbali/li
 const bomDbService = require("./services/postgres-db/services/bom/listener");
 const additionalOperationsService = require("./services/postgres-db/services/additional_operations/listener");
 const markgingTestingService = require("./services/postgres-db/services/marking_testing/listener");
+const apiServiceReportWeight = require("./services/postgres-db/services/report_weights/listener");
 
 
 const app = express();
@@ -125,6 +126,7 @@ verbaleLev2DbService.listenerSetup(app);
 bomDbService.listenerSetup(app);
 additionalOperationsService.listenerSetup(app);
 markgingTestingService.listenerSetup(app);
+apiServiceReportWeight.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
