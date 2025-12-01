@@ -21,7 +21,7 @@ async function receiveCoordinamento(jsonCoordinamento) {
             var item = jsonCoordinamento.coordinations[i];
             var correctPlant = await getPlantFromERPPlant(item.plant);
             if (correctPlant != "") {
-                const data = await postgresdbService.executeQuery(queryMark.insertWBS, [correctPlant, item.wbe, item.wbe_description, item.project, item.project + " - " + item.project_description, item.network, item.network_description, item.activity_id, item.activity_id_description, item.confirmation_number, item.user_group, item.coordination, item.duration, item.duration_uom]);
+                const data = await postgresdbService.executeQuery(queryMark.insertWBS, [correctPlant, item.wbe, item.wbe_description, item.project, item.project + " - " + item.project_description, item.network, item.network_description, item.activity_id, item.activity_id_description, item.confirmation_number, item.user_group, item.coordination, item.activity_duration, item.uom]);
                 result.push(data);
             } else {
                 console.log(`Plant mapping not found for ERP plant: ${item.plant}. Skipping entry with confirmation number: ${item.confirmation_number}`);

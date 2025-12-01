@@ -1,7 +1,7 @@
 const selectZUnproductive = `SELECT * from z_unproductive_wbs where plant = $1`;
 
-const insertWBS = `INSERT INTO z_unproductive_wbs (plant, wbe, wbe_description, wbs, wbs_description, network, network_description, activity_id, activity_id_description, confirmation_number, user_group, coordination_activity, duration, duration_uom)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`;
+const insertWBS = `INSERT INTO z_unproductive_wbs (plant, wbe, wbe_description, wbs, wbs_description, network, network_description, activity_id, activity_id_description, confirmation_number, user_group, coordination_activity, duration, duration_uom, marked_labor, variance_labor, marked_uom, variance_uom)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, 0, 'HCN', 'HCN')`;
 
 const deleteWBS = `DELETE FROM z_unproductive_wbs WHERE confirmation_number = ANY($2) AND plant = $1`;
 
