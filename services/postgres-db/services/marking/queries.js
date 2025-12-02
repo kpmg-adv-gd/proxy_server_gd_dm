@@ -50,4 +50,9 @@ const updateZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
                                    variance_labor = variance_labor + $4
                                WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsByWBEQuery, getModificationsBySfcQuery, getProjectDataQuery, updateZUnproductiveWBSQuery };
+const updateMinusZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
+                               SET marked_labor = marked_labor - $3,
+                                   variance_labor = variance_labor - $4
+                               WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsByWBEQuery, getModificationsBySfcQuery, getProjectDataQuery, updateZUnproductiveWBSQuery, updateMinusZUnproductiveWBSQuery };

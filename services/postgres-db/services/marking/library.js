@@ -52,6 +52,10 @@ async function updateZUnproductiveWBS(plant, confirmationNumber, markedLabor, va
     await postgresdbService.executeQuery(queryMarking.updateZUnproductiveWBSQuery, [plant, confirmationNumber, markedLabor, varianceLabor]);
 }
 
+async function updateMinusZUnproductiveWBS(plant, confirmationNumber, markedLabor, varianceLabor) {
+    await postgresdbService.executeQuery(queryMarking.updateMinusZUnproductiveWBSQuery, [plant, confirmationNumber, markedLabor, varianceLabor]);
+}
+
 async function updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor,variance_labor) {
     let isStorno = cancelled_confirmation && cancelled_confirmation !== "";
     await postgresdbService.executeQuery(queryMarking.updateMarkingRecapQuery, [isStorno,marked_labor,variance_labor,confirmation_number]);
@@ -74,4 +78,4 @@ async function getProjectData(plant) {
     return data;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getModificationsByWBEService, updateZUnproductiveWBS }
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getModificationsByWBEService, updateZUnproductiveWBS, updateMinusZUnproductiveWBS }

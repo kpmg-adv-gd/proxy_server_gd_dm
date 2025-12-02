@@ -9,19 +9,10 @@ const updateWBS = `UPDATE z_unproductive_wbs SET wbe = $2, wbe_description = $3,
     network_description = $7, activity_id = $8, activity_id_description = $9, user_group = $11 
     WHERE plant = $1 and confirmation_number = $10`;
 
-const getMarcatureDayAndValue = `with adds as (select marking_date as "DAY", sum(marked_labor + variance_labor) as "VALUE_ADD"
+const getMarcatureDayAndValue = `select marking_date as "DAY", sum(marked_labor + variance_labor) as "VALUE"
 from z_op_confirmations 
 where plant = $1 and user_personal_number = $2 and 
-cancellation_flag = false and cancelled_confirmation is null group by marking_date),
-mins as (
-select marking_date as "DAY", sum(marked_labor + variance_labor) as "VALUE_MIN"
-from z_op_confirmations 
-where plant = $1 and user_personal_number = $2 and 
-cancellation_flag = false and cancelled_confirmation is not null group by marking_date)
-select adds."DAY", adds."VALUE_ADD" - 
-case when mins."VALUE_MIN" is null then 0 else mins."VALUE_MIN" end as "VALUE"
-from adds
-left join mins on adds."DAY" = mins."DAY" `;
+cancellation_flag = false and cancelled_confirmation is null group by marking_date`;
 
 const getUnproductiveByConfirmationNumber = `SELECT * FROM z_unproductive_wbs WHERE plant = $1 AND confirmation_number = $2`;
 

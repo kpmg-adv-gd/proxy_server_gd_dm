@@ -1,6 +1,6 @@
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost } = require("../../../utility/CommonCallApi");
-const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData, updateZUnproductiveWBS } = require("../../postgres-db/services/marking/library");
+const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData, updateZUnproductiveWBS, updateMinusZUnproductiveWBS } = require("../../postgres-db/services/marking/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -161,8 +161,8 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
                 durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
                 rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defectId);
         }
-        // Entro in z_unproductive_wbs con confirmation number, plant e sommo alle colonne marked labor e variance labor il loro valore
-        await updateZUnproductiveWBS(plant, confirmationNumber, markedLabor, varianceLabor);
+            // Entro in z_unproductive_wbs con confirmation number, plant e sommo alle colonne marked labor e variance labor il loro valore
+            await updateZUnproductiveWBS(plant, confirmationNumber, markedLabor, varianceLabor);
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
@@ -174,7 +174,7 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
 }
 
 
-async function sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
+async function sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, varianceLabor, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -202,11 +202,12 @@ async function sendStornoUnproductive(plant, personalNumber, activityNumber, act
 
     if (response.OUTPUT && response.OUTPUT.type == "S") {
         // Se la risposta è OK, aggiorno le conferme in ZDM
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, confirmationCounter, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, varianceLabor, durationUom, null, userId, personalNumber, false, confirmationCounter, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
         if (unCancellation == "X") {
             // Se è un annullamento, aggiorno il flag di cancellazione
             await updateCancelFlagOpConfirmation(confirmationNumber, confirmationCounter, userId);
         }   
+        await updateMinusZUnproductiveWBS(plant, confirmationNumber, duration, varianceLabor);
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
