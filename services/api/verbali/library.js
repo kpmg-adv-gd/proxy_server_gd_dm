@@ -5,7 +5,7 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 // Funzione per ottenere i verbali del supervisore assembly
-async function getVerbaliSupervisoreAssembly(plant, project, wbs) {
+async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
     var results = [];
     try {
         const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
@@ -66,6 +66,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs) {
             // Filtri su progetto e wbs
             if (project != "" && data.project != project) continue;
             if (wbs != "" && data.wbs != wbs) continue;
+            if (!showAll && data.reportStatus === "DONE") continue;
             // Aggiungo elemento
             results.push(data);
         }

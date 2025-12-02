@@ -7,8 +7,8 @@ module.exports.listenerSetup = (app) => {
     // Endpoint per ottenere i verbali del supervisore assembly
     app.post("/api/getVerbaliSupervisoreAssembly", async (req, res) => {
         try {
-            const { plant, project, wbs } = req.body;
-            const verbali = await getVerbaliSupervisoreAssembly(plant, project, wbs);
+            const { plant, project, wbs, showAll } = req.body;
+            const verbali = await getVerbaliSupervisoreAssembly(plant, project, wbs, showAll);
             if (verbali === false) {
                 res.status(500).json({ error: "Error while executing query" });
                 return;
