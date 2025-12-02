@@ -54,6 +54,11 @@ async function getMancantiInfoData(plant,project,orderGroup){
     return response;
 }
 
+async function getTotalQuantityFromOrders(plant, ordersList){
+    const responseQuery = await postgresdbService.executeQuery(queryLoipro.getTotalQuantityFromOrders, [plant, ordersList]);
+    return responseQuery[0].counter;
+}
+
 // Gestire le date "00000000"
 function formatDate(date) {
     // Se la data è "00000000" o "falsy", restituisci NULL
@@ -68,4 +73,4 @@ function formatDate(date) {
     // Se la data è già nel formato corretto, la restituisco così com'è
     return date;
 }
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData }
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders }

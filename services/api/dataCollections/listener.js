@@ -54,6 +54,14 @@ module.exports.listenerSetup = (app) => {
         var url = hostname + "/datacollection/v1/log";
         for (var i = 0; i < dataCollections.length; i++) {
             var dc = dataCollections[i];
+            if (dc.voteSection != null) {
+                dc.parameters.push({
+                    parameterName: dc.voteNameSection,
+                    valueText: dc.voteSection,
+                    dataType: "TEXT",
+                    comment: "",
+                });
+            }
             var parameters = await generateJsonParameters(dc.parameters);
             var payload = {
                 plant: plant,

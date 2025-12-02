@@ -90,20 +90,21 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
             }
             // Aggiungo informazione sulla viisbilità del voto sezione
             var sections = await getReportWeight("Assembly");
-            if (sections.find(item => item.section === dc.group)) {
+            if (sections.find(item => item.section === data.group)) {
                 var sharedVoti = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
+                console.log("SHARED VOTI SEZIONE: ", JSON.stringify(sharedVoti));
                 if (sharedVoti.length > 0) {
                     try {
                         var votiSezione = JSON.parse(sharedVoti[0].value);
-                        if (votiSezione.some(item => item.group === dc.group)) 
-                            moveDcVotoSezione(data, votiSezione.find(item => item.group === dc.group).parameterName);
+                        if (votiSezione.some(item => item.section === dc.group)) 
+                            moveDcVotoSezione(data, votiSezione.filter(item => item.section === dc.group)[0].value);
                     } catch (error) { }
                 }
             }
             results.push(data);
         }
         // Ordinare le data collection in base al nome del gruppo
-        results = await autoCompileFieldsDataCollection(results, selected);
+        results = await autoCompileFieldsDataCollection(plant, results, selected);
         results.sort((a, b) => a.group.localeCompare(b.group));
         return results;
     } catch (error) {
@@ -200,12 +201,12 @@ async function generateJsonParameters(parameters) {
 }
 
 // Funzione per l'auto compilazione di campi specifici delle data collections estratte
-async function autoCompileFieldsDataCollection(data, selected) {
+async function autoCompileFieldsDataCollection(plant, data, selected) {
     var sharedParametri = await getZSharedMemoryData(plant, "PARAMETRI_AUTO");
     if (sharedParametri.length > 0) {
         try {
             var parametriAuto = JSON.parse(sharedParametri[0].value);
-            data = await autoCompileFieldsDataCollectionDispatcher(data, parametriAuto, selected);
+            data = await autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected);
         } catch (error) { 
             console.log("Error parsing PARAMETRI_AUTO from shared memory: " + error.message);
         }
@@ -213,10 +214,12 @@ async function autoCompileFieldsDataCollection(data, selected) {
     return data;
 }
 
-// Toglo il parametro dalla lista, e lo salvo in un campo apposito
+// Toglo il parametro dalla lista, e lo salvo in un campo apposito per mostrarlo separatamente
 function moveDcVotoSezione(data, parameterName) {
     for (var i = 0; i < data.parameters.length; i++) {
         if (data.parameters[i].parameterName === parameterName) {
+            data.voteNameSection = parameterName;
+            data.voteNameSectionDesc = data.parameters[i].description;
             data.voteSection = data.parameters[i].valueText || data.parameters[i].valueData || data.parameters[i].valueNumber || data.parameters[i].valueBoolean || data.parameters[i].valueList || "";
             data.parameters.splice(i, 1);
             return;
