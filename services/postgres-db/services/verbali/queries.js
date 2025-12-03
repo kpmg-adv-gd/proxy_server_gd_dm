@@ -1,7 +1,7 @@
 const getVerbaleLev2NotDoneQuery = `SELECT DISTINCT "order", plant, sfc, workcenter_lev_2 FROM z_verbale_lev_2 WHERE plant = $1 AND workcenter_lev_2 = $2 AND status_lev_2 != 'Done' and sfc is not null`;
 
 const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_type as machine_type_2, l2.safety, 
-    l2.status_lev_2 as status, l2.time_lev_2, l2.workcenter_lev_2,
+    l2.status_lev_2 as status, l2.time_lev_2, l2.workcenter_lev_2, l2.wbe, 
     l3.id_lev_3, l3.lev_3, l3.status_lev_3, l3.machine_type as machine_type_3, l3.status_lev_3, l3.nonconformances
     FROM z_verbale_lev_2 l2 
     INNER JOIN z_verbale_lev_3 l3 ON l2.id_lev_2 = l3.id_lev_2 AND l2.sfc = l3.sfc
@@ -75,8 +75,8 @@ const updateNonConformanceLevel3 = `UPDATE z_verbale_lev_3
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
     AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
 
-const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'New', $10, $11, $12)`;
+const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'New', $10, $11, $12, $13)`;
     
 const insertZVerbaleLev3 = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'New', false)`;

@@ -1,6 +1,7 @@
 const { callPatch } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
+const PDFDocument = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -151,10 +152,196 @@ async function updateCustomSentTotTestingOrder(plant,order,user) {
     }
 }
 
+// Funzione per generare e scaricare il file del verbale di ispezione
+async function downloadInspectionReportPDF(dataCollections, selectedData) {
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument({ margin: 50 });
+            const chunks = [];
+
+            // Raccoglie i chunk del PDF in memoria
+            doc.on('data', chunk => chunks.push(chunk));
+            doc.on('end', () => {
+                const pdfBuffer = Buffer.concat(chunks);
+                const base64PDF = pdfBuffer.toString('base64');
+                resolve(base64PDF);
+            });
+            doc.on('error', reject);
+
+            // TESTATA - Header del documento
+            doc.fontSize(20).font('Helvetica-Bold').text('VERBALE DI ISPEZIONE', { align: 'center' });
+            doc.moveDown(1);
+
+            // Informazioni dalla testata (selectedData)
+            doc.fontSize(12).font('Helvetica-Bold');
+            
+            if (selectedData?.sfc) {
+                doc.text(`SFC: `, { continued: true }).font('Helvetica').text(selectedData.sfc);
+            }
+            if (selectedData?.parent_project) {
+                doc.font('Helvetica-Bold').text(`Progetto: `, { continued: true }).font('Helvetica').text(selectedData.project);
+            }
+            if (selectedData?.material) {
+                doc.font('Helvetica-Bold').text(`Materiale: `, { continued: true }).font('Helvetica').text(selectedData.material);
+            }
+
+            doc.moveDown(1.5);
+            doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+            doc.moveDown(1);
+
+            // DATA COLLECTIONS - Sezioni con parametri
+            if (dataCollections && dataCollections.length > 0) {
+                dataCollections.forEach((collection, index) => {
+                    // Verifica se serve una nuova pagina
+                    if (doc.y > doc.page.height - 150) {
+                        doc.addPage();
+                    }
+
+                    // Titolo della sezione
+                    doc.fontSize(14).font('Helvetica-Bold')
+                        .text(`${collection.description || 'Data Collection'}`, { underline: true });
+                    doc.moveDown(0.5);
+
+                    // Informazioni aggiuntive della collection
+                    doc.fontSize(10).font('Helvetica');
+                    if (collection.version) {
+                        doc.text(`Versione: ${collection.version}`);
+                    }
+
+                    doc.moveDown(0.5);
+
+                    // Aggiungo eventuale parametro aggiuntivo di voto se presente
+                    if (collection.voteSection != null) {
+                        collection.parameters.push({
+                            parameterName: collection.voteNameSection,
+                            valueText: collection.voteSection,
+                            dataType: "TEXT",
+                            comment: "",
+                        });
+                    }
+
+                    // Parametri della collection
+                    if (collection.parameters && Array.isArray(collection.parameters) && collection.parameters.length > 0) {
+                        doc.fontSize(11).font('Helvetica-Bold').text('Parametri:');
+                        doc.moveDown(0.5);
+
+                        // Definizione delle colonne della tabella
+                        const tableTop = doc.y;
+                        const colWidths = {
+                            nome: 200,
+                            valore: 150,
+                            commento: 150
+                        };
+                        const colPositions = {
+                            nome: 50,
+                            valore: 50 + colWidths.nome + 10,
+                            commento: 50 + colWidths.nome + colWidths.valore + 20
+                        };
+
+                        // Disegna intestazione tabella
+                        doc.fontSize(10).font('Helvetica-Bold');
+                        doc.rect(colPositions.nome, doc.y, colWidths.nome, 20).stroke();
+                        doc.rect(colPositions.valore, doc.y, colWidths.valore, 20).stroke();
+                        doc.rect(colPositions.commento, doc.y, colWidths.commento, 20).stroke();
+                        
+                        const headerY = doc.y + 6;
+                        doc.text('Nome Parametro', colPositions.nome + 5, headerY, { width: colWidths.nome - 10, align: 'left' });
+                        doc.text('Valore', colPositions.valore + 5, headerY, { width: colWidths.valore - 10, align: 'left' });
+                        doc.text('Commento', colPositions.commento + 5, headerY, { width: colWidths.commento - 10, align: 'left' });
+                        
+                        doc.y += 20;
+
+                        // Disegna righe della tabella
+                        collection.parameters.forEach((param, paramIndex) => {
+                            // Determina il valore del parametro
+                            let value = 'N/A';
+                            if (param.valueText !== undefined && param.valueText !== null) {
+                                value = param.valueText;
+                            } else if (param.valueNumber !== undefined && param.valueNumber !== null) {
+                                value = param.valueNumber.toString();
+                            } else if (param.valueData !== undefined && param.valueData !== null) {
+                                value = param.valueData;
+                            } else if (param.valueBoolean !== undefined && param.valueBoolean !== null) {
+                                value = param.valueBoolean ? 'Sì' : 'No';
+                            } else if (param.valueList !== undefined && param.valueList !== null) {
+                                value = Array.isArray(param.valueList) ? param.valueList.join(', ') : param.valueList;
+                            }
+
+                            const nome = param.description || 'Parametro';
+                            const commento = param.comment || '';
+
+                            // Calcola l'altezza necessaria per il testo più lungo
+                            const nomeHeight = doc.heightOfString(nome, { width: colWidths.nome - 10 });
+                            const valoreHeight = doc.heightOfString(value.toString(), { width: colWidths.valore - 10 });
+                            const commentoHeight = doc.heightOfString(commento, { width: colWidths.commento - 10 });
+                            const rowHeight = Math.max(nomeHeight, valoreHeight, commentoHeight) + 10;
+
+                            // Verifica se serve una nuova pagina
+                            if (doc.y + rowHeight > doc.page.height - 100) {
+                                doc.addPage();
+                                doc.y = 50;
+                            }
+
+                            const rowY = doc.y;
+
+                            // Disegna bordi della riga
+                            doc.rect(colPositions.nome, rowY, colWidths.nome, rowHeight).stroke();
+                            doc.rect(colPositions.valore, rowY, colWidths.valore, rowHeight).stroke();
+                            doc.rect(colPositions.commento, rowY, colWidths.commento, rowHeight).stroke();
+
+                            // Scrivi il contenuto (salva e ripristina Y per ogni cella)
+                            doc.fontSize(9).font('Helvetica');
+                            
+                            const textY = rowY + 5;
+                            doc.text(nome, colPositions.nome + 5, textY, { width: colWidths.nome - 10, align: 'left', lineBreak: true });
+                            
+                            doc.text(value.toString(), colPositions.valore + 5, textY, { width: colWidths.valore - 10, align: 'left', lineBreak: true });
+                            
+                            doc.text(commento, colPositions.commento + 5, textY, { width: colWidths.commento - 10, align: 'left', lineBreak: true });
+
+                            doc.y = rowY + rowHeight;
+                        });
+                    } else {
+                        doc.fontSize(10).font('Helvetica-Oblique').text('  Nessun parametro disponibile');
+                    }
+
+                    // Reset posizione X e Y dopo la tabella
+                    doc.x = 50;
+                    doc.moveDown(1);
+                    
+                    // Separatore tra sezioni (tranne l'ultima)
+                    if (index < dataCollections.length - 1) {
+                        doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+                        doc.moveDown(1);
+                    }
+                });
+            } else {
+                doc.fontSize(12).font('Helvetica-Oblique').text('Nessuna data collection disponibile', { align: 'center' });
+            }
+
+            // Aggiungi footer a tutte le pagine
+            const range = doc.bufferedPageRange();
+            for (let i = range.start; i < range.start + range.count; i++) {
+                doc.switchToPage(i);
+                doc.fontSize(8).font('Helvetica')
+                    .text(`Pagina ${i + 1} di ${range.count}`, 
+                          50, 
+                          doc.page.height - 50, 
+                          { align: 'center' });
+            }
+
+            // Finalizza il documento
+            doc.end();
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+}   
+
 // utils
 function generateTreeTable(data) { 
     var tree = [];
-    console.log("MARCO TREE: " + JSON.stringify(data));
     for (var i = 0; i < data.length; i++) {
         var child = {
             project_parent: data[i].project,
@@ -177,4 +364,4 @@ function generateTreeTable(data) {
 
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, downloadInspectionReportPDF };

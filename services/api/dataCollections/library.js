@@ -7,7 +7,7 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 // Elaborazione delle data collections per il supervisore assembly
-async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollections) {
+async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollections, refresh) {
     var results = [];
     try {
         for (var i = 0; i < datacollections.length; i++) {
@@ -92,7 +92,6 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
             var sections = await getReportWeight("Assembly");
             if (sections.find(item => item.section === data.group)) {
                 var sharedVoti = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
-                console.log("SHARED VOTI SEZIONE: ", JSON.stringify(sharedVoti));
                 if (sharedVoti.length > 0) {
                     try {
                         var votiSezione = JSON.parse(sharedVoti[0].value);
@@ -104,7 +103,7 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
             results.push(data);
         }
         // Ordinare le data collection in base al nome del gruppo
-        results = await autoCompileFieldsDataCollection(plant, results, selected);
+        results = await autoCompileFieldsDataCollection(plant, results, selected, refresh);
         results.sort((a, b) => a.group.localeCompare(b.group));
         return results;
     } catch (error) {
@@ -201,12 +200,12 @@ async function generateJsonParameters(parameters) {
 }
 
 // Funzione per l'auto compilazione di campi specifici delle data collections estratte
-async function autoCompileFieldsDataCollection(plant, data, selected) {
+async function autoCompileFieldsDataCollection(plant, data, selected, refresh) {
     var sharedParametri = await getZSharedMemoryData(plant, "PARAMETRI_AUTO");
     if (sharedParametri.length > 0) {
         try {
             var parametriAuto = JSON.parse(sharedParametri[0].value);
-            data = await autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected);
+            data = await autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh);
         } catch (error) { 
             console.log("Error parsing PARAMETRI_AUTO from shared memory: " + error.message);
         }

@@ -3,11 +3,12 @@ const { dispatch } = require("../../mdo/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getTotalQuantityFromOrders } = require("../../postgres-db/services/mancanti/library");
+const { ref } = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
 
-async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected) {
+async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh) {
     var filter = `(DATA_FIELD_VALUE eq '${selected.parent_project}' and DATA_FIELD eq 'COMMESSA')`;
     var mockReq = {
         path: "/mdo/ORDER_CUSTOM_DATA",
@@ -24,31 +25,31 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
         // switch sulla funzione da chiamare
         switch (numParametro) {
             case "0":
-                data = await ruleParameter0(data, group, parameterName, selected, dcData);
+                data = await ruleParameter0(data, group, parameterName, selected, dcData, refresh);
                 break;
             case "1":
-                data = await ruleParameter1(data, group, parameterName, selected);
+                data = await ruleParameter1(data, group, parameterName, selected, refresh);
                 break;
             case "2":
-                data = await ruleParameter2(data, group, parameterName, selected, dcData);
+                data = await ruleParameter2(data, group, parameterName, selected, dcData, refresh);
                 break;
             case "3":
-                data = await ruleParameter3(data, group, parameterName, selected);
+                data = await ruleParameter3(data, group, parameterName, selected, refresh);
                 break;
             case "4":
-                data = await ruleParameter4(data, group, parameterName, selected, plant);
+                data = await ruleParameter4(data, group, parameterName, selected, plant, refresh);
                 break;
             case "5":
-                data = await ruleParameter5(data, group, parameterName, selected);
+                data = await ruleParameter5(data, group, parameterName, selected, refresh);
                 break;
             case "6":
-                data = await ruleParameter6(data, group, parameterName, selected);
+                data = await ruleParameter6(data, group, parameterName, selected, refresh);
                 break;
             case "7":
-                data = await ruleParameter7(data, group, parameterName, selected);
+                data = await ruleParameter7(data, group, parameterName, selected, refresh);
                 break;
             case "8":
-                data = await ruleParameter8(data, group, parameterName, selected);
+                data = await ruleParameter8(data, group, parameterName, selected, refresh);
                 break;
             default:
                 // Nessuna azione
@@ -58,7 +59,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     return data;
 }
 
-async function ruleParameter0(data, group, parameterName, selected, dcData) {
+async function ruleParameter0(data, group, parameterName, selected, dcData, refresh) {
     if (dcData.length > 0) {
         var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CO')`;
         var mockReq2 = {
@@ -72,7 +73,7 @@ async function ruleParameter0(data, group, parameterName, selected, dcData) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && data[i].parameters[j].valueText == "") {
+                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
                             data[i].parameters[j].valueText = dcData2[0].DATA_VALUE;
                         }
                     }
@@ -82,12 +83,12 @@ async function ruleParameter0(data, group, parameterName, selected, dcData) {
     }
     return data;
 }
-async function ruleParameter1(data, group, parameterName, selected) {
+async function ruleParameter1(data, group, parameterName, selected, refresh) {
     var project = selected.project_parent;
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && data[i].parameters[j].valueText == "") {
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
                     data[i].parameters[j].valueText = project;
                 }
             }
@@ -95,7 +96,7 @@ async function ruleParameter1(data, group, parameterName, selected) {
     }
     return data;
 }
-async function ruleParameter2(data, group, parameterName, selected, dcData) {
+async function ruleParameter2(data, group, parameterName, selected, dcData, refresh) {
     if (dcData.length > 0) {
         var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CUSTOMER')`;
         var mockReq2 = {
@@ -109,7 +110,7 @@ async function ruleParameter2(data, group, parameterName, selected, dcData) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && data[i].parameters[j].valueText == "") {
+                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
                             data[i].parameters[j].valueText = dcData2[0].DATA_VALUE;
                         }
                     }
@@ -119,12 +120,12 @@ async function ruleParameter2(data, group, parameterName, selected, dcData) {
     }
     return data;
 }
-async function ruleParameter3(data, group, parameterName, selected) {
+async function ruleParameter3(data, group, parameterName, selected, refresh) {
     var material = selected.material;
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && data[i].parameters[j].valueText == "") {
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
                     data[i].parameters[j].valueText = material;
                 }
             }
@@ -132,14 +133,14 @@ async function ruleParameter3(data, group, parameterName, selected) {
     }
     return data;
 }
-async function ruleParameter4(data, group, parameterName, selected, plant) {
+async function ruleParameter4(data, group, parameterName, selected, plant, refresh) {
     var ordersToCheck = await ordersChildrenRecursion(plant, selected.order);
     var quantity = await getTotalQuantityFromOrders(plant, "'" + ordersToCheck.join("','") + "'");
     quantity = quantity == null ? "0" : quantity
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && data[i].parameters[j].valueText == "") {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
                     data[i].parameters[j].valueText = quantity;
                 }
             }
@@ -147,16 +148,16 @@ async function ruleParameter4(data, group, parameterName, selected, plant) {
     }
     return data;
 }
-async function ruleParameter5(data, group, parameterName, selected) {
+async function ruleParameter5(data, group, parameterName, selected, refresh) {
     return data;
 }
-async function ruleParameter6(data, group, parameterName, selected) {
+async function ruleParameter6(data, group, parameterName, selected, refresh) {
     return data;
 }
-async function ruleParameter7(data, group, parameterName, selected) {
+async function ruleParameter7(data, group, parameterName, selected, refresh) {
     return data;
 }
-async function ruleParameter8(data, group, parameterName, selected) {
+async function ruleParameter8(data, group, parameterName, selected, refresh) {
     return data;
 }
 

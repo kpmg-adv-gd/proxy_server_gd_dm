@@ -8,14 +8,14 @@ module.exports.listenerSetup = (app) => {
     // Endpoint per ottenere le data collections per supervisore assembly
     app.post("/api/getDataCollectionsBySFC", async (req, res) => {
         try {
-            const { plant, resource, selected, stepId } = req.body;
+            const { plant, resource, selected, stepId, refresh } = req.body;
 
             var url = hostname + "/datacollection/v1/sfc/groups?plant=" + plant + "&resource=" + resource
                 + "&sfc=" + selected.sfc + "&StepId=" + stepId;
 
             const datacollectionsResponse = await callGet(url);
             if (datacollectionsResponse && datacollectionsResponse.length > 0) {
-                var results = await elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollectionsResponse);
+                var results = await elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollectionsResponse, refresh);
                 if (!results) {
                     res.status(500).json({ error: "Error while executing query" });
                     return;

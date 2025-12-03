@@ -386,7 +386,7 @@ async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
         var level1 = jsonOrderTesting.level1[i];
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
-            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority);    
+            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
             if (!res) result = false;
         }
     }

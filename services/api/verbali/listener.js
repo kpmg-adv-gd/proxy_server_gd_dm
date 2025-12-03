@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, downloadInspectionReportPDF } = require("./library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -38,6 +38,7 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    // Chusura del verbale di ispezione
     app.post("/api/generateInspection", async (req, res) => {
         try {
             const { plant, order, user } = req.body;
@@ -48,6 +49,20 @@ module.exports.listenerSetup = (app) => {
             // Logica di dettaglio per il passaggio al testing
             // todo...
             res.status(200).json({ message: "Update successful" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per generare e scaricare il file del verbale di ispezione
+    // Questo endpoint deve restituire il file PDF generato (application/pdf)
+    app.post("/api/downloadInspectionReportPDF", async (req, res) => {
+        try {
+            const { dataCollections, selectedData } = req.body;
+            var base64PDF = await downloadInspectionReportPDF(dataCollections, selectedData);
+            res.status(200).json({ base64: base64PDF });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
