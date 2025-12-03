@@ -18,7 +18,7 @@ async function getZOpConfirmationData(plant,project,wbe,userId,startMarkingDate,
     }
     whereCondition += " ORDER BY zoc.confirmation_number::numeric ASC,zoc.confirmation_counter DESC, TO_DATE(zoc.marking_date, 'DD/MM/YYYY') DESC"
     const fullQuery = queryMarking.getZOpConfirmationDataByFilterQuery+whereCondition;
-    const data = await postgresdbService.executeQuery(fullQuery,[]);
+    const data = await postgresdbService.executeQuery(fullQuery,[plant]);
     return data;
 }
 
