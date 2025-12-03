@@ -3,6 +3,7 @@ const { dispatch } = require("../../mdo/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getTotalQuantityFromOrders } = require("../../postgres-db/services/mancanti/library");
+const { getModificheToDataCollections } = require("../../postgres-db/services/modifiche/library");
 const { ref } = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -40,13 +41,13 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
                 data = await ruleParameter4(data, group, parameterName, selected, plant, refresh);
                 break;
             case "5":
-                data = await ruleParameter5(data, group, parameterName, selected, refresh);
+                data = await ruleParameter5(data, group, parameterName, selected, plant, refresh);
                 break;
             case "6":
-                data = await ruleParameter6(data, group, parameterName, selected, refresh);
+                data = await ruleParameter6(data, group, parameterName, selected, plant, refresh);
                 break;
             case "7":
-                data = await ruleParameter7(data, group, parameterName, selected, refresh);
+                data = await ruleParameter7(data, group, parameterName, selected, plant, refresh);
                 break;
             case "8":
                 data = await ruleParameter8(data, group, parameterName, selected, refresh);
@@ -148,13 +149,43 @@ async function ruleParameter4(data, group, parameterName, selected, plant, refre
     }
     return data;
 }
-async function ruleParameter5(data, group, parameterName, selected, refresh) {
+async function ruleParameter5(data, group, parameterName, selected, plant, refresh) {
+    var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MK");
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
+                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                }
+            }
+        }
+    }
     return data;
 }
-async function ruleParameter6(data, group, parameterName, selected, refresh) {
+async function ruleParameter6(data, group, parameterName, selected, plant, refresh) {
+    var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MT");
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
+                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                }
+            }
+        }
+    }
     return data;
 }
-async function ruleParameter7(data, group, parameterName, selected, refresh) {
+async function ruleParameter7(data, group, parameterName, selected, plant, refresh) {
+    var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MA");
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
+                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                }
+            }
+        }
+    }
     return data;
 }
 async function ruleParameter8(data, group, parameterName, selected, refresh) {

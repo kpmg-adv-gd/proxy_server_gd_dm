@@ -9,7 +9,7 @@ const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_t
     AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.active = true 
     ORDER BY l3.id_lev_2, l3.id_lev_3`;
 
-const getAllMachineType = `SELECT DISTINCT machine_type FROM z_verbale_lev_2 WHERE plant = $1 `;
+const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 `;
 
 const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, machine_type, status_lev_3, 
     TO_CHAR((start_date  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as start_date,

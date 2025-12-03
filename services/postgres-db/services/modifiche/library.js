@@ -63,6 +63,12 @@ async function updateZModifyCO2ByOrder(plant,newSfc,oldSfc){
     return data;
 }
 
+async function getModificheToDataCollections(plant,project,wbe,section, type){
+    let dateNow = new Date();
+    var data = await postgresdbService.executeQuery(queryModifiche.getModificheToDataCollections, [plant,project,wbe,section, type]); 
+    return data;
+}
+
 async function getModificheToTesting(plant, project){
     const data = await postgresdbService.executeQuery(queryModifiche.getModificheToTestingQuery, [plant, project]);
     // Recupero descrizione materiali
@@ -115,4 +121,4 @@ async function getModificheToTesting(plant, project){
     return treeTable;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting }
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToDataCollections }

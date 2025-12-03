@@ -94,4 +94,6 @@ const updateZModifyByOrderQuery = `UPDATE z_modify
 
 const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND closed_in_assembly = false AND closed_in_testing = false ORDER BY prog_eco ASC;`;                             
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery };
+const getModificheToDataCollections = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND wbe_machine = $3 AND machine_section = $4 AND status != '1' AND "type" = $5`;
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToDataCollections };
