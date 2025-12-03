@@ -214,6 +214,7 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
                     if (collection.voteSection != null) {
                         collection.parameters.push({
                             parameterName: collection.voteNameSection,
+                            description: collection.voteNameSectionDesc,
                             valueText: collection.voteSection,
                             dataType: "TEXT",
                             comment: "",
@@ -267,7 +268,7 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
                                 value = Array.isArray(param.valueList) ? param.valueList.join(', ') : param.valueList;
                             }
 
-                            const nome = param.description || 'Parametro';
+                            const nome = param.description || 'Parametro N/A';
                             const commento = param.comment || '';
 
                             // Calcola l'altezza necessaria per il testo più lungo

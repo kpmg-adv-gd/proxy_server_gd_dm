@@ -154,11 +154,19 @@ async function ruleParameter4(data, group, parameterName, selected, plant, refre
 }
 async function ruleParameter5(data, group, parameterName, selected, plant, refresh) {
     var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MK");
+    if (result.length > 0) {
+        // Creo commento concatenando prog_eco e process_id delle modifiche trovate
+        var commento = "";
+        for (var i = 0; i < result.length; i++) {
+            commento += `Prog/Eco: ${result[i].prog_eco} - Process ID: ${result[i].process_id}\n`;
+        }
+    }
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
                 if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
                     data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                    if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
         }
@@ -167,11 +175,19 @@ async function ruleParameter5(data, group, parameterName, selected, plant, refre
 }
 async function ruleParameter6(data, group, parameterName, selected, plant, refresh) {
     var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MT");
+    if (result.length > 0) {
+        // Creo commento concatenando prog_eco e material delle modifiche trovate
+        var commento = "";
+        for (var i = 0; i < result.length; i++) {
+            commento += `Prog/Eco: ${result[i].prog_eco} - Material: ${result[i].material}\n`;
+        }
+    }
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
                 if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
                     data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                    if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
         }
@@ -180,11 +196,19 @@ async function ruleParameter6(data, group, parameterName, selected, plant, refre
 }
 async function ruleParameter7(data, group, parameterName, selected, plant, refresh) {
     var result = await getModificheToDataCollections(plant, selected.project_parent, selected.wbs, selected.material, "MA");
+    if (result.length > 0) {
+        // Creo commento concatenando process id e material delle modifiche trovate
+        var commento = "";
+        for (var i = 0; i < result.length; i++) {
+            commento += `Process ID: ${result[i].process_id} - Material: ${result[i].material}\n`;
+        }
+    }
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
                 if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
                     data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                    if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
         }
@@ -202,7 +226,7 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || refresh)) {
                     data[i].parameters[j].valueNumber = totalTime;
                 }
             }
@@ -286,13 +310,13 @@ async function getIncompleteOperations(plant, selected) {
         var filter4 = `(PLANT eq '${plant}' and MFG_ORDER eq '${orderData[0].MFG_ORDER}' and ROUTING eq '${orderData[0].ROUTING}' and ROUTING_VERSION eq '${orderData[0].ROUTING_VERSION}'
             and (${operationList.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(' or ')}))`;
         var mockReq4 = {
-            path: "/mdo/ORDER_SCHEDULE",
+            path: "/mdo/SFC_STEP_STATUS",
             query: { $apply: `filter(${filter4})` },
             method: "GET"
         };
         var outMock4 = await dispatch(mockReq4);
         var optNotIncluded = (outMock4?.data?.value && outMock4.data.value.length > 0) ? outMock4.data.value.filter(item => item.COMPLETED_AT != null) : [];
-        var optDaConsiderare = operationList.filter(op => !optNotIncluded.find(item => item.OPERATION_ACTIVITY === op));
+        var optDaConsiderare = orderScheduleData.filter(op => !optNotIncluded.find(item => item.OPERATION_ACTIVITY === op.OPERATION_ACTIVITY));
         return optDaConsiderare;
     } else {
         return [];
