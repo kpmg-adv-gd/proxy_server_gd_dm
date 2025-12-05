@@ -4,6 +4,7 @@ const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/
 const { getDefectsTI } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale } = require("../../postgres-db/services/additional_operations/library");
+const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/library");
 const PDFDocument = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -162,6 +163,7 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
     var defects = await getDefectsTI(plant, selectedData.project_parent);
     var modifiche = await getModificheToVerbaleTesting(plant, selectedData.project_parent, selectedData.wbs, selectedData.material);
     var additionalOperations = await getAdditionalOperationsToVerbale(plant, selectedData.project_parent, selectedData.material);
+    var mancanti = await getZMancantiReportData(plant, selectedData.project_parent, selectedData.wbs, null, null, null);
 
     return new Promise((resolve, reject) => {
         try {
@@ -708,6 +710,150 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
                     doc.text(group_code, colPositionsOp.group_code + 2, textY, { width: colWidthsOp.group_code - 4, align: 'left', lineBreak: true });
                     doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
                     doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
+
+                    doc.y = rowY + rowHeight;
+                });
+                doc.x = 50;
+            }
+
+            // SEZIONE MANCANTI
+            if (mancanti && mancanti.length > 0) {
+                doc.addPage();
+                doc.x = 50;
+                doc.y = 50;
+
+                doc.fontSize(18).font('Helvetica-Bold')
+                    .text('SEZIONE MANCANTI', { align: 'center' });
+                doc.moveDown(0.5);
+                doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+                doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
+                doc.moveDown(1);
+                doc.moveDown(0.5);
+
+                // Definizione colonne per mancanti
+                const colWidthsManc = {
+                    project: 50,
+                    wbs: 50,
+                    parentMat: 55,
+                    order: 45,
+                    material: 55,
+                    missingComp: 55,
+                    compDesc: 60,
+                    missingType: 45,
+                    coverType: 45,
+                    receiptDate: 50
+                };
+                const colPositionsManc = {
+                    project: 50,
+                    wbs: 50 + colWidthsManc.project + 2,
+                    parentMat: 50 + colWidthsManc.project + colWidthsManc.wbs + 4,
+                    order: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + 6,
+                    material: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + 8,
+                    missingComp: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + colWidthsManc.material + 10,
+                    compDesc: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + colWidthsManc.material + colWidthsManc.missingComp + 12,
+                    missingType: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + colWidthsManc.material + colWidthsManc.missingComp + colWidthsManc.compDesc + 14,
+                    coverType: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + colWidthsManc.material + colWidthsManc.missingComp + colWidthsManc.compDesc + colWidthsManc.missingType + 16,
+                    receiptDate: 50 + colWidthsManc.project + colWidthsManc.wbs + colWidthsManc.parentMat + colWidthsManc.order + colWidthsManc.material + colWidthsManc.missingComp + colWidthsManc.compDesc + colWidthsManc.missingType + colWidthsManc.coverType + 18
+                };
+
+                // Intestazione tabella mancanti
+                doc.fontSize(6).font('Helvetica-Bold');
+                doc.rect(colPositionsManc.project, doc.y, colWidthsManc.project, 20).stroke();
+                doc.rect(colPositionsManc.wbs, doc.y, colWidthsManc.wbs, 20).stroke();
+                doc.rect(colPositionsManc.parentMat, doc.y, colWidthsManc.parentMat, 20).stroke();
+                doc.rect(colPositionsManc.order, doc.y, colWidthsManc.order, 20).stroke();
+                doc.rect(colPositionsManc.material, doc.y, colWidthsManc.material, 20).stroke();
+                doc.rect(colPositionsManc.missingComp, doc.y, colWidthsManc.missingComp, 20).stroke();
+                doc.rect(colPositionsManc.compDesc, doc.y, colWidthsManc.compDesc, 20).stroke();
+                doc.rect(colPositionsManc.missingType, doc.y, colWidthsManc.missingType, 20).stroke();
+                doc.rect(colPositionsManc.coverType, doc.y, colWidthsManc.coverType, 20).stroke();
+                doc.rect(colPositionsManc.receiptDate, doc.y, colWidthsManc.receiptDate, 20).stroke();
+
+                const headerYManc = doc.y + 6;
+                doc.text('Project', colPositionsManc.project + 2, headerYManc, { width: colWidthsManc.project - 4, align: 'left' });
+                doc.text('WBS Element', colPositionsManc.wbs + 2, headerYManc, { width: colWidthsManc.wbs - 4, align: 'left' });
+                doc.text('Parent Material', colPositionsManc.parentMat + 2, headerYManc, { width: colWidthsManc.parentMat - 4, align: 'left' });
+                doc.text('Group Order', colPositionsManc.order + 2, headerYManc, { width: colWidthsManc.order - 4, align: 'left' });
+                doc.text('Group Material', colPositionsManc.material + 2, headerYManc, { width: colWidthsManc.material - 4, align: 'left' });
+                doc.text('Missing Component', colPositionsManc.missingComp + 2, headerYManc, { width: colWidthsManc.missingComp - 4, align: 'left' });
+                doc.text('Component Description', colPositionsManc.compDesc + 2, headerYManc, { width: colWidthsManc.compDesc - 4, align: 'left' });
+                doc.text('Missing Type', colPositionsManc.missingType + 2, headerYManc, { width: colWidthsManc.missingType - 4, align: 'left' });
+                doc.text('Cover Element Type', colPositionsManc.coverType + 2, headerYManc, { width: colWidthsManc.coverType - 4, align: 'left' });
+                doc.text('Expected Receipt Date', colPositionsManc.receiptDate + 2, headerYManc, { width: colWidthsManc.receiptDate - 4, align: 'left' });
+
+                doc.y += 20;
+
+                // Righe tabella mancanti
+                mancanti.forEach(manc => {
+                    const project = manc.project || 'N/A';
+                    const wbs = manc.wbs_element || 'N/A';
+                    const parentMat = manc.parent_material || 'N/A';
+                    const order = manc.order || 'N/A';
+                    const material = manc.material || 'N/A';
+                    const missingComp = manc.missing_component || 'N/A';
+                    const compDesc = manc.component_description || 'N/A';
+                    const missingType = manc.type_mancante || 'N/A';
+                    const coverType = manc.type_cover_element || 'N/A';
+                    
+                    // Formatta la data in DD/MM/YYYY
+                    let receiptDate = 'N/A';
+                    if (manc.receipt_expected_date) {
+                        try {
+                            const date = new Date(manc.receipt_expected_date);
+                            if (!isNaN(date.getTime())) {
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                receiptDate = `${day}/${month}/${year}`;
+                            }
+                        } catch (e) {
+                            receiptDate = 'N/A';
+                        }
+                    }
+
+                    // Calcola altezza riga
+                    const projectHeight = doc.heightOfString(project, { width: colWidthsManc.project - 4 });
+                    const wbsHeight = doc.heightOfString(wbs, { width: colWidthsManc.wbs - 4 });
+                    const parentMatHeight = doc.heightOfString(parentMat, { width: colWidthsManc.parentMat - 4 });
+                    const orderHeight = doc.heightOfString(order, { width: colWidthsManc.order - 4 });
+                    const materialHeight = doc.heightOfString(material, { width: colWidthsManc.material - 4 });
+                    const missingCompHeight = doc.heightOfString(missingComp, { width: colWidthsManc.missingComp - 4 });
+                    const compDescHeight = doc.heightOfString(compDesc, { width: colWidthsManc.compDesc - 4 });
+                    const missingTypeHeight = doc.heightOfString(missingType, { width: colWidthsManc.missingType - 4 });
+                    const coverTypeHeight = doc.heightOfString(coverType, { width: colWidthsManc.coverType - 4 });
+                    const receiptDateHeight = doc.heightOfString(receiptDate, { width: colWidthsManc.receiptDate - 4 });
+                    const rowHeight = Math.max(projectHeight, wbsHeight, parentMatHeight, orderHeight, materialHeight, missingCompHeight, compDescHeight, missingTypeHeight, coverTypeHeight, receiptDateHeight) + 8;
+
+                    // Nuova pagina se necessario
+                    if (doc.y + rowHeight > doc.page.height - 100) {
+                        doc.addPage();
+                        doc.y = 50;
+                    }
+
+                    const rowY = doc.y;
+                    doc.rect(colPositionsManc.project, rowY, colWidthsManc.project, rowHeight).stroke();
+                    doc.rect(colPositionsManc.wbs, rowY, colWidthsManc.wbs, rowHeight).stroke();
+                    doc.rect(colPositionsManc.parentMat, rowY, colWidthsManc.parentMat, rowHeight).stroke();
+                    doc.rect(colPositionsManc.order, rowY, colWidthsManc.order, rowHeight).stroke();
+                    doc.rect(colPositionsManc.material, rowY, colWidthsManc.material, rowHeight).stroke();
+                    doc.rect(colPositionsManc.missingComp, rowY, colWidthsManc.missingComp, rowHeight).stroke();
+                    doc.rect(colPositionsManc.compDesc, rowY, colWidthsManc.compDesc, rowHeight).stroke();
+                    doc.rect(colPositionsManc.missingType, rowY, colWidthsManc.missingType, rowHeight).stroke();
+                    doc.rect(colPositionsManc.coverType, rowY, colWidthsManc.coverType, rowHeight).stroke();
+                    doc.rect(colPositionsManc.receiptDate, rowY, colWidthsManc.receiptDate, rowHeight).stroke();
+
+                    doc.fontSize(6).font('Helvetica');
+                    const textY = rowY + 4;
+                    doc.text(project, colPositionsManc.project + 2, textY, { width: colWidthsManc.project - 4, align: 'left', lineBreak: true });
+                    doc.text(wbs, colPositionsManc.wbs + 2, textY, { width: colWidthsManc.wbs - 4, align: 'left', lineBreak: true });
+                    doc.text(parentMat, colPositionsManc.parentMat + 2, textY, { width: colWidthsManc.parentMat - 4, align: 'left', lineBreak: true });
+                    doc.text(order, colPositionsManc.order + 2, textY, { width: colWidthsManc.order - 4, align: 'left', lineBreak: true });
+                    doc.text(material, colPositionsManc.material + 2, textY, { width: colWidthsManc.material - 4, align: 'left', lineBreak: true });
+                    doc.text(missingComp, colPositionsManc.missingComp + 2, textY, { width: colWidthsManc.missingComp - 4, align: 'left', lineBreak: true });
+                    doc.text(compDesc, colPositionsManc.compDesc + 2, textY, { width: colWidthsManc.compDesc - 4, align: 'left', lineBreak: true });
+                    doc.text(missingType, colPositionsManc.missingType + 2, textY, { width: colWidthsManc.missingType - 4, align: 'left', lineBreak: true });
+                    doc.text(coverType, colPositionsManc.coverType + 2, textY, { width: colWidthsManc.coverType - 4, align: 'left', lineBreak: true });
+                    doc.text(receiptDate, colPositionsManc.receiptDate + 2, textY, { width: colWidthsManc.receiptDate - 4, align: 'left', lineBreak: true });
 
                     doc.y = rowY + rowHeight;
                 });
