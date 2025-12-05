@@ -1,5 +1,6 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, downloadInspectionReportPDF } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF } = require("./library");
+const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -41,13 +42,15 @@ module.exports.listenerSetup = (app) => {
     // Chusura del verbale di ispezione
     app.post("/api/generateInspection", async (req, res) => {
         try {
-            const { plant, order, user } = req.body;
+            const { plant, user, selectedData, dataCollections } = req.body;
             // Salvo campi custom ASSEMBLY_REPORT_STATUS e ASSEMBLY_REPORT_USER
-            await updateCustomAssemblyReportStatusOrderDone(plant, order, user);
+            await updateCustomAssemblyReportStatusOrderDone(plant, selectedData.order, user);
             // Salvo campo custom SENT_TO_TESTING su ordine e su figli/nipoti...
-            await updateCustomSentTotTestingOrder(plant, order, user);
+            await updateCustomSentTotTestingOrder(plant, selectedData.order, user);
             // Logica di dettaglio per il passaggio al testing
             // todo...
+            var base64PDF = await generateInspectionPDF(plant, dataCollections, selectedData);
+            await saveWorkInstructionPDF(base64PDF, "Verbale_Ispezione_"+selectedData.project_parent+"_"+selectedData.material, plant);
             res.status(200).json({ message: "Update successful" });
         } catch (error) {
             let status = error.status || 500;
@@ -58,11 +61,11 @@ module.exports.listenerSetup = (app) => {
 
     // Endpoint per generare e scaricare il file del verbale di ispezione
     // Questo endpoint deve restituire il file PDF generato (application/pdf)
-    app.post("/api/downloadInspectionReportPDF", async (req, res) => {
+    app.post("/api/downloadVerbalePDF", async (req, res) => {
         try {
-            const { dataCollections, selectedData } = req.body;
-            var base64PDF = await downloadInspectionReportPDF(dataCollections, selectedData);
-            res.status(200).json({ base64: base64PDF });
+            const { plant, project, material } = req.body;
+            var base64 = await getWorkInstructionPDF(plant, "Verbale_Ispezione_" + project + "_" + material);
+            res.status(200).json({ base64: base64 });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

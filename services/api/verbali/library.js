@@ -1,6 +1,9 @@
-const { callPatch } = require("../../../utility/CommonCallApi");
+const { callPatch, callPost } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
+const { getDefectsTI } = require("../../postgres-db/services/defect/library");
+const { getModificheToVerbaleTesting } = require("../../postgres-db/services/modifiche/library");
+const { getAdditionalOperationsToVerbale } = require("../../postgres-db/services/additional_operations/library");
 const PDFDocument = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -153,7 +156,13 @@ async function updateCustomSentTotTestingOrder(plant,order,user) {
 }
 
 // Funzione per generare e scaricare il file del verbale di ispezione
-async function downloadInspectionReportPDF(dataCollections, selectedData) {
+async function generateInspectionPDF(plant, dataCollections, selectedData) {
+
+    /* Recupero le sezioni aggiuntive da mostrare dopo la lista delle dc (con i parametri) */
+    var defects = await getDefectsTI(plant, selectedData.project_parent);
+    var modifiche = await getModificheToVerbaleTesting(plant, selectedData.project_parent, selectedData.wbs, selectedData.material);
+    var additionalOperations = await getAdditionalOperationsToVerbale(plant, selectedData.project_parent, selectedData.material);
+
     return new Promise((resolve, reject) => {
         try {
             const doc = new PDFDocument({ margin: 50 });
@@ -176,20 +185,23 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
             doc.fontSize(12).font('Helvetica-Bold');
             
             if (selectedData?.sfc) {
-                doc.text(`SFC: `, { continued: true }).font('Helvetica').text(selectedData.sfc);
+                doc.text(`SFC: `, 50, doc.y, { continued: true }).font('Helvetica').text(selectedData.sfc);
+                doc.moveDown(0.5);
             }
-            if (selectedData?.parent_project) {
-                doc.font('Helvetica-Bold').text(`Progetto: `, { continued: true }).font('Helvetica').text(selectedData.project);
+            if (selectedData?.project_parent) {
+                doc.font('Helvetica-Bold').text(`Progetto: `, 50, doc.y, { continued: true }).font('Helvetica').text(selectedData.project_parent);
+                doc.moveDown(0.5);
             }
             if (selectedData?.material) {
-                doc.font('Helvetica-Bold').text(`Materiale: `, { continued: true }).font('Helvetica').text(selectedData.material);
+                doc.font('Helvetica-Bold').text(`Materiale: `, 50, doc.y, { continued: true }).font('Helvetica').text(selectedData.material);
+                doc.moveDown(0.5);
             }
 
-            doc.moveDown(1.5);
+            //doc.moveDown(1.5);
             doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
             doc.moveDown(1);
 
-            // DATA COLLECTIONS - Sezioni con parametri
+            // SEZIONE DATA COLLECTIONS - Sezioni con parametri
             if (dataCollections && dataCollections.length > 0) {
                 dataCollections.forEach((collection, index) => {
                     // Verifica se serve una nuova pagina
@@ -223,7 +235,6 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
 
                     // Parametri della collection
                     if (collection.parameters && Array.isArray(collection.parameters) && collection.parameters.length > 0) {
-                        doc.fontSize(11).font('Helvetica-Bold').text('Parametri:');
                         doc.moveDown(0.5);
 
                         // Definizione delle colonne della tabella
@@ -263,7 +274,7 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
                             } else if (param.valueData !== undefined && param.valueData !== null) {
                                 value = param.valueData;
                             } else if (param.valueBoolean !== undefined && param.valueBoolean !== null) {
-                                value = param.valueBoolean ? 'Sì' : 'No';
+                                value = param.valueBoolean;
                             } else if (param.valueList !== undefined && param.valueList !== null) {
                                 value = Array.isArray(param.valueList) ? param.valueList.join(', ') : param.valueList;
                             }
@@ -320,6 +331,389 @@ async function downloadInspectionReportPDF(dataCollections, selectedData) {
                 doc.fontSize(12).font('Helvetica-Oblique').text('Nessuna data collection disponibile', { align: 'center' });
             }
 
+            // SEZIONE DIFETTI
+            if (defects && defects.length > 0) {
+                // Estrai tutti i difetti dai Children della treeTable
+                const allDefects = [];
+                defects.forEach(group => {
+                    if (group.Children && Array.isArray(group.Children)) {
+                        allDefects.push(...group.Children);
+                    }
+                });
+
+                if (allDefects.length > 0) {
+                    // Aggiungi sempre una nuova pagina per i difetti
+                    doc.addPage();
+
+                    // Reset posizione X
+                    doc.x = 50;
+                    doc.y = 50;
+
+                    // Titolo sezione difetti con bordo più visibile
+                    doc.fontSize(18).font('Helvetica-Bold')
+                        .text('SEZIONE DIFETTI', { align: 'center' });
+                    doc.moveDown(0.5);
+                    doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+                    doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
+                    doc.moveDown(1);
+                    doc.moveDown(0.5);
+
+                    // Definizione delle colonne della tabella difetti
+                    const colWidthsDefects = {
+                        group: 70,
+                        code: 70,
+                        material: 60,
+                        priority: 55,
+                        user: 50,
+                        phase: 50,
+                        status: 50,
+                        qn: 50
+                    };
+                    const colPositionsDefects = {
+                        group: 50,
+                        code: 50 + colWidthsDefects.group + 2,
+                        material: 50 + colWidthsDefects.group + colWidthsDefects.code + 4,
+                        priority: 50 + colWidthsDefects.group + colWidthsDefects.code + colWidthsDefects.material + 6,
+                        user: 50 + colWidthsDefects.group + colWidthsDefects.code + colWidthsDefects.material + colWidthsDefects.priority + 8,
+                        phase: 50 + colWidthsDefects.group + colWidthsDefects.code + colWidthsDefects.material + colWidthsDefects.priority + colWidthsDefects.user + 10,
+                        status: 50 + colWidthsDefects.group + colWidthsDefects.code + colWidthsDefects.material + colWidthsDefects.priority + colWidthsDefects.user + colWidthsDefects.phase + 12,
+                        qn: 50 + colWidthsDefects.group + colWidthsDefects.code + colWidthsDefects.material + colWidthsDefects.priority + colWidthsDefects.user + colWidthsDefects.phase + colWidthsDefects.status + 14
+                    };
+
+                    // Disegna intestazione tabella difetti
+                    doc.fontSize(8).font('Helvetica-Bold');
+                    doc.rect(colPositionsDefects.group, doc.y, colWidthsDefects.group, 20).stroke();
+                    doc.rect(colPositionsDefects.code, doc.y, colWidthsDefects.code, 20).stroke();
+                    doc.rect(colPositionsDefects.material, doc.y, colWidthsDefects.material, 20).stroke();
+                    doc.rect(colPositionsDefects.priority, doc.y, colWidthsDefects.priority, 20).stroke();
+                    doc.rect(colPositionsDefects.user, doc.y, colWidthsDefects.user, 20).stroke();
+                    doc.rect(colPositionsDefects.phase, doc.y, colWidthsDefects.phase, 20).stroke();
+                    doc.rect(colPositionsDefects.status, doc.y, colWidthsDefects.status, 20).stroke();
+                    doc.rect(colPositionsDefects.qn, doc.y, colWidthsDefects.qn, 20).stroke();
+
+                    const headerYDefects = doc.y + 6;
+                    doc.text('Group', colPositionsDefects.group + 2, headerYDefects, { width: colWidthsDefects.group - 4, align: 'left' });
+                    doc.text('Code', colPositionsDefects.code + 2, headerYDefects, { width: colWidthsDefects.code - 4, align: 'left' });
+                    doc.text('Material', colPositionsDefects.material + 2, headerYDefects, { width: colWidthsDefects.material - 4, align: 'left' });
+                    doc.text('Priority', colPositionsDefects.priority + 2, headerYDefects, { width: colWidthsDefects.priority - 4, align: 'left' });
+                    doc.text('User', colPositionsDefects.user + 2, headerYDefects, { width: colWidthsDefects.user - 4, align: 'left' });
+                    doc.text('Phase', colPositionsDefects.phase + 2, headerYDefects, { width: colWidthsDefects.phase - 4, align: 'left' });
+                    doc.text('Status', colPositionsDefects.status + 2, headerYDefects, { width: colWidthsDefects.status - 4, align: 'left' });
+                    doc.text('QN', colPositionsDefects.qn + 2, headerYDefects, { width: colWidthsDefects.qn - 4, align: 'left' });
+
+                    doc.y += 20;
+
+                    // Disegna righe della tabella difetti
+                    allDefects.forEach((defect) => {
+                        const group = defect.groupDesc || 'N/A';
+                        const code = defect.codeDesc || 'N/A';
+                        const material = defect.material || 'N/A';
+                        const priority = defect.priority_description || 'N/A';
+                        const user = defect.user || 'N/A';
+                        const phase = defect.phase || 'N/A';
+                        const status = defect.status || 'N/A';
+                        const qn = defect.qn_code || 'N/A';
+
+                        // Calcola l'altezza necessaria per il testo più lungo
+                        const groupHeight = doc.heightOfString(group, { width: colWidthsDefects.group - 4 });
+                        const codeHeight = doc.heightOfString(code, { width: colWidthsDefects.code - 4 });
+                        const materialHeight = doc.heightOfString(material, { width: colWidthsDefects.material - 4 });
+                        const priorityHeight = doc.heightOfString(priority, { width: colWidthsDefects.priority - 4 });
+                        const userHeight = doc.heightOfString(user, { width: colWidthsDefects.user - 4 });
+                        const phaseHeight = doc.heightOfString(phase, { width: colWidthsDefects.phase - 4 });
+                        const statusHeight = doc.heightOfString(status, { width: colWidthsDefects.status - 4 });
+                        const qnHeight = doc.heightOfString(qn, { width: colWidthsDefects.qn - 4 });
+                        const rowHeight = Math.max(groupHeight, codeHeight, materialHeight, priorityHeight, userHeight, phaseHeight, statusHeight, qnHeight) + 8;
+
+                        // Verifica se serve una nuova pagina
+                        if (doc.y + rowHeight > doc.page.height - 100) {
+                            doc.addPage();
+                            doc.y = 50;
+                        }
+
+                        const rowY = doc.y;
+
+                        // Disegna bordi della riga
+                        doc.rect(colPositionsDefects.group, rowY, colWidthsDefects.group, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.code, rowY, colWidthsDefects.code, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.material, rowY, colWidthsDefects.material, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.priority, rowY, colWidthsDefects.priority, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.user, rowY, colWidthsDefects.user, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.phase, rowY, colWidthsDefects.phase, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.status, rowY, colWidthsDefects.status, rowHeight).stroke();
+                        doc.rect(colPositionsDefects.qn, rowY, colWidthsDefects.qn, rowHeight).stroke();
+
+                        // Scrivi il contenuto
+                        doc.fontSize(7).font('Helvetica');
+                        
+                        const textY = rowY + 4;
+                        doc.text(group, colPositionsDefects.group + 2, textY, { width: colWidthsDefects.group - 4, align: 'left', lineBreak: true });
+                        doc.text(code, colPositionsDefects.code + 2, textY, { width: colWidthsDefects.code - 4, align: 'left', lineBreak: true });
+                        doc.text(material, colPositionsDefects.material + 2, textY, { width: colWidthsDefects.material - 4, align: 'left', lineBreak: true });
+                        doc.text(priority, colPositionsDefects.priority + 2, textY, { width: colWidthsDefects.priority - 4, align: 'left', lineBreak: true });
+                        doc.text(user, colPositionsDefects.user + 2, textY, { width: colWidthsDefects.user - 4, align: 'left', lineBreak: true });
+                        doc.text(phase, colPositionsDefects.phase + 2, textY, { width: colWidthsDefects.phase - 4, align: 'left', lineBreak: true });
+                        doc.text(status, colPositionsDefects.status + 2, textY, { width: colWidthsDefects.status - 4, align: 'left', lineBreak: true });
+                        doc.text(qn, colPositionsDefects.qn + 2, textY, { width: colWidthsDefects.qn - 4, align: 'left', lineBreak: true });
+
+                        doc.y = rowY + rowHeight;
+                    });
+
+                    // Reset posizione X dopo la tabella difetti
+                    doc.x = 50;
+                }
+            }
+
+            // SEZIONE MODIFICHE
+            if (modifiche && modifiche.length > 0) {
+                // Estrai tutti i child dalle modifiche della treeTable
+                const allModificheChildren = [];
+                modifiche.forEach(parent => {
+                    if (parent.Children && Array.isArray(parent.Children)) {
+                        parent.Children.forEach(child => {
+                            allModificheChildren.push({
+                                type: parent.type,
+                                progEco: parent.progEco,
+                                processId: parent.processId,
+                                material: parent.material,
+                                ...child
+                            });
+                        });
+                    }
+                });
+
+                if (allModificheChildren.length > 0) {
+                    // Aggiungi sempre una nuova pagina per le modifiche
+                    doc.addPage();
+
+                    // Reset posizione X
+                    doc.x = 50;
+                    doc.y = 50;
+
+                    // Titolo sezione modifiche con bordo più visibile
+                    doc.fontSize(18).font('Helvetica-Bold')
+                        .text('SEZIONE MODIFICHE', { align: 'center' });
+                    doc.moveDown(0.5);
+                    doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+                    doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
+                    doc.moveDown(1);
+                    doc.moveDown(0.5);
+
+                    // Definizione delle colonne della tabella modifiche
+                    const colWidthsModifiche = {
+                        type: 40,
+                        progEco: 60,
+                        processId: 60,
+                        material: 60,
+                        status: 50,
+                        fluxType: 50,
+                        qty: 35,
+                        childMaterial: 60,
+                        resolution: 60
+                    };
+                    const colPositionsModifiche = {
+                        type: 50,
+                        progEco: 50 + colWidthsModifiche.type + 2,
+                        processId: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + 4,
+                        material: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + 6,
+                        status: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + colWidthsModifiche.material + 8,
+                        fluxType: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + colWidthsModifiche.material + colWidthsModifiche.status + 10,
+                        qty: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + colWidthsModifiche.material + colWidthsModifiche.status + colWidthsModifiche.fluxType + 12,
+                        childMaterial: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + colWidthsModifiche.material + colWidthsModifiche.status + colWidthsModifiche.fluxType + colWidthsModifiche.qty + 14,
+                        resolution: 50 + colWidthsModifiche.type + colWidthsModifiche.progEco + colWidthsModifiche.processId + colWidthsModifiche.material + colWidthsModifiche.status + colWidthsModifiche.fluxType + colWidthsModifiche.qty + colWidthsModifiche.childMaterial + 16
+                    };
+
+                    // Disegna intestazione tabella modifiche
+                    doc.fontSize(7).font('Helvetica-Bold');
+                    doc.rect(colPositionsModifiche.type, doc.y, colWidthsModifiche.type, 20).stroke();
+                    doc.rect(colPositionsModifiche.progEco, doc.y, colWidthsModifiche.progEco, 20).stroke();
+                    doc.rect(colPositionsModifiche.processId, doc.y, colWidthsModifiche.processId, 20).stroke();
+                    doc.rect(colPositionsModifiche.material, doc.y, colWidthsModifiche.material, 20).stroke();
+                    doc.rect(colPositionsModifiche.status, doc.y, colWidthsModifiche.status, 20).stroke();
+                    doc.rect(colPositionsModifiche.fluxType, doc.y, colWidthsModifiche.fluxType, 20).stroke();
+                    doc.rect(colPositionsModifiche.qty, doc.y, colWidthsModifiche.qty, 20).stroke();
+                    doc.rect(colPositionsModifiche.childMaterial, doc.y, colWidthsModifiche.childMaterial, 20).stroke();
+                    doc.rect(colPositionsModifiche.resolution, doc.y, colWidthsModifiche.resolution, 20).stroke();
+
+                    const headerYModifiche = doc.y + 6;
+                    doc.text('Type', colPositionsModifiche.type + 2, headerYModifiche, { width: colWidthsModifiche.type - 4, align: 'left' });
+                    doc.text('Progr.Eco', colPositionsModifiche.progEco + 2, headerYModifiche, { width: colWidthsModifiche.progEco - 4, align: 'left' });
+                    doc.text('Process ID', colPositionsModifiche.processId + 2, headerYModifiche, { width: colWidthsModifiche.processId - 4, align: 'left' });
+                    doc.text('Material', colPositionsModifiche.material + 2, headerYModifiche, { width: colWidthsModifiche.material - 4, align: 'left' });
+                    doc.text('Status', colPositionsModifiche.status + 2, headerYModifiche, { width: colWidthsModifiche.status - 4, align: 'left' });
+                    doc.text('Flux Type', colPositionsModifiche.fluxType + 2, headerYModifiche, { width: colWidthsModifiche.fluxType - 4, align: 'left' });
+                    doc.text('Qty', colPositionsModifiche.qty + 2, headerYModifiche, { width: colWidthsModifiche.qty - 4, align: 'left' });
+                    doc.text('Child Material', colPositionsModifiche.childMaterial + 2, headerYModifiche, { width: colWidthsModifiche.childMaterial - 4, align: 'left' });
+                    doc.text('Resolution', colPositionsModifiche.resolution + 2, headerYModifiche, { width: colWidthsModifiche.resolution - 4, align: 'left' });
+
+                    doc.y += 20;
+
+                    // Disegna righe della tabella modifiche
+                    allModificheChildren.forEach((modifica) => {
+                        const type = modifica.type || 'N/A';
+                        const progEco = modifica.progEco || 'N/A';
+                        const processId = modifica.processId || 'N/A';
+                        const material = modifica.material || 'N/A';
+                        
+                        // Mappa lo status numerico in testo
+                        let status = 'N/A';
+                        if (modifica.status === 0 || modifica.status === '0') {
+                            status = 'NEW';
+                        } else if (modifica.status === 1 || modifica.status === '1') {
+                            status = 'APPLIED';
+                        } else if (modifica.status === 2 || modifica.status === '2') {
+                            status = 'NOT APPLIED';
+                        } else if (modifica.status) {
+                            status = modifica.status.toString();
+                        }
+                        
+                        const fluxType = modifica.fluxType || 'N/A';
+                        const qty = modifica.qty !== undefined && modifica.qty !== null ? modifica.qty.toString() : 'N/A';
+                        const childMaterial = modifica.childMaterial || 'N/A';
+                        const resolution = modifica.resolution || 'N/A';
+
+                        // Calcola l'altezza necessaria per il testo più lungo
+                        const typeHeight = doc.heightOfString(type, { width: colWidthsModifiche.type - 4 });
+                        const progEcoHeight = doc.heightOfString(progEco, { width: colWidthsModifiche.progEco - 4 });
+                        const processIdHeight = doc.heightOfString(processId, { width: colWidthsModifiche.processId - 4 });
+                        const materialHeight = doc.heightOfString(material, { width: colWidthsModifiche.material - 4 });
+                        const statusHeight = doc.heightOfString(status, { width: colWidthsModifiche.status - 4 });
+                        const fluxTypeHeight = doc.heightOfString(fluxType, { width: colWidthsModifiche.fluxType - 4 });
+                        const qtyHeight = doc.heightOfString(qty, { width: colWidthsModifiche.qty - 4 });
+                        const childMaterialHeight = doc.heightOfString(childMaterial, { width: colWidthsModifiche.childMaterial - 4 });
+                        const resolutionHeight = doc.heightOfString(resolution, { width: colWidthsModifiche.resolution - 4 });
+                        const rowHeight = Math.max(typeHeight, progEcoHeight, processIdHeight, materialHeight, statusHeight, fluxTypeHeight, qtyHeight, childMaterialHeight, resolutionHeight) + 8;
+
+                        // Verifica se serve una nuova pagina
+                        if (doc.y + rowHeight > doc.page.height - 100) {
+                            doc.addPage();
+                            doc.y = 50;
+                        }
+
+                        const rowY = doc.y;
+
+                        // Disegna bordi della riga
+                        doc.rect(colPositionsModifiche.type, rowY, colWidthsModifiche.type, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.progEco, rowY, colWidthsModifiche.progEco, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.processId, rowY, colWidthsModifiche.processId, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.material, rowY, colWidthsModifiche.material, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.status, rowY, colWidthsModifiche.status, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.fluxType, rowY, colWidthsModifiche.fluxType, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.qty, rowY, colWidthsModifiche.qty, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.childMaterial, rowY, colWidthsModifiche.childMaterial, rowHeight).stroke();
+                        doc.rect(colPositionsModifiche.resolution, rowY, colWidthsModifiche.resolution, rowHeight).stroke();
+
+                        // Scrivi il contenuto
+                        doc.fontSize(6).font('Helvetica');
+                        
+                        const textY = rowY + 4;
+                        doc.text(type, colPositionsModifiche.type + 2, textY, { width: colWidthsModifiche.type - 4, align: 'left', lineBreak: true });
+                        doc.text(progEco, colPositionsModifiche.progEco + 2, textY, { width: colWidthsModifiche.progEco - 4, align: 'left', lineBreak: true });
+                        doc.text(processId, colPositionsModifiche.processId + 2, textY, { width: colWidthsModifiche.processId - 4, align: 'left', lineBreak: true });
+                        doc.text(material, colPositionsModifiche.material + 2, textY, { width: colWidthsModifiche.material - 4, align: 'left', lineBreak: true });
+                        doc.text(status, colPositionsModifiche.status + 2, textY, { width: colWidthsModifiche.status - 4, align: 'left', lineBreak: true });
+                        doc.text(fluxType, colPositionsModifiche.fluxType + 2, textY, { width: colWidthsModifiche.fluxType - 4, align: 'left', lineBreak: true });
+                        doc.text(qty, colPositionsModifiche.qty + 2, textY, { width: colWidthsModifiche.qty - 4, align: 'left', lineBreak: true });
+                        doc.text(childMaterial, colPositionsModifiche.childMaterial + 2, textY, { width: colWidthsModifiche.childMaterial - 4, align: 'left', lineBreak: true });
+                        doc.text(resolution, colPositionsModifiche.resolution + 2, textY, { width: colWidthsModifiche.resolution - 4, align: 'left', lineBreak: true });
+
+                        doc.y = rowY + rowHeight;
+                    });
+
+                    // Reset posizione X dopo la tabella modifiche
+                    doc.x = 50;
+                }
+            }
+
+            // SEZIONE OPERAZIONI MANCANTI
+            if (additionalOperations && additionalOperations.length > 0) {
+                doc.addPage();
+                doc.x = 50;
+                doc.y = 50;
+
+                doc.fontSize(18).font('Helvetica-Bold')
+                    .text('OPERAZIONI MANCANTI', { align: 'center' });
+                doc.moveDown(0.5);
+                doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
+                doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
+                doc.moveDown(1);
+                doc.moveDown(0.5);
+
+                // Definizione colonne
+                const colWidthsOp = {
+                    section: 80, // Machine
+                    material: 80,
+                    group_code: 80,
+                    operation: 80,
+                    operation_description: 120
+                };
+                const colPositionsOp = {
+                    section: 50,
+                    material: 50 + colWidthsOp.section + 2,
+                    group_code: 50 + colWidthsOp.section + colWidthsOp.material + 4,
+                    operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.group_code + 6,
+                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.group_code + colWidthsOp.operation + 8
+                };
+
+                // Intestazione tabella
+                doc.fontSize(8).font('Helvetica-Bold');
+                doc.rect(colPositionsOp.section, doc.y, colWidthsOp.section, 20).stroke();
+                doc.rect(colPositionsOp.material, doc.y, colWidthsOp.material, 20).stroke();
+                doc.rect(colPositionsOp.group_code, doc.y, colWidthsOp.group_code, 20).stroke();
+                doc.rect(colPositionsOp.operation, doc.y, colWidthsOp.operation, 20).stroke();
+                doc.rect(colPositionsOp.operation_description, doc.y, colWidthsOp.operation_description, 20).stroke();
+
+                const headerYOp = doc.y + 6;
+                doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
+                doc.text('Material', colPositionsOp.material + 2, headerYOp, { width: colWidthsOp.material - 4, align: 'left' });
+                doc.text('Group Code', colPositionsOp.group_code + 2, headerYOp, { width: colWidthsOp.group_code - 4, align: 'left' });
+                doc.text('Operation', colPositionsOp.operation + 2, headerYOp, { width: colWidthsOp.operation - 4, align: 'left' });
+                doc.text('Operation Description', colPositionsOp.operation_description + 2, headerYOp, { width: colWidthsOp.operation_description - 4, align: 'left' });
+
+                doc.y += 20;
+
+                // Righe tabella
+                additionalOperations.forEach(op => {
+                    const section = op.section || 'N/A';
+                    const material = op.meterial || op.material || 'N/A';
+                    const group_code = op.group_code || 'N/A';
+                    const operation = op.operation || 'N/A';
+                    const operation_description = op.operation_description || 'N/A';
+
+                    // Calcola altezza riga
+                    const sectionHeight = doc.heightOfString(section, { width: colWidthsOp.section - 4 });
+                    const materialHeight = doc.heightOfString(material, { width: colWidthsOp.material - 4 });
+                    const groupCodeHeight = doc.heightOfString(group_code, { width: colWidthsOp.group_code - 4 });
+                    const operationHeight = doc.heightOfString(operation, { width: colWidthsOp.operation - 4 });
+                    const opDescHeight = doc.heightOfString(operation_description, { width: colWidthsOp.operation_description - 4 });
+                    const rowHeight = Math.max(sectionHeight, materialHeight, groupCodeHeight, operationHeight, opDescHeight) + 8;
+
+                    // Nuova pagina se necessario
+                    if (doc.y + rowHeight > doc.page.height - 100) {
+                        doc.addPage();
+                        doc.y = 50;
+                    }
+
+                    const rowY = doc.y;
+                    doc.rect(colPositionsOp.section, rowY, colWidthsOp.section, rowHeight).stroke();
+                    doc.rect(colPositionsOp.material, rowY, colWidthsOp.material, rowHeight).stroke();
+                    doc.rect(colPositionsOp.group_code, rowY, colWidthsOp.group_code, rowHeight).stroke();
+                    doc.rect(colPositionsOp.operation, rowY, colWidthsOp.operation, rowHeight).stroke();
+                    doc.rect(colPositionsOp.operation_description, rowY, colWidthsOp.operation_description, rowHeight).stroke();
+
+                    doc.fontSize(7).font('Helvetica');
+                    const textY = rowY + 4;
+                    doc.text(section, colPositionsOp.section + 2, textY, { width: colWidthsOp.section - 4, align: 'left', lineBreak: true });
+                    doc.text(material, colPositionsOp.material + 2, textY, { width: colWidthsOp.material - 4, align: 'left', lineBreak: true });
+                    doc.text(group_code, colPositionsOp.group_code + 2, textY, { width: colWidthsOp.group_code - 4, align: 'left', lineBreak: true });
+                    doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
+                    doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
+
+                    doc.y = rowY + rowHeight;
+                });
+                doc.x = 50;
+            }
+
             // Aggiungi footer a tutte le pagine
             const range = doc.bufferedPageRange();
             for (let i = range.start; i < range.start + range.count; i++) {
@@ -363,6 +757,5 @@ function generateTreeTable(data) {
 }
 
 
-
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, downloadInspectionReportPDF };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF };

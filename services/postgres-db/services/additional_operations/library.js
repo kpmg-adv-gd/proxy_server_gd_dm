@@ -15,6 +15,11 @@ async function getAdditionalOperations(plant, order) {
     return data;
 }
 
+async function getAdditionalOperationsToVerbale(plant, project, section) {
+    const data = await postgresdbService.executeQuery(queryAdditionalOperations.getAdditionalOperationsToVerbaleQuery, [plant, project, section]);
+    return data;
+}
+
 async function startAdditionalOperation(plant, sfc, operation, phase) {
     try {
         var data = await postgresdbService.executeQuery(queryAdditionalOperations.getInfoAdditionalOperation, [plant, sfc, operation, phase]);
@@ -74,4 +79,4 @@ async function updateNonConformanceAdditionalOperation(plant, sfc, operation) {
     }
 }
 
-module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, updateNonConformanceAdditionalOperation };
+module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, updateNonConformanceAdditionalOperation, getAdditionalOperationsToVerbale };

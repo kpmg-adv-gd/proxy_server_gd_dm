@@ -121,4 +121,57 @@ async function getModificheToTesting(plant, project){
     return treeTable;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToDataCollections }
+
+async function getModificheToVerbaleTesting(plant, project, wbe, material){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheToVerbaleTestingQuery, [plant, project, wbe, material]);
+    // Recupero descrizione materiali
+    for (var i=0;i<data.length;i++) {
+        var filter = `PLANT eq '${plant}' and (MATERIAL eq '${data[i].material}' or MATERIAL eq '${data[i].child_material}')`;
+        var mockReq = {
+            path: "/mdo/MATERIAL_TEXT",
+            query: { $apply: `filter(${filter})` },
+            method: "GET"
+        };
+        var result = await dispatch(mockReq);
+        if (result && result.length > 0) {
+            data[i].material_description = result.find(item => item.MATERIAL == data[i].material)?.DESCRIPTION || "";
+            data[i].child_material_description = result.find(item => item.MATERIAL == data[i].child_material)?.DESCRIPTION || "";
+        }
+    }
+    // Creazione TreeTable
+    var treeTable = [], childId = 0;
+    for (var i=0;i<data.length;i++) {
+        var child = {
+            level: 2,
+            wbe: data[i].wbe,
+            childMaterial: data[i].child_material,
+            childMaterialDescription: data[i].child_material_description,
+            qty: data[i].qty,
+            fluxType: data[i].flux_type,
+            status: data[i].status,
+            order: data[i].order,
+            resolution: data[i].resolution,
+            note: data[i].note,
+            mark: data[i].type == "MA",
+            childId: childId++
+        }
+        if (treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material).length == 0) {
+            treeTable.push({
+                level: 1,
+                type: data[i].type,
+                progEco: data[i].prog_eco,
+                processId: data[i].process_id,
+                material: data[i].material,
+                materialDescription: data[i].material_description,
+                mark: data[i].type == "MT" || data[i].type == "MK",
+                Children: [child]
+            });
+        }else{
+            treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material)[0]
+                .Children.push(child);
+        }
+    }
+    return treeTable;
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections }
