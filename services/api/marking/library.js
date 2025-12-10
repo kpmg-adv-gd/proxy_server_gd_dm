@@ -143,11 +143,13 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
     console.log("RESPONSE SAP: "+JSON.stringify(response));
 
     if (response.OUTPUT && response.OUTPUT.type == "S") {
+        if (rowSelectedWBS.coordination_activity) var operationDesc = rowSelectedWBS.activity_id_description;
+        else var operationDesc = rowSelectedWBS.wbs_description;
         // Se la risposta è OK, aggiorno le conferme in ZDM
         if (reasonForVariance != null) {
             var varianceLabor = duration;
             var markedLabor = 0;
-            await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, operationDesc, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
                 markedLabor, durationUom, 
                 varianceLabor, // variance labor
                 durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
@@ -155,7 +157,7 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
         }else{
             var varianceLabor = 0;
             var markedLabor = duration;
-            await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, operationDesc, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
                 markedLabor, durationUom, 
                 varianceLabor, // variance labor
                 durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
