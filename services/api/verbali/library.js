@@ -729,32 +729,40 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
 
                 // Definizione colonne
                 const colWidthsOp = {
-                    section: 80, // Machine
-                    material: 80,
-                    group_code: 80,
-                    operation: 80,
-                    operation_description: 120
+                    section: 60, // Machine
+                    material: 60,
+                    order: 60,
+                    group_code: 60,
+                    group_description: 80,
+                    operation: 60,
+                    operation_description: 80
                 };
                 const colPositionsOp = {
                     section: 50,
                     material: 50 + colWidthsOp.section + 2,
-                    group_code: 50 + colWidthsOp.section + colWidthsOp.material + 4,
-                    operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.group_code + 6,
-                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.group_code + colWidthsOp.operation + 8
+                    order: 50 + colWidthsOp.section + colWidthsOp.material + 4,
+                    group_code: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + 6,
+                    group_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + 8,
+                    operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + 10,
+                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12
                 };
 
                 // Intestazione tabella
-                doc.fontSize(8).font('Helvetica-Bold');
+                doc.fontSize(7).font('Helvetica-Bold');
                 doc.rect(colPositionsOp.section, doc.y, colWidthsOp.section, 20).stroke();
                 doc.rect(colPositionsOp.material, doc.y, colWidthsOp.material, 20).stroke();
+                doc.rect(colPositionsOp.order, doc.y, colWidthsOp.order, 20).stroke();
                 doc.rect(colPositionsOp.group_code, doc.y, colWidthsOp.group_code, 20).stroke();
+                doc.rect(colPositionsOp.group_description, doc.y, colWidthsOp.group_description, 20).stroke();
                 doc.rect(colPositionsOp.operation, doc.y, colWidthsOp.operation, 20).stroke();
                 doc.rect(colPositionsOp.operation_description, doc.y, colWidthsOp.operation_description, 20).stroke();
 
                 const headerYOp = doc.y + 6;
                 doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
                 doc.text('Material', colPositionsOp.material + 2, headerYOp, { width: colWidthsOp.material - 4, align: 'left' });
+                doc.text('Order', colPositionsOp.order + 2, headerYOp, { width: colWidthsOp.order - 4, align: 'left' });
                 doc.text('Group Code', colPositionsOp.group_code + 2, headerYOp, { width: colWidthsOp.group_code - 4, align: 'left' });
+                doc.text('Group Description', colPositionsOp.group_description + 2, headerYOp, { width: colWidthsOp.group_description - 4, align: 'left' });
                 doc.text('Operation', colPositionsOp.operation + 2, headerYOp, { width: colWidthsOp.operation - 4, align: 'left' });
                 doc.text('Operation Description', colPositionsOp.operation_description + 2, headerYOp, { width: colWidthsOp.operation_description - 4, align: 'left' });
 
@@ -764,17 +772,21 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
                 additionalOperations.forEach(op => {
                     const section = op.section || 'N/A';
                     const material = op.meterial || op.material || 'N/A';
+                    const order = op.order || 'N/A';
                     const group_code = op.group_code || 'N/A';
+                    const group_description = op.group_description || 'N/A';
                     const operation = op.operation || 'N/A';
                     const operation_description = op.operation_description || 'N/A';
 
                     // Calcola altezza riga
                     const sectionHeight = doc.heightOfString(section, { width: colWidthsOp.section - 4 });
                     const materialHeight = doc.heightOfString(material, { width: colWidthsOp.material - 4 });
+                    const orderHeight = doc.heightOfString(order, { width: colWidthsOp.order - 4 });
                     const groupCodeHeight = doc.heightOfString(group_code, { width: colWidthsOp.group_code - 4 });
+                    const groupDescHeight = doc.heightOfString(group_description, { width: colWidthsOp.group_description - 4 });
                     const operationHeight = doc.heightOfString(operation, { width: colWidthsOp.operation - 4 });
                     const opDescHeight = doc.heightOfString(operation_description, { width: colWidthsOp.operation_description - 4 });
-                    const rowHeight = Math.max(sectionHeight, materialHeight, groupCodeHeight, operationHeight, opDescHeight) + 8;
+                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight) + 8;
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
@@ -785,15 +797,19 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
                     const rowY = doc.y;
                     doc.rect(colPositionsOp.section, rowY, colWidthsOp.section, rowHeight).stroke();
                     doc.rect(colPositionsOp.material, rowY, colWidthsOp.material, rowHeight).stroke();
+                    doc.rect(colPositionsOp.order, rowY, colWidthsOp.order, rowHeight).stroke();
                     doc.rect(colPositionsOp.group_code, rowY, colWidthsOp.group_code, rowHeight).stroke();
+                    doc.rect(colPositionsOp.group_description, rowY, colWidthsOp.group_description, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation, rowY, colWidthsOp.operation, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation_description, rowY, colWidthsOp.operation_description, rowHeight).stroke();
 
-                    doc.fontSize(7).font('Helvetica');
+                    doc.fontSize(6).font('Helvetica');
                     const textY = rowY + 4;
                     doc.text(section, colPositionsOp.section + 2, textY, { width: colWidthsOp.section - 4, align: 'left', lineBreak: true });
                     doc.text(material, colPositionsOp.material + 2, textY, { width: colWidthsOp.material - 4, align: 'left', lineBreak: true });
+                    doc.text(order, colPositionsOp.order + 2, textY, { width: colWidthsOp.order - 4, align: 'left', lineBreak: true });
                     doc.text(group_code, colPositionsOp.group_code + 2, textY, { width: colWidthsOp.group_code - 4, align: 'left', lineBreak: true });
+                    doc.text(group_description, colPositionsOp.group_description + 2, textY, { width: colWidthsOp.group_description - 4, align: 'left', lineBreak: true });
                     doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
                     doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
 
