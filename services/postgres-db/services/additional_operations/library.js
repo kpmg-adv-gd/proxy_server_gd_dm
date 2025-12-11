@@ -79,4 +79,18 @@ async function updateNonConformanceAdditionalOperation(plant, sfc, operation) {
     }
 }
 
-module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, updateNonConformanceAdditionalOperation, getAdditionalOperationsToVerbale };
+// Aggiunta righe da ribaltamento operazioni
+async function insertZAddtionalOperations(rows) {
+    for (let i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        for (let j = 0; j < rows[i].operations.length; j++) {
+            var opt = rows[i].operations[j];
+            await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
+                row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
+                opt.phase, opt.operationStatus, opt.stepId, opt.CONFIRMATION_NUMBER, opt.MES_ORDER, row.defects
+            ]);
+        }
+    }
+}
+
+module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, updateNonConformanceAdditionalOperation, getAdditionalOperationsToVerbale, insertZAddtionalOperations };

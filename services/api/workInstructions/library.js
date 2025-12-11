@@ -23,12 +23,25 @@ async function filteredWorkInstructionsTI(plant, response, idLev3) {
 }
 
 async function saveWorkInstructionPDF(base64Data, wiName, plant) {
-    console.log("Salvataggio Work Instruction:", wiName, "per plant:", plant);
     try {
         // Crea la Work Instruction su SAP DM
         const url = hostname + "/workinstruction/v1/workinstructions";
         
         // SOLUZIONE: Salva il base64 in un customValue invece che nel campo text
+        // Se lungo più di 4000 caratteri, spezzetta in più customValues
+        var customValue = [], index = 0, numCustomValues = 0;
+        for (let i = 0; i < base64Data.length; i += 4000) {
+            customValue.push({
+                attribute: "PDF_BASE64_" + index,
+                value: base64Data.substring(i, i + 4000)
+            });
+            index++;
+            numCustomValues++;
+        }
+        customValue.push({
+            attribute: "BASE_64_PARTS",
+            value: numCustomValues.toString()
+        });
         const payload = {
             plant: plant,
             workInstruction: wiName,
@@ -37,12 +50,7 @@ async function saveWorkInstructionPDF(base64Data, wiName, plant) {
             status: "RELEASABLE",
             currentVersion: true,
             trackViewing: false,
-            customValues: [
-                {
-                    attribute: "PDF_BASE64",
-                    value: base64Data
-                }
-            ],
+            customValues: customValue,
             workInstructionElements: [
                 {
                     type: "TEXT",
@@ -84,10 +92,18 @@ async function getWorkInstructionPDF(plant, wiName) {
     var url = hostname+"/workinstruction/v1/workinstructions?plant=" + plant + "&workinstruction=" + wiName;
     var response = await callGet(url);
     if(response && response.length > 0){
-        // Recupera il base64 dal customValue invece che dal campo text
-        const pdfBase64CustomValue = response[0].customValues?.find(cv => cv.attribute === "PDF_BASE64");
-        if (pdfBase64CustomValue && pdfBase64CustomValue.value) {
-            return pdfBase64CustomValue.value;
+        // Recupera il base64 dal customValue invece che dal campo text, unendo le parti se spezzettato
+        var partsCountCV = response[0].customValues?.find(cv => cv.attribute === "BASE_64_PARTS");
+        var partsCount = partsCountCV ? parseInt(partsCountCV.value) : 0;
+        var base64Data = "";
+        for (let i = 0; i < partsCount; i++) {
+            let partCV = response[0].customValues?.find(cv => cv.attribute === "PDF_BASE64_" + i);
+            if (partCV && partCV.value) {
+                base64Data += partCV.value;
+            }
+        }
+        if (base64Data) {
+            return base64Data;
         }
         throw new Error("PDF non trovato nei custom values della Work Instruction");
     } else {

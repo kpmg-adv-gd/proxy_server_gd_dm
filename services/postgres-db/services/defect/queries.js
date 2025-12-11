@@ -72,4 +72,6 @@ const getStatusDefects = `SELECT DISTINCT status FROM z_defects WHERE status is 
 
 const insertZDefectTesting = `INSERT INTO z_defect_testing (defect_id, plant, sfc, id_lev_1, id_lev_2, id_lev_3) VALUES ($1, $2, $3, $4, $5, $6)`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting };
+const updateDefectsToTesting = `UPDATE z_defects SET sent_to_testing = TRUE WHERE plant = $1 AND dm_order IN ($2)`;
+
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting };

@@ -222,8 +222,7 @@ async function getDefectsTI(plant, project) {
             url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
             var defectResponse = await callGet(url);
             defectResponse = defectResponse.content || [];
-            console.log("DEFECT MARCO: " + JSON.stringify(defectResponse));
-            difettiStandard = [...difettiStandard, ...defectResponse];
+             difettiStandard = [...difettiStandard, ...defectResponse];
         }
         defects[i].defectStandard = difettiStandard.filter(dif => dif.id == defects[i].id)[0] || null;
         // Recupero code description
@@ -316,4 +315,9 @@ async function getFiltersDefectsTI() {
     };
 }   
 
-module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getFiltersDefectsTI };
+async function updateDefectsToTesting(plant, listOrders) {
+    const data = await postgresdbService.executeQuery(queryDefect.updateDefectsToTesting, [plant, listOrders]);
+    return data;
+}
+
+module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getFiltersDefectsTI, updateDefectsToTesting };

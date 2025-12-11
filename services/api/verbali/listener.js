@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTesting, updateTestingDefects } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -43,12 +43,19 @@ module.exports.listenerSetup = (app) => {
     app.post("/api/generateInspection", async (req, res) => {
         try {
             const { plant, user, selectedData, dataCollections } = req.body;
+            // Logica di dettaglio per il passaggio al testing
+            //var sent = await sendToTesting(plant, selectedData);
+            var sent = true;
+            if (!sent) {
+                throw { status: 500, message: "Error during sending to Testing process" };
+            }
             // Salvo campi custom ASSEMBLY_REPORT_STATUS e ASSEMBLY_REPORT_USER
             await updateCustomAssemblyReportStatusOrderDone(plant, selectedData.order, user);
             // Salvo campo custom SENT_TO_TESTING su ordine e su figli/nipoti...
             await updateCustomSentTotTestingOrder(plant, selectedData.order, user);
-            // Logica di dettaglio per il passaggio al testing
-            // todo...
+            // Salvo il sendToTesting sui difetti
+            await updateTestingDefects(plant, selectedData.order);
+            // generazione del PDF del verbale di ispezione
             var base64PDF = await generateInspectionPDF(plant, dataCollections, selectedData);
             await saveWorkInstructionPDF(base64PDF, "Verbale_Ispezione_"+selectedData.project_parent+"_"+selectedData.material, plant);
             res.status(200).json({ message: "Update successful" });
