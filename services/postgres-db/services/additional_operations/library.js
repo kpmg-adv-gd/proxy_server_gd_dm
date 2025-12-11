@@ -70,14 +70,6 @@ async function completeAdditionalOperation(plant, sfc, operation, phase) {
     }
 }
 
-async function updateNonConformanceAdditionalOperation(plant, sfc, operation) {
-    try {
-        await postgresdbService.executeQuery(queryAdditionalOperations.updateNonConformanceAdditionalOperation, [plant, sfc, operation]);
-        return true;
-    } catch (error) {
-        return false;
-    }
-}
 
 // Aggiunta righe da ribaltamento operazioni
 async function insertZAddtionalOperations(rows) {
@@ -87,10 +79,10 @@ async function insertZAddtionalOperations(rows) {
             var opt = rows[i].operations[j];
             await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
                 row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
-                opt.phase, opt.operationStatus, opt.stepId, opt.CONFIRMATION_NUMBER, opt.MES_ORDER, row.defects
+                opt.phase, opt.operationStatus, opt.stepId, opt.CONFIRMATION_NUMBER, opt.MES_ORDER
             ]);
         }
     }
 }
 
-module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, updateNonConformanceAdditionalOperation, getAdditionalOperationsToVerbale, insertZAddtionalOperations };
+module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, getAdditionalOperationsToVerbale, insertZAddtionalOperations };

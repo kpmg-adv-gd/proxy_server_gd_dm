@@ -192,7 +192,6 @@ async function sendToTesting(plant, selectedData) {
                 routing: selectedOrder.routing.routing,
                 routingType: selectedOrder.routing.routingType,
                 routingVersion: selectedOrder.routing.version,
-                defects: selectedOrder.customValues.find(obj => obj.attribute == "DEFECTS") && selectedOrder.customValues.find(obj => obj.attribute == "DEFECTS").value || false,
                 operations: []
             };
             // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc

@@ -40,15 +40,4 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
-    // Api per aggiornare apertura di un difetto su additional operation
-    app.post("/db/updateNonConformanceAdditionalOperation", async (req, res) => {
-        const { plant, sfc, operation } = req.body;
-        try {
-            await postgresdbService.updateNonConformanceAdditionalOperation(plant, sfc, operation);
-            res.status(200).json({ message: "Non conformance updated successfully" });
-        } catch (error) {
-            res.status(500).json({ error: "Error while executing query" });
-        }
-    });
-
 };

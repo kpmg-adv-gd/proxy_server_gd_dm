@@ -15,9 +15,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per ottenere tutti machine type
     app.post("/db/getAllMachineType", async (req, res) => {
-        const { plant } = req.body;
+        const { plant, idLev1 } = req.body;
         try {
-            const allMachineType = await postgresdbService.getAllMachineType(plant);
+            const allMachineType = await postgresdbService.getAllMachineType(plant, idLev1);
             res.status(200).json(allMachineType); 
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });

@@ -65,8 +65,8 @@ async function getVerbaleLev2ByLev1(plant, order, sfc, id_lev_1) {
 }
 
 // Recupero tutti i machine type
-async function getAllMachineType(plant) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getAllMachineType, [plant]);
+async function getAllMachineType(plant, idLev1) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getAllMachineType, [plant, idLev1]);
     return data;
 }
 
