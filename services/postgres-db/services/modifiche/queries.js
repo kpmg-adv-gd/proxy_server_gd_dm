@@ -94,8 +94,12 @@ const updateZModifyByOrderQuery = `UPDATE z_modify
 
 const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND ( (sent_to_testing = true AND sent_to_installation = false) OR (phase = 'Testing' AND sent_to_installation = false) ) ORDER BY prog_eco ASC;`;                             
 
-const getModificheToVerbaleTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND wbe = $3 AND material = $4 ORDER BY prog_eco ASC;`;
+const getModificheToVerbaleTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND wbe_machine = $2 AND machine_section = $3 AND project = $4 and status != '1' ORDER BY prog_eco ASC;`;
 
 const getModificheToDataCollections = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND wbe_machine = $3 AND machine_section = $4 AND status != '1' AND "type" = $5`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections };
+const updateModificheToTestingQuery = `UPDATE z_modify
+                                        SET sent_to_testing = true
+                                        WHERE plant = $1 AND wbe_machine = $2 AND machine_section = $3 AND project = $4 and status != '1'`;
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery };

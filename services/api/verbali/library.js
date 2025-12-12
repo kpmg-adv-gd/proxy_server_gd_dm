@@ -2,7 +2,7 @@ const { callPatch, callGet } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
-const { getModificheToVerbaleTesting } = require("../../postgres-db/services/modifiche/library");
+const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
 const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/library");
@@ -26,28 +26,13 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
         for (var i = 0; i < orders.length; i++) {
             var mfg_order = orders[i].MFG_ORDER;
             var data = { order: mfg_order };
-            // Recupero progetto
-            var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqProject = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${projectFilter})` },
-                method: "GET"
-            };
-            var outMockProject = await dispatch(mockReqProject);
-            var projectData = outMockProject?.data?.value.length>0 ? outMockProject.data.value : [];
-            if (projectData.length > 0) data.project = projectData[0].DATA_FIELD_VALUE;
-            else continue;
-            // Recupero WBS
-            var wbsFilter = `(DATA_FIELD eq 'WBE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqWbs = { 
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${wbsFilter})` },
-                method: "GET"
-            };
-            var outMockWbs = await dispatch(mockReqWbs);
-            var wbsData = outMockWbs?.data?.value.length>0 ? outMockWbs.data.value : [];
-            if (wbsData.length > 0) data.wbs = wbsData[0].DATA_FIELD_VALUE;
-            else continue;
+            var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
+            var orderResponse = await callGet(url);
+            data.wbs = orderResponse.customValues.filter(item => item.attribute == "WBE")[0]?.value || "";
+            data.material  = orderResponse.customValues.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.project = orderResponse.customValues.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
+            data.reportStatus = orderResponse.customValues.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
+            if (data.wbs == "" || data.material == "" || data.project == "") continue;
             // Recupero SFC - Material - Status (diverso di INVALID)
             var sfcFilter = `(MFG_ORDER eq '${mfg_order}' and STATUS ne 'INVALID' and PLANT eq '${plant}')`;
             var mockReqSfc = {
@@ -57,19 +42,8 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             };
             var outMockSfc = await dispatch(mockReqSfc);
             var sfcData = outMockSfc?.data?.value.length>0 ? outMockSfc.data.value : [];
-            if (sfcData.length > 0) { data.sfc = sfcData[0].SFC; data.material = sfcData[0].MATERIAL; data.status = sfcData[0].STATUS; }
+            if (sfcData.length > 0) { data.sfc = sfcData[0].SFC; data.status = sfcData[0].STATUS; }
             else continue;
-            // Recupero Report Status
-            var reportStatusFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_STATUS' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqReportStatus = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${reportStatusFilter})` },
-                method: "GET"
-            };
-            var outMockReportStatus = await dispatch(mockReqReportStatus);
-            var reportStatusData = outMockReportStatus?.data?.value.length>0 ? outMockReportStatus.data.value : [];
-            if (reportStatusData.length > 0) data.reportStatus = reportStatusData[0].DATA_FIELD_VALUE;
-            else data.reportStatus = "";
             // Filtri su progetto e wbs
             if (project != "" && data.project != project) continue;
             if (wbs != "" && data.wbs != wbs) continue;
@@ -161,14 +135,19 @@ async function updateCustomSentTotTestingOrder(plant,order,user) {
     }
 }
 
-// Funzione pe aggiornare i difetti con il sendToTesting
+// Funzione pe aggiornare i difetti da inviare a testing
 async function updateTestingDefects(plant,order) {
     var ordersToCheck = await ordersChildrenRecursion(plant, order);
     await updateDefectsToTesting(plant, "'" + ordersToCheck.join("','") + "'");
 }
 
-// Funzione per eseguire invio al Testing
-async function sendToTesting(plant, selectedData) {
+// Funzione pe aggiornare modifiche da inviare a testing
+async function updateTestingModifiche(plant,project, wbeMachine, section) {
+    await updateModificheToTesting(plant, wbeMachine, section, project);
+}
+
+// Funzione per eseguire invio al Testing Additional Operations
+async function sendToTestingAdditionalOperations(plant, selectedData) {
     var url = hostname + "/order/v1/orders?order=" + selectedData.order + "&plant=" + plant;
     var order = await callGet(url);
     var commessa = order.customValues.find(obj => obj.attribute == "COMMESSA") && order.customValues.find(obj => obj.attribute == "COMMESSA").value || "";
@@ -1021,4 +1000,4 @@ function generateTreeTable(data) {
 
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTesting, updateTestingDefects };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche };

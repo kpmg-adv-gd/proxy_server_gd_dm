@@ -122,8 +122,8 @@ async function getModificheToTesting(plant, project){
 }
 
 
-async function getModificheToVerbaleTesting(plant, project, wbe, material){
-    const data = await postgresdbService.executeQuery(queryModifiche.getModificheToVerbaleTestingQuery, [plant, project, wbe, material]);
+async function getModificheToVerbaleTesting(plant, project, wbeMachine, section){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheToVerbaleTestingQuery, [plant, wbeMachine, section, project]);
     // Recupero descrizione materiali
     for (var i=0;i<data.length;i++) {
         var filter = `PLANT eq '${plant}' and (MATERIAL eq '${data[i].material}' or MATERIAL eq '${data[i].child_material}')`;
@@ -174,4 +174,8 @@ async function getModificheToVerbaleTesting(plant, project, wbe, material){
     return treeTable;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections }
+async function updateModificheToTesting(plant, wbe, section, project){
+    await postgresdbService.executeQuery(queryModifiche.updateModificheToTestingQuery, [plant, wbe, section, project]);
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting };
