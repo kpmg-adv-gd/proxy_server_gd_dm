@@ -167,5 +167,38 @@ async function callGetFile(url){
     }
 };
 
+async function callPostMultipart(url, formData) {
+    try {
+        // Ottieni il Bearer Token prima di fare la richiesta API
+        const token = await getBearerToken();
+
+        // Effettua la chiamata POST con multipart/form-data
+        const response = await axios.post(url, formData, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                ...formData.getHeaders() // Imposta automaticamente Content-Type: multipart/form-data con boundary
+            },
+        });
+        return response.data;
+    } catch(error){
+        // Recupera il messaggio di errore dalla risposta, se disponibile
+        const errorMessage =
+            error.response?.data?.message || 
+            error.response?.data ||
+            error.message ||
+            "Errore sconosciuto";
+    
+        const errorStatus = error.response?.status || error.status || 500;
+    
+        console.error("Errore dettagliato:", {
+            status: errorStatus,
+            message: errorMessage,
+            originalError: error,
+        });
+    
+        throw { status: errorStatus, message: errorMessage };
+    }
+}
+
 // Esporta la funzione
-module.exports = { callGet, callPost, callPut, callPatch, callGetFile };
+module.exports = { callGet, callPost, callPut, callPatch, callGetFile, callPostMultipart };

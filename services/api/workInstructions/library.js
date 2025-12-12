@@ -1,4 +1,5 @@
-const { callPost, callGet } = require("../../../utility/CommonCallApi");
+const { callPost, callGet, callPostMultipart, callGetFile } = require("../../../utility/CommonCallApi");
+const FormData = require('form-data');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -24,24 +25,25 @@ async function filteredWorkInstructionsTI(plant, response, idLev3) {
 
 async function saveWorkInstructionPDF(base64Data, wiName, plant) {
     try {
-        // Crea la Work Instruction su SAP DM
-        const url = hostname + "/workinstruction/v1/workinstructions";
+        // Decodifica il base64 in Buffer
+        const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+        const pdfBuffer = Buffer.from(base64String, 'base64');
         
-        // SOLUZIONE: Salva il base64 in un customValue invece che nel campo text
-        // Se lungo più di 4000 caratteri, spezzetta in più customValues
-        var customValue = [], index = 0, numCustomValues = 0;
-        for (let i = 0; i < base64Data.length; i += 4000) {
-            customValue.push({
-                attribute: "PDF_BASE64_" + index,
-                value: base64Data.substring(i, i + 4000)
-            });
-            index++;
-            numCustomValues++;
-        }
-        customValue.push({
-            attribute: "BASE_64_PARTS",
-            value: numCustomValues.toString()
+        // Crea FormData per l'upload multipart
+        const formData = new FormData();
+        formData.append('file', pdfBuffer, {
+            filename: `${wiName}.pdf`,
+            contentType: 'application/pdf'
         });
+
+        const url = hostname + "/workinstruction/v1/workinstructions/file";
+        const response = await callPostMultipart(url, formData);
+        console.log("Risposta upload file:", response);
+        var externalFileUrl = response.externalFileUrl;
+        console.log("File caricato con successo. URL esterno:", externalFileUrl);
+
+        // Ora aggiorna la Work Instruction per collegare il file caricato
+        const urlWI = hostname + "/workinstruction/v1/workinstructions";
         const payload = {
             plant: plant,
             workInstruction: wiName,
@@ -50,33 +52,23 @@ async function saveWorkInstructionPDF(base64Data, wiName, plant) {
             status: "RELEASABLE",
             currentVersion: true,
             trackViewing: false,
-            customValues: customValue,
+            customValues: [],
             workInstructionElements: [
                 {
                     type: "TEXT",
-                    text: `Verbale di ispezione generato automaticamente.`,
+                    text: externalFileUrl,
                     sequence: 1,
-                    description: "Verbale di ispezione " + wiName
+                    description: "external file link",
                 }
             ]
         };
-        
+        console.log("Payload per la Work Instruction:", payload);
         // Effettua la chiamata POST per creare la Work Instruction
-        const response = await callPost(url, payload);
+        await callPost(urlWI, payload);
 
-        console.log("Risposta dalla creazione della Work Instruction:", response);
-        console.log("WI creata con il nome:", wiName);
-        
-        // Ritorna l'URL o l'ID della Work Instruction creata
-        if (response && response.workInstruction) {
-            return {
-                success: true,
-            };
-        }
-        
         return {
-            success: false,
-            message: "Errore nella creazione della Work Instruction"
+            success: true,
+            data: response
         };
         
     } catch (error) {
@@ -92,24 +84,37 @@ async function getWorkInstructionPDF(plant, wiName) {
     var url = hostname+"/workinstruction/v1/workinstructions?plant=" + plant + "&workinstruction=" + wiName;
     var response = await callGet(url);
     if(response && response.length > 0){
-        // Recupera il base64 dal customValue invece che dal campo text, unendo le parti se spezzettato
-        var partsCountCV = response[0].customValues?.find(cv => cv.attribute === "BASE_64_PARTS");
-        var partsCount = partsCountCV ? parseInt(partsCountCV.value) : 0;
-        var base64Data = "";
-        for (let i = 0; i < partsCount; i++) {
-            let partCV = response[0].customValues?.find(cv => cv.attribute === "PDF_BASE64_" + i);
-            if (partCV && partCV.value) {
-                base64Data += partCV.value;
-            }
+        var workInstruction = response[0];
+        // Recupera il link del file dalla workInstructionElements
+        var fileLinkElement = workInstruction.workInstructionElements.find(element => element.type === "TEXT");
+        if (fileLinkElement) {
+            var fileUrl = fileLinkElement.text;
+            // Chiama l'API per scaricare il file binario
+            const url = hostname + "/workinstruction/v1/workinstructions/file?externalFileUrl=" + encodeURIComponent(fileUrl);
+            var fileResponse = await callGetFile(url);
+            // Converti il buffer in base64
+            const base64 = Buffer.from(fileResponse.data).toString('base64');
+            return base64;
+        } else {
+            throw new Error("Nessun elemento di tipo TEXT trovato nella Work Instruction");
         }
-        if (base64Data) {
-            return base64Data;
-        }
-        throw new Error("PDF non trovato nei custom values della Work Instruction");
     } else {
         throw new Error("Work Instruction non trovata");
     }
 }
+
+// Funzione che converte base64 in Blob
+function base64ToBlob(base64) {
+    // Rimuove il prefisso data:application/pdf;base64, se presente
+    const base64String = base64.includes(',') ? base64.split(',')[1] : base64;
+    
+    // Decodifica la stringa base64
+    const binaryString = Buffer.from(base64String, 'base64');
+    
+    // Crea e ritorna il Blob
+    return new Blob([binaryString], { type: 'application/pdf' });
+}
+
 
 // Esporta la funzione
 module.exports = { filteredWorkInstructionsTI, saveWorkInstructionPDF, getWorkInstructionPDF
