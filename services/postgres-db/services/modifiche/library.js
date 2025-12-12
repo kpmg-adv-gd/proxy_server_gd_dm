@@ -2,13 +2,13 @@ const postgresdbService = require('../../connection');
 const queryModifiche = require("./queries");
 const { dispatch } = require("../../../mdo/library");
 
-async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project) {
+async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase) {
     let dateNow = new Date();
     if(!prog_eco) prog_eco="";
     if(!process_id) process_id="";
     if(!qty) qty=0;
     if(!status) status=0;
-    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project]);
+    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project, phase]);
     return data;
 }
 

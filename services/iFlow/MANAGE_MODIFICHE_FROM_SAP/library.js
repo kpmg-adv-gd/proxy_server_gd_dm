@@ -54,7 +54,13 @@ async function manageModifica(objModifica){
     var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
     var { bom, bomType, materialOrder, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
 
-    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project)
+    var sentToTesting = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
+    var sentToInstallation = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_INSTALLATION")[0]?.value || "";
+    if (sentToTesting == "" && sentToInstallation == "") var phase = "Assembly";
+    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
+    else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
+
+    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase)
 
     if(!modificaValue){
         modificaValue = modificaType;

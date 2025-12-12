@@ -1,6 +1,6 @@
 
-const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project) 
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20); `;
+const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project, phase) 
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, $21); `;
 
 const getModificheDataQuery = `SELECT *
                                 FROM z_modify
@@ -40,7 +40,7 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         co2,
                                         wbe_machine,
                                         machine_section,
-                                        project
+                                        project, phase, sent_to_assembly, sent_to_testing
                                     )
                                     select
                                         prog_eco
@@ -64,7 +64,7 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         co2,
                                         wbe_machine,
                                         machine_section,
-                                        project
+                                        project, phase, sent_to_assembly, sent_to_testing
                                     from z_modify
                                     where plant = $1 and sfc=$3 and co2=true `;
 
@@ -92,7 +92,7 @@ const updateZModifyByOrderQuery = `UPDATE z_modify
                                     last_update = $4
                                     WHERE plant = $1 AND sfc=$3 `;
 
-const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND closed_in_assembly = false AND closed_in_testing = false ORDER BY prog_eco ASC;`;                             
+const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND ( (sent_to_testing = true AND sent_to_installation = false) OR (phase = 'Testing' AND sent_to_installation = false) ) ORDER BY prog_eco ASC;`;                             
 
 const getModificheToVerbaleTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND wbe = $3 AND material = $4 ORDER BY prog_eco ASC;`;
 
