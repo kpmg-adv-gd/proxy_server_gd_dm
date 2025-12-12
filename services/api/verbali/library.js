@@ -184,6 +184,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                     operation: item.operation.operation,
                     operationDescription: item.operation.description,
                     operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
+                    workCenter: item.plannedWorkCenter
                 }
                 // Recupero campi custom
                 var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+sfcOrder.routing+"&type=SHOP_ORDER";

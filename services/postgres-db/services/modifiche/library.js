@@ -111,6 +111,9 @@ async function getModificheToTesting(plant, project){
                 material: data[i].material,
                 materialDescription: data[i].material_description,
                 mark: data[i].type == "MT" || data[i].type == "MK",
+                project: data[i].project,
+                machineSection: data[i].machine_section,
+                wbe: data[i].wbe,
                 Children: [child]
             });
         }else{

@@ -40,7 +40,7 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         co2,
                                         wbe_machine,
                                         machine_section,
-                                        project, phase, sent_to_assembly, sent_to_testing
+                                        project, phase, sent_to_testing, sent_to_installation
                                     )
                                     select
                                         prog_eco
@@ -64,7 +64,7 @@ const updateZModifyCO2ByOrderQuery = `insert into z_modify (
                                         co2,
                                         wbe_machine,
                                         machine_section,
-                                        project, phase, sent_to_assembly, sent_to_testing
+                                        project, phase, sent_to_testing, sent_to_installation
                                     from z_modify
                                     where plant = $1 and sfc=$3 and co2=true `;
 
