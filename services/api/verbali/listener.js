@@ -44,8 +44,7 @@ module.exports.listenerSetup = (app) => {
         try {
             const { plant, user, selectedData, dataCollections } = req.body;
             // Logica di dettaglio per il passaggio al testing
-            //var sent = await sendToTesting(plant, selectedData);
-            var sent = true;
+            var sent = await sendToTesting(plant, selectedData);
             if (!sent) {
                 throw { status: 500, message: "Error during sending to Testing process" };
             }
@@ -56,7 +55,7 @@ module.exports.listenerSetup = (app) => {
             // Salvo il sendToTesting sui difetti
             await updateTestingDefects(plant, selectedData.order);
             // generazione del PDF del verbale di ispezione
-            var base64PDF = await generateInspectionPDF(plant, dataCollections, selectedData);
+            var base64PDF = await generateInspectionPDF(plant, dataCollections, selectedData, user);
             await saveWorkInstructionPDF(base64PDF, "Verbale_Ispezione_"+selectedData.project_parent+"_"+selectedData.material, plant);
             res.status(200).json({ message: "Update successful" });
         } catch (error) {

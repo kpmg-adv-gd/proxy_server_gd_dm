@@ -243,7 +243,7 @@ async function sendToTesting(plant, selectedData) {
 
 
 // Funzione per generare e scaricare il file del verbale di ispezione
-async function generateInspectionPDF(plant, dataCollections, selectedData) {
+async function generateInspectionPDF(plant, dataCollections, selectedData, user) {
 
     /* Recupero le sezioni aggiuntive da mostrare dopo la lista delle dc (con i parametri) */
     var defects = await getDefectsTI(plant, selectedData.project_parent);
@@ -284,6 +284,21 @@ async function generateInspectionPDF(plant, dataCollections, selectedData) {
                 doc.font('Helvetica-Bold').text(`Materiale: `, 50, doc.y, { continued: true }).font('Helvetica').text(selectedData.material);
                 doc.moveDown(0.5);
             }
+
+            // Data e ora di generazione (fuso orario CET/CEST)
+            const now = new Date();
+            const formattedDate = now.toLocaleString('it-IT', { 
+                timeZone: 'Europe/Rome',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(',', '');
+            doc.font('Helvetica').fontSize(10).text(`Verbale generato da `, { continued: true }).font('Helvetica-Bold').text(`${user}`, { continued: true }).font('Helvetica').text(` in data `, { continued: true }).font('Helvetica-Bold').text(`${formattedDate}`);
+            doc.moveDown(0.5);
 
             //doc.moveDown(1.5);
             doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
