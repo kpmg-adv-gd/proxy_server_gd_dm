@@ -83,12 +83,19 @@ const insertZVerbaleLev3 = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_l
 
 const getChildsOrders = `SELECT child_order FROM z_orders_link WHERE plant = $1 AND parent_order = $2`;
 
-const getGroupByPriorityDefects = `SELECT DISTINCT z_priority.priority, z_priority.description, z_priority.weight,
-	count(*) as quantity, z_priority.weight * count(*) AS value FROM z_defects
-    INNER JOIN z_priority ON z_defects.priority = z_priority.priority 
-    WHERE plant = $1 AND mes_order IN ($2)
+const getGroupByPriorityDefects = `with PRIO as (
+	SELECT DISTINCT z_priority.priority, z_priority.description, z_priority.weight,
+	count(*) as quantity, 
+	z_priority.weight * count(*) AS value FROM z_priority
+    INNER JOIN z_defects ON z_defects.priority = z_priority.priority 
+    WHERE z_defects.plant = $1 AND z_defects.dm_order = ANY($2)
     GROUP BY z_priority.priority, z_priority.description, z_priority.weight
-    ORDER BY z_priority.priority`;
+    ORDER BY z_priority.priority)
+    select zp.priority, zp.description, zp.weight,
+    case when prio.quantity is null then 0 else prio.quantity end as quantity, 
+    case when prio.value is null then 0 else prio.value end as value
+    from z_priority zp
+    left join PRIO prio ON zp.priority = prio.priority`;
 
 const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;
 

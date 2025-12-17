@@ -42,7 +42,7 @@ module.exports.listenerSetup = (app) => {
     // Chusura del verbale di ispezione
     app.post("/api/generateInspection", async (req, res) => {
         try {
-            const { plant, user, selectedData, dataCollections } = req.body;
+            const { plant, user, selectedData, dataCollections, ncCustomTable, resultCustomTable } = req.body;
             // Logica di dettaglio per il passaggio al testing
             var sentAddOpt = await sendToTestingAdditionalOperations(plant, selectedData);
             if (!sentAddOpt) {
@@ -57,8 +57,8 @@ module.exports.listenerSetup = (app) => {
             // Eseguo invio a testing delle modifiche
             await updateTestingModifiche(plant, selectedData.project_parent, selectedData.wbs, selectedData.material);
             // generazione del PDF del verbale di ispezione
-            var base64PDF = await generateInspectionPDF(plant, dataCollections, selectedData, user);
-            await saveWorkInstructionPDF(base64PDF, "Verbale_Ispezione_"+selectedData.project_parent+"_"+selectedData.material, plant);
+            var base64PDF = await generateInspectionPDF(plant, dataCollections, ncCustomTable, resultCustomTable, selectedData, user);
+            await saveWorkInstructionPDF(base64PDF, "Verbale_Ispezione_"+selectedData.sfc, plant);
             res.status(200).json({ message: "Update successful" });
         } catch (error) {
             let status = error.status || 500;
@@ -71,8 +71,8 @@ module.exports.listenerSetup = (app) => {
     // Questo endpoint deve restituire il file PDF generato (application/pdf)
     app.post("/api/downloadVerbalePDF", async (req, res) => {
         try {
-            const { plant, project, material } = req.body;
-            var base64 = await getWorkInstructionPDF(plant, "Verbale_Ispezione_" + project + "_" + material);
+            const { plant, sfc } = req.body;
+            var base64 = await getWorkInstructionPDF(plant, "Verbale_Ispezione_" + sfc);
             res.status(200).json({ base64: base64 });
         } catch (error) {
             let status = error.status || 500;

@@ -62,9 +62,9 @@ const getDefectsTI = `SELECT distinct z_defects.*, z_coding.coding, z_coding.cod
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
-                    left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc
+                    left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
                     WHERE z_defects.plant = $1 AND z_defects.project = $2 AND mes_order is not null
-                    AND ( z_defects.phase = 'Testing' OR (z_defects.status = 'OPEN' AND z_defects.sent_to_testing = true) )
+                    AND ( z_defects.phase = 'Testing' OR z_defects.sent_to_testing = true )
                     ORDER BY z_defects.creation_date DESC`;
 
 const getPhaseDefects = `SELECT DISTINCT phase FROM z_defects WHERE phase is not null ORDER BY phase`;
@@ -72,6 +72,6 @@ const getStatusDefects = `SELECT DISTINCT status FROM z_defects WHERE status is 
 
 const insertZDefectTesting = `INSERT INTO z_defect_testing (defect_id, plant, sfc, id_lev_1, id_lev_2, id_lev_3) VALUES ($1, $2, $3, $4, $5, $6)`;
 
-const updateDefectsToTesting = `UPDATE z_defects SET sent_to_testing = TRUE WHERE plant = $1 AND dm_order IN ($2)`;
+const updateDefectsToTesting = `UPDATE z_defects SET sent_to_testing = TRUE WHERE plant = $1 AND dm_order = ANY($2)`;
 
 module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting };

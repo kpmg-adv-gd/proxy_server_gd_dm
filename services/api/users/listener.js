@@ -34,6 +34,6 @@ module.exports.listenerSetup = (app) => {
             console.error("Error calling external API:", errMessage);
             res.status(status).json({ error: errMessage });
         }
-    });
+    });    
 
 };

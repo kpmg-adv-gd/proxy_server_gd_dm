@@ -201,14 +201,14 @@ async function insertZVerbaleLev3(order, id_lev_1, id_lev_2, id_lev_3, lev_3, ma
 async function getCustomTableNC(plant, order) {
     try {
         var ordersToCheck = await ordersChildrenRecursion(plant, order);
-        var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, "'" + ordersToCheck.join("','") + "'"]);      
+        var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, ordersToCheck]);   
         // Aggiungo riga con totale
-        var total = { priority: "TOTALE", description: "Totale", weight: 0, quantity: 0 };
+        var total = { priority: "TOTALE", description: "TOTALE", weight: 0, quantity: 0, value: 0 };
         for (var i = 0; i < data.length; i++) {
             total.weight += parseInt(data[i].weight);
             total.quantity += parseInt(data[i].quantity);
+            total.value += parseInt(data[i].value);
         }  
-        total.value = total.weight * total.quantity;
         data.push(total);
         // una volta ottenuti i dati, estraggo anche il voto che rispetta il range in Z_REPORT_NC_TRANSCODE
         var votoSezioneQuery = await postgresdbService.executeQuery(queryVerbali.getVotoNCTranscode, [total.value]);

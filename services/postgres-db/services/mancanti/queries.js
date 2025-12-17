@@ -128,7 +128,7 @@ const getMancantiInfoDataQuery = `select plant,project,"order",count(*) as tot_m
                 
 const getTotalQuantityFromOrders = `select sum(missing_quantity) as counter
                                     from z_report_mancanti
-                                    where plant = $1 and "order" IN ($2) and active = true
+                                    where plant = $1 and "order" = ANY($2) and active = true
                                 `;
 
 module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders };

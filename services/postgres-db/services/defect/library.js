@@ -222,7 +222,7 @@ async function getDefectsTI(plant, project) {
             url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
             var defectResponse = await callGet(url);
             defectResponse = defectResponse.content || [];
-             difettiStandard = [...difettiStandard, ...defectResponse];
+            difettiStandard = [...difettiStandard, ...defectResponse];
         }
         defects[i].defectStandard = difettiStandard.filter(dif => dif.id == defects[i].id)[0] || null;
         // Recupero code description
@@ -234,15 +234,17 @@ async function getDefectsTI(plant, project) {
         defects[i].codeDescription = codesTrovati.filter(code => code.code == defects[i].code)[0]?.description || null;
         defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
         // Recupero livello 1 associato al difetto
-        var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
-        var responseRouting = await callGet(urlRouting);
-        responseRouting[0].routingOperationGroups.forEach(group => {
-            group.routingOperationGroupSteps.forEach(operation => {
-                if (operation.routingStep.stepId == defects[i].id_lev_1) {
-                    defects[i].lev1 = operation.routingStep.description;
-                }
+        if (defects[i].phase == "Testing") {
+            var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+            var responseRouting = await callGet(urlRouting);
+            responseRouting[0].routingOperationGroups.forEach(group => {
+                group.routingOperationGroupSteps.forEach(operation => {
+                    if (operation.routingStep.stepId == defects[i].id_lev_1) {
+                        defects[i].lev1 = operation.routingStep.description;
+                    }
+                });
             });
-        });
+        }
         // Altri dati custom
         defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
     }

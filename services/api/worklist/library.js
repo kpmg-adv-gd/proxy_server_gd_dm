@@ -13,6 +13,11 @@ function getWorkListDataFiltered(response,body){
             let machineSectionCondition = true;
             let parentMaterialCondition = true;
 
+            // Se ha campo custom del Testing (PHASE = "Testing"), escludo l'elemento
+            if (obj.customValues.some(customObj => customObj.attribute === "PHASE" && customObj.value === "Testing")) {
+                return false;
+            }
+
             let customValues = obj.customValues;
             if (!!sfc) {
                 sfcCondition = obj.sfc.toUpperCase().includes(sfc.toUpperCase());

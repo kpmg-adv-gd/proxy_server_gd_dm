@@ -8,8 +8,18 @@ module.exports.listenerSetup = (app) => {
     // Endpoint per ottenere le data collections per supervisore assembly
     app.post("/api/getDataCollectionsBySFC", async (req, res) => {
         try {
-            const { plant, resource, selected, stepId, refresh } = req.body;
+            const { plant, resource, selected, refresh } = req.body;
 
+            // Recupero prima stepID
+            var urlSteId = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + selected.sfc;
+            const stepIdResponse = await callGet(urlSteId);
+            if (!stepIdResponse || stepIdResponse.length === 0) {
+                res.status(500).json({ error: "Error while retrieving Step ID" });
+                return;
+            }
+            var stepId = stepIdResponse.steps[0].stepId;
+
+            // Recupero data collections
             var url = hostname + "/datacollection/v1/sfc/groups?plant=" + plant + "&resource=" + resource
                 + "&sfc=" + selected.sfc + "&StepId=" + stepId;
 

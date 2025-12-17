@@ -65,7 +65,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
 
 async function ruleParameter0(data, group, parameterName, dcData, refresh) {
     if (dcData.length > 0) {
-        var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CO')`;
+        var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CO_PREV')`;
         var mockReq2 = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filter2})` },
@@ -139,13 +139,14 @@ async function ruleParameter3(data, group, parameterName, selected, refresh) {
 }
 async function ruleParameter4(data, group, parameterName, selected, plant, refresh) {
     var ordersToCheck = await ordersChildrenRecursion(plant, selected.order);
-    var quantity = await getTotalQuantityFromOrders(plant, "'" + ordersToCheck.join("','") + "'");
+    var quantity = await getTotalQuantityFromOrders(plant, ordersToCheck);
     quantity = quantity == null ? "0" : quantity
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                    data[i].parameters[j].valueText = quantity;
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                    data[i].parameters[j].valueList = quantity > 0 ? "SI" : "NO";
+                    data[i].parameters[j].comment = "Quantity: " + quantity.toString();
                 }
             }
         }
@@ -164,8 +165,8 @@ async function ruleParameter5(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
-                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                    data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
@@ -185,8 +186,8 @@ async function ruleParameter6(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
-                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                    data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
@@ -206,8 +207,8 @@ async function ruleParameter7(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
-                    data[i].parameters[j].valueBoolean = result.length > 0 ? "SI" : "NO";
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                    data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
             }
@@ -261,8 +262,8 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueBoolean == "" || refresh)) {
-                    data[i].parameters[j].valueBoolean = rigaTrovata ? "NO" : "SI";
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                    data[i].parameters[j].valueList = rigaTrovata ? "NO" : "SI";
                 }
             }
         }
