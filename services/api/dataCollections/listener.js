@@ -62,6 +62,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/api/saveDataCollections", async (req, res) => {
         const { plant, order, sfc, resource, dataCollections, passInWork } = req.body;
         var url = hostname + "/datacollection/v1/log";
+        var listDcError = [];
         for (var i = 0; i < dataCollections.length; i++) {
             var dc = dataCollections[i];
             if (dc.voteSection != null) {
@@ -86,9 +87,15 @@ module.exports.listenerSetup = (app) => {
             }
             try {
                 await callPost(url, payload);
-            } catch (error) { }
+            } catch (error) { 
+                listDcError.push({ dc: dc.group, message: error.message || "Error while saving Data Collection" });
+            }
             // Aggiorno il campo custom ASSEMBLY_REPORT_STATUS su IN_WORK
             if (passInWork) await updateCustomAssemblyReportStatusOrderInWork(plant, order);
+        }
+        if (listDcError.length > 0) {
+            res.status(500).json({ error: "Some Data Collections failed to save", details: listDcError });
+            return;
         }
         res.status(200).json({ message: "Data Collections saved successfully" });
     });
