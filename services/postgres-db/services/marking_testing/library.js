@@ -6,4 +6,9 @@ async function insertMarkingTesting(plant, wbs, network, order, activity_id, id_
     return data;
 }
 
-module.exports = { insertMarkingTesting }
+async function getMarkingTesting(plant, project, type) {
+    const data = await postgresdbService.executeQuery(queryVariance.getMarkingTestingQuery, [plant, project, type]);
+    return data;
+}
+
+module.exports = { insertMarkingTesting, getMarkingTesting }
