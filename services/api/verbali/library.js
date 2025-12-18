@@ -23,17 +23,30 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
         };
         var outMock = await dispatch(mockReq);
         var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
+        // rientro nella MDO con la lista degli ordini trovati (creo lista di OR)
+        var ordersList = orders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        if (project != "") {
+            const filter2 = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersList}))`;
+            const mockReq2 = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${filter2})` },
+                method: "GET"
+            };
+            var outMock2 = await dispatch(mockReq2);
+            var orders = outMock2?.data?.value.length>0 ? outMock2.data.value : [];
+        }
+        // Ciclo gli ordini trovati
         for (var i = 0; i < orders.length; i++) {
             var mfg_order = orders[i].MFG_ORDER;
             var data = { order: mfg_order };
             var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
             var orderResponse = await callGet(url);
-            data.wbs = orderResponse.customValues.filter(item => item.attribute == "WBE")[0]?.value || "";
-            data.material  = orderResponse.customValues.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
-            data.project = orderResponse.customValues.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
-            data.reportStatus = orderResponse.customValues.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
+            data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
+            data.material  = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
+            data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
-            data.sfc = orderResponse.sfcs.length > 0 ? orderResponse.sfcs[0] : "";
+            data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
             // Recupero status con api sfcdetail
             try {
@@ -146,11 +159,15 @@ async function updateTestingModifiche(plant,project, wbeMachine, section) {
 
 // Funzione per eseguire invio al Testing Additional Operations
 async function sendToTestingAdditionalOperations(plant, selectedData) {
+    // Recupero info ordine principale
     var url = hostname + "/order/v1/orders?order=" + selectedData.order + "&plant=" + plant;
     var order = await callGet(url);
-    var commessa = order.customValues.find(obj => obj.attribute == "COMMESSA") && order.customValues.find(obj => obj.attribute == "COMMESSA").value || "";
+    var commessa = order?.customValues?.find(obj => obj.attribute == "COMMESSA")?.value || "";
+    var sezioneMacchina = order?.customValues?.find(obj => obj.attribute == "SEZIONE MACCHINA")?.value || "";
+    var material = order.material?.material || "";
     // Recupero child order
     var childOrders = await getZOrdersLinkByPlantProjectAndParentOrder(plant, commessa, selectedData.order);
+    childOrders.push({ plant: plant, child_order: selectedData.order, project: commessa, child_material: material, machine_section: sezioneMacchina }); // Aggiungo anche l'ordine principale
     var resultOrders = [];
     var index = 0;
     while (index < childOrders.length) {
@@ -174,7 +191,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
             // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
             var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+sfcOrder.sfc;
             var response = await callGet(url);
-            var stepNotDone = response.steps.filter(step => step.stepDone == false);
+            var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
             for (var j = 0; j < stepNotDone.length; j++) {
                 var item = stepNotDone[j];
                 var opt = {
@@ -187,19 +204,19 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                 // Recupero campi custom
                 var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+sfcOrder.routing+"&type=SHOP_ORDER";
                 var responseRouting = await callGet(url);
-                var selectedOpt = responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0 
+                var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0 
                     ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
                 if (selectedOpt != null) {
-                    opt.MF = selectedOpt.routingOperation.customValues.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
-                    opt.MES_ORDER = selectedOpt.routingOperation.customValues.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                    opt.CONFIRMATION_NUMBER = selectedOpt.routingOperation.customValues.filter(obj => obj.attribute == "CONFIRMATION_NUMBER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "CONFIRMATION_NUMBER").value : null;
+                    opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
+                    opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                    opt.CONFIRMATION_NUMBER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "CONFIRMATION_NUMBER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "CONFIRMATION_NUMBER").value : null;
                 }
                 // Recupero ulteriori dettagli, dai campi custom
                 if (opt.MES_ORDER != null) {
                     var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
                     var mesOrder = await callGet(urlMesOrder);
-                    opt.groupCode = mesOrder.material.material;
-                    opt.groupDescription = mesOrder.material.description;
+                    opt.groupCode = mesOrder?.material?.material;
+                    opt.groupDescription = mesOrder?.material?.description;
                 }
                 if (opt.MF != null) {
                     var productionPhase = await getMappingPhase(plant, opt.MF);
@@ -216,6 +233,8 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
     }
     // Creazione dei dati estratti nel Testing
     await insertZAddtionalOperations(resultOrders);
+    // Creazione riga con ordine
+    
     return true;
 }
 
@@ -294,12 +313,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(14).font('Helvetica-Bold')
                         .text(`${collection.description || 'Data Collection'}`, { underline: true });
                     doc.moveDown(0.5);
-
-                    // Informazioni aggiuntive della collection
-                    doc.fontSize(10).font('Helvetica');
-                    if (collection.version) {
-                        doc.text(`Versione: ${collection.version}`);
-                    }
 
                     doc.moveDown(0.5);
 
@@ -432,31 +445,31 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 const colWidthsNC = {
                     priority: 80,
                     description: 200,
-                    weight: 70,
                     quantity: 70,
+                    weight: 70,
                     value: 70
                 };
                 const colPositionsNC = {
                     priority: 50,
                     description: 50 + colWidthsNC.priority + 2,
-                    weight: 50 + colWidthsNC.priority + colWidthsNC.description + 4,
-                    quantity: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.weight + 6,
-                    value: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.weight + colWidthsNC.quantity + 8
+                    quantity: 50 + colWidthsNC.priority + colWidthsNC.description + 4,
+                    weight: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + 6,
+                    value: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + colWidthsNC.weight + 8
                 };
 
                 // Intestazione tabella
                 doc.fontSize(10).font('Helvetica-Bold');
                 doc.rect(colPositionsNC.priority, doc.y, colWidthsNC.priority, 20).stroke();
                 doc.rect(colPositionsNC.description, doc.y, colWidthsNC.description, 20).stroke();
-                doc.rect(colPositionsNC.weight, doc.y, colWidthsNC.weight, 20).stroke();
                 doc.rect(colPositionsNC.quantity, doc.y, colWidthsNC.quantity, 20).stroke();
+                doc.rect(colPositionsNC.weight, doc.y, colWidthsNC.weight, 20).stroke();
                 doc.rect(colPositionsNC.value, doc.y, colWidthsNC.value, 20).stroke();
 
                 const headerYNC = doc.y + 6;
                 doc.text('Priority', colPositionsNC.priority + 5, headerYNC, { width: colWidthsNC.priority - 10, align: 'left' });
                 doc.text('Description', colPositionsNC.description + 5, headerYNC, { width: colWidthsNC.description - 10, align: 'left' });
-                doc.text('Weight', colPositionsNC.weight + 5, headerYNC, { width: colWidthsNC.weight - 10, align: 'left' });
                 doc.text('Quantity', colPositionsNC.quantity + 5, headerYNC, { width: colWidthsNC.quantity - 10, align: 'left' });
+                doc.text('Weight', colPositionsNC.weight + 5, headerYNC, { width: colWidthsNC.weight - 10, align: 'left' });
                 doc.text('Value', colPositionsNC.value + 5, headerYNC, { width: colWidthsNC.value - 10, align: 'left' });
 
                 doc.y += 20;
@@ -486,16 +499,16 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const rowY = doc.y;
                     doc.rect(colPositionsNC.priority, rowY, colWidthsNC.priority, rowHeight).stroke();
                     doc.rect(colPositionsNC.description, rowY, colWidthsNC.description, rowHeight).stroke();
-                    doc.rect(colPositionsNC.weight, rowY, colWidthsNC.weight, rowHeight).stroke();
                     doc.rect(colPositionsNC.quantity, rowY, colWidthsNC.quantity, rowHeight).stroke();
+                    doc.rect(colPositionsNC.weight, rowY, colWidthsNC.weight, rowHeight).stroke();
                     doc.rect(colPositionsNC.value, rowY, colWidthsNC.value, rowHeight).stroke();
 
                     doc.fontSize(9).font('Helvetica');
                     const textY = rowY + 5;
                     doc.text(priority, colPositionsNC.priority + 5, textY, { width: colWidthsNC.priority - 10, align: 'left', lineBreak: true });
                     doc.text(description, colPositionsNC.description + 5, textY, { width: colWidthsNC.description - 10, align: 'left', lineBreak: true });
-                    doc.text(weight, colPositionsNC.weight + 5, textY, { width: colWidthsNC.weight - 10, align: 'left', lineBreak: true });
                     doc.text(quantity, colPositionsNC.quantity + 5, textY, { width: colWidthsNC.quantity - 10, align: 'left', lineBreak: true });
+                    doc.text(weight, colPositionsNC.weight + 5, textY, { width: colWidthsNC.weight - 10, align: 'left', lineBreak: true });
                     doc.text(value, colPositionsNC.value + 5, textY, { width: colWidthsNC.value - 10, align: 'left', lineBreak: true });
 
                     doc.y = rowY + rowHeight;
@@ -1121,19 +1134,9 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.x = 50;
             }
 
-            // Aggiungi footer a tutte le pagine
-            const range = doc.bufferedPageRange();
-            for (let i = range.start; i < range.start + range.count; i++) {
-                doc.switchToPage(i);
-                doc.fontSize(8).font('Helvetica')
-                    .text(`Pagina ${i + 1} di ${range.count}`, 
-                          50, 
-                          doc.page.height - 50, 
-                          { align: 'center' });
-            }
-
             // Finalizza il documento
             doc.end();
+            
 
         } catch (error) {
             reject(error);

@@ -158,14 +158,16 @@ async function getReportWeightDataCollections(plant, sfc, resource, listSection)
     for (var j = 0; j < listSection.length; j++) {
         var weight = parseFloat(listSection[j].weight);
         var score = parseFloat(listSection[j].vote);
-        if (!isNaN(weight) && !isNaN(score)) {
+        if (!isNaN(weight)) {
             totalWeight += weight;
-            totalScore += weight * score;
+            if (!isNaN(score)) {
+                totalScore += weight * score;
+            }
         }
     }
     if (totalWeight > 0) {
-        media.weight = totalWeight.toFixed(2);
-        media.vote = (totalScore / totalWeight).toFixed(2);
+        media.weight = parseFloat(totalWeight.toFixed(2));
+        media.vote = parseFloat((totalScore / totalWeight).toFixed(2));
     } else {
         media.weight = "NA";
         media.vote = "NA";

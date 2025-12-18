@@ -10,7 +10,9 @@ const hostname = credentials.DM_API_URL;
 
 
 async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh) {
-    var filter = `(DATA_FIELD_VALUE eq '${selected.parent_project}' and DATA_FIELD eq 'COMMESSA')`;
+    console.log("AUTO COMPILE PARAMETRI:", JSON.stringify(parametriAuto));
+    var filter = `(DATA_FIELD_VALUE eq '${selected.project_parent}' and DATA_FIELD eq 'COMMESSA')`;
+    console.log("FILTER:", filter);
     var mockReq = {
         path: "/mdo/ORDER_CUSTOM_DATA",
         query: { $apply: `filter(${filter})` },
@@ -18,6 +20,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     };
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
+    console.log("DC DATA inizio:", JSON.stringify(dcData));
 
     for (var i = 0; i < parametriAuto.length; i++) {
         var numParametro = parametriAuto[i].parametro;
@@ -65,7 +68,8 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
 
 async function ruleParameter0(data, group, parameterName, dcData, refresh) {
     if (dcData.length > 0) {
-        var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CO_PREV')`;
+        var ordersList = dcData.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        var filter2 = `((${ordersList}) and DATA_FIELD eq 'CO_PREV')`;
         var mockReq2 = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filter2})` },
@@ -78,7 +82,7 @@ async function ruleParameter0(data, group, parameterName, dcData, refresh) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
                         if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                            data[i].parameters[j].valueText = dcData2[0].DATA_VALUE;
+                            data[i].parameters[j].valueText = dcData2[0].DATA_FIELD_VALUE;
                         }
                     }
                 }
@@ -102,7 +106,8 @@ async function ruleParameter1(data, group, parameterName, selected, refresh) {
 }
 async function ruleParameter2(data, group, parameterName, dcData, refresh) {
     if (dcData.length > 0) {
-        var filter2 = `(MFG_ORDER eq '${dcData[0].MFG_ORDER}' and DATA_FIELD eq 'CUSTOMER')`;
+        var ordersList = dcData.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        var filter2 = `((${ordersList}) and DATA_FIELD eq 'CUSTOMER')`;
         var mockReq2 = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filter2})` },
@@ -115,7 +120,7 @@ async function ruleParameter2(data, group, parameterName, dcData, refresh) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
                         if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                            data[i].parameters[j].valueText = dcData2[0].DATA_VALUE;
+                            data[i].parameters[j].valueText = dcData2[0].DATA_FIELD_VALUE;
                         }
                     }
                 }

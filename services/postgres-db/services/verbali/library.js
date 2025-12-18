@@ -203,9 +203,8 @@ async function getCustomTableNC(plant, order) {
         var ordersToCheck = await ordersChildrenRecursion(plant, order);
         var data = await postgresdbService.executeQuery(queryVerbali.getGroupByPriorityDefects, [plant, ordersToCheck]);   
         // Aggiungo riga con totale
-        var total = { priority: "TOTALE", description: "TOTALE", weight: 0, quantity: 0, value: 0 };
+        var total = { priority: "TOTALE", description: "TOTALE", weight: "", quantity: 0, value: 0 };
         for (var i = 0; i < data.length; i++) {
-            total.weight += parseInt(data[i].weight);
             total.quantity += parseInt(data[i].quantity);
             total.value += parseInt(data[i].value);
         }  

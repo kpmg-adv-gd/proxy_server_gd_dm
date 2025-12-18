@@ -74,6 +74,7 @@ module.exports.listenerSetup = (app) => {
                 });
             }
             var parameters = await generateJsonParameters(dc.parameters);
+            if (parameters.length === 0) continue;
             var payload = {
                 plant: plant,
                 sfcs: [sfc],
@@ -94,7 +95,7 @@ module.exports.listenerSetup = (app) => {
             if (passInWork) await updateCustomAssemblyReportStatusOrderInWork(plant, order);
         }
         if (listDcError.length > 0) {
-            res.status(500).json({ error: "Some Data Collections failed to save", details: listDcError });
+            res.status(500).json({ error: listDcError });
             return;
         }
         res.status(200).json({ message: "Data Collections saved successfully" });
