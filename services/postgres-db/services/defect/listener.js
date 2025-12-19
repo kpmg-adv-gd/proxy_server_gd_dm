@@ -36,6 +36,17 @@ module.exports.listenerSetup = (app) => {
             res.status(500).json({ error: "Error while executing query" });
         }
     });
+
+    app.post("/db/selectZDefectByWBE", async (req, res) => {
+        const { plant, wbe } = req.body;
+        try {
+            const result = await postgresdbService.selectZDefectByWBE(plant, wbe);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    });
     
     app.post("/db/selectDefectToApprove", async (req, res) => {
         const { plant } = req.body;

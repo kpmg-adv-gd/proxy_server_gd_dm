@@ -22,6 +22,19 @@ const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.co
                     WHERE z_defects.id = ANY($1) and z_defects.plant = $2
                     ORDER BY z_defects.creation_date DESC`;
 
+const selectZDefectByWBE = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description,
+                    z_notification_type.description as notification_type_description, 
+                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description,
+                    z_variance_type.description as variance_description
+                    FROM z_defects
+                    left join z_coding on z_defects.coding_id = z_coding.id
+                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    left join z_responsible on z_defects.responsible = z_responsible.id
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    WHERE z_defects.wbe = $2 and z_defects.plant = $1
+                    ORDER BY z_defects.creation_date DESC`;
+
 const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
                     z_notification_type.description as notification_type_description, 
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
@@ -50,4 +63,4 @@ const checkAllDefectClose = `SELECT * FROM z_defects WHERE status = 'OPEN' AND s
 
 const getDefectsWBE = `SELECT DISTINCT z_defects.wbe from z_defects WHERE z_defects.wbe IS NOT NULL AND z_defects.wbe != '' AND z_defects.plant = $1 ORDER BY z_defects.wbe`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE };
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectZDefectByWBE, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE };
