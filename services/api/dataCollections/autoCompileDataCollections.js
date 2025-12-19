@@ -223,10 +223,16 @@ async function ruleParameter7(data, group, parameterName, selected, plant, refre
 }
 async function ruleParameter8(data, group, parameterName, selected, plant, refresh) {
     var optDaConsiderare = await getIncompleteOperations(plant, selected);
-    // Sommo i tempi PLAN_SETUP_TIME e PLAN_PROCESS_TIME di ogni orderScheduleData non presente in optNotIncluded
     var totalTime = 0;
     for (var i = 0; i < optDaConsiderare.length; i++) {
-        totalTime += (optDaConsiderare[i].PLAN_SETUP_TIME || 0) + (optDaConsiderare[i].PLAN_PROCESS_TIME || 0);
+        var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+optDaConsiderare[i].routing+"&type=SHOP_ORDER";
+        var responseRouting = await callGet(url);
+        var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == optDaConsiderare[i].operation).length > 0 
+            ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == optDaConsiderare[i].operation)[0] : null;
+        if (selectedOpt != null) {
+            var time = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : 0;
+            totalTime += parseFloat(time);
+        }
     }
     // Aggiorno il parametro
     for (var i = 0; i < data.length; i++) {
@@ -252,14 +258,8 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
     // Verifico quante operazioni di rodaggio sono presenti in optDaConsiderare
     var rigaTrovata = false;
     for (var i = 0; i < optDaConsiderare.length; i++) {
-        for (var j = 0; j < operazioniRodaggio.length; j++) {
-            // controllo in like (contiene pezzo di stringa)
-            if (optDaConsiderare[i].OPERATION_ACTIVITY.includes(operazioniRodaggio[j])) {
-                rigaTrovata = true;
-                break;
-            }
-        }
-        if (rigaTrovata) {
+        if (operazioniRodaggio.includes(optDaConsiderare[i].operation)) {
+            rigaTrovata = true;
             break;
         }
     }
@@ -279,54 +279,27 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
 // utils
 // Funzione per estrarre operazioni non concluse
 async function getIncompleteOperations(plant, selected) {
+    var optDaConsiderare = [];
     // Ricavo routing e routing_version
     var ordersToCheck = await ordersChildrenRecursion(plant, selected.order);
-    const orderFilter = ordersToCheck.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
-    var filter = `(PLANT eq '${plant}' and (${orderFilter}) )`;
-    var mockReq = {
-        path: "/mdo/ORDER",
-        query: { $apply: `filter(${filter})` },
-        method: "GET"
-    };
-    var outMock = await dispatch(mockReq);
-    var orderData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-    if (orderData.length == 0) return [];
-    // prendo primo elemento e ci entro in mdo ROUTING_STEP
-    var filter2 = `(PLANT eq '${plant}' and ROUTING eq '${orderData[0].ROUTING}' and ROUTING_VERSION eq '${orderData[0].ROUTING_VERSION}')`;
-    var mockReq2 = {
-        path: "/mdo/ROUTING_STEP",
-        query: { $apply: `filter(${filter2})` },
-        method: "GET"
-    };
-    var outMock2 = await dispatch(mockReq2);
-    var routingStepData = (outMock2?.data?.value && outMock2.data.value.length > 0) ? outMock2.data.value : [];
-    // recupero la lista di operazioni (not null) in ROUTING_STEP_OPERATION_ACTIVITY: con queste entro in mdo ORDER_SCHEDULE per estrarre PLAN_SETUP_TIME e PLAN_PROCESS_TIME (da sommare poi)
-    var operationList = routingStepData.filter(rs => rs.ROUTING_STEP_OPERATION_ACTIVITY != null).map(rs => rs.OPERATION);
-    if (operationList.length > 0) {
-        var filter3 = `(PLANT eq '${plant}' and MFG_ORDER eq '${orderData[0].MFG_ORDER}' and ROUTING eq '${orderData[0].ROUTING}' and ROUTING_VERSION eq '${orderData[0].ROUTING_VERSION}'
-            and (${operationList.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(' or ')}))`;
-        var mockReq3 = {
-            path: "/mdo/ORDER_SCHEDULE",
-            query: { $apply: `filter(${filter3})` },
-            method: "GET"
-        };
-        var outMock3 = await dispatch(mockReq3);
-        var orderScheduleData = (outMock3?.data?.value && outMock3.data.value.length > 0) ? outMock3.data.value : [];
-        // Estraggo operazioni da non includere nella somma finale dalla mdo SFC_STEP_STATUS
-        var filter4 = `(PLANT eq '${plant}' and MFG_ORDER eq '${orderData[0].MFG_ORDER}' and ROUTING eq '${orderData[0].ROUTING}' and ROUTING_VERSION eq '${orderData[0].ROUTING_VERSION}'
-            and (${operationList.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(' or ')}))`;
-        var mockReq4 = {
-            path: "/mdo/SFC_STEP_STATUS",
-            query: { $apply: `filter(${filter4})` },
-            method: "GET"
-        };
-        var outMock4 = await dispatch(mockReq4);
-        var optNotIncluded = (outMock4?.data?.value && outMock4.data.value.length > 0) ? outMock4.data.value.filter(item => item.COMPLETED_AT != null) : [];
-        var optDaConsiderare = orderScheduleData.filter(op => !optNotIncluded.find(item => item.OPERATION_ACTIVITY === op.OPERATION_ACTIVITY));
-        return optDaConsiderare;
-    } else {
-        return [];
+    for (var i = 0; i < ordersToCheck.length; i++) {
+        var url = hostname + "/order/v1/orders?order=" + ordersToCheck[i] + "&plant=" + plant;
+        var selectedOrder = await callGet(url);
+        if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
+            var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+selectedOrder.sfcs[0];
+            var response = await callGet(url);
+            var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
+            stepNotDone.forEach(element => {
+                optDaConsiderare.push({
+                    operation: element.operation.operation,
+                    routing: element.stepRouting.routing,
+                    routingVersion: element.stepRouting.version,
+                    routingType: element.stepRouting.type
+                });
+            });
+        }         
     }
+    return optDaConsiderare;
 }
 
 // Esporta la funzione

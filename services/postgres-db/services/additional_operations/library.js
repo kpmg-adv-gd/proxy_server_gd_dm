@@ -79,7 +79,7 @@ async function insertZAddtionalOperations(rows) {
             var opt = rows[i].operations[j];
             await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
                 row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
-                opt.phase, opt.operationStatus, opt.stepId, opt.CONFIRMATION_NUMBER, opt.MES_ORDER, opt.workCenter
+                opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter
             ]);
         }
     }

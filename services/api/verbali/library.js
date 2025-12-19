@@ -22,7 +22,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             method: "GET"
         };
         var outMock = await dispatch(mockReq);
-        var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
+        var orders = outMock?.data?.value.length > 0 ? outMock.data.value : [];
         // rientro nella MDO con la lista degli ordini trovati (creo lista di OR)
         var ordersList = orders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
         if (project != "") {
@@ -33,7 +33,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
                 method: "GET"
             };
             var outMock2 = await dispatch(mockReq2);
-            var orders = outMock2?.data?.value.length>0 ? outMock2.data.value : [];
+            var orders = outMock2?.data?.value.length > 0 ? outMock2.data.value : [];
         }
         // Ciclo gli ordini trovati
         for (var i = 0; i < orders.length; i++) {
@@ -42,7 +42,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
             var orderResponse = await callGet(url);
             data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
-            data.material  = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.material = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
@@ -50,7 +50,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
             // Recupero status con api sfcdetail
             try {
-                var urlStatus = hostname + "/sfc/v1/sfcdetail?plant="+plant+"&sfc="+data.sfc;
+                var urlStatus = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + data.sfc;
                 let responseGetSfc = await callGet(urlStatus);
                 data.status = responseGetSfc.status.description;
             } catch (error) {
@@ -80,7 +80,7 @@ async function getProjectsVerbaliSupervisoreAssembly(plant) {
             method: "GET"
         };
         var outMock = await dispatch(mockReq);
-        var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
+        var orders = outMock?.data?.value.length > 0 ? outMock.data.value : [];
         for (var i = 0; i < orders.length; i++) {
             var mfg_order = orders[i].MFG_ORDER;
             // Recupero progetto
@@ -91,8 +91,8 @@ async function getProjectsVerbaliSupervisoreAssembly(plant) {
                 method: "GET"
             };
             var outMockProject = await dispatch(mockReqProject);
-            var projectData = outMockProject?.data?.value.length>0 ? outMockProject.data.value : [];
-            if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE)) 
+            var projectData = outMockProject?.data?.value.length > 0 ? outMockProject.data.value : [];
+            if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE))
                 projects.push({ project: projectData[0].DATA_FIELD_VALUE });
         }
         return projects;
@@ -102,58 +102,58 @@ async function getProjectsVerbaliSupervisoreAssembly(plant) {
 }
 
 // Funzione per aggiornare lo stato del verbale di ispezione su IN_WORK
-async function updateCustomAssemblyReportStatusOrderInWork(plant,order) {
+async function updateCustomAssemblyReportStatusOrderInWork(plant, order) {
     let url = hostname + "/order/v1/orders/customValues";
     let customValues = [
-        { "attribute":"ASSEMBLY_REPORT_STATUS", "value": "IN_WORK" },
+        { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "IN_WORK" },
     ];
-    let body={
-        "plant":plant,
-        "order":order,
+    let body = {
+        "plant": plant,
+        "order": order,
         "customValues": customValues
     };
-    await callPatch(url,body);
+    await callPatch(url, body);
 }
 
 // Funzione per aggiornare lo stato del verbale di ispezione su DONE e salvare l'utente che ha generato il verbale
-async function updateCustomAssemblyReportStatusOrderDone(plant,order,user){
+async function updateCustomAssemblyReportStatusOrderDone(plant, order, user) {
     let url = hostname + "/order/v1/orders/customValues";
     let customValues = [
-        { "attribute":"ASSEMBLY_REPORT_STATUS", "value": "DONE" },
-        { "attribute":"ASSEMBLY_REPORT_USER", "value": user },
+        { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "DONE" },
+        { "attribute": "ASSEMBLY_REPORT_USER", "value": user },
     ];
-    let body={
-        "plant":plant,
-        "order":order,
+    let body = {
+        "plant": plant,
+        "order": order,
         "customValues": customValues
     };
-    await callPatch(url,body);
+    await callPatch(url, body);
 }
 
 // Funzione per aggiornare il campo custom SENT_TO_TESTING a true su ordine e su figli/nipoti...
-async function updateCustomSentTotTestingOrder(plant,order,user) {
+async function updateCustomSentTotTestingOrder(plant, order, user) {
     var ordersToCheck = await ordersChildrenRecursion(plant, order);
     let url = hostname + "/order/v1/orders/customValues";
-    let customValues = [ { "attribute":"SENT_TO_TESTING", "value": true } ];
+    let customValues = [{ "attribute": "SENT_TO_TESTING", "value": true }];
     // Salvo il campo custom per ogni ordine trovato
     for (var i = 0; i < ordersToCheck.length; i++) {
-        let body={
-            "plant":plant,
-            "order":ordersToCheck[i],
+        let body = {
+            "plant": plant,
+            "order": ordersToCheck[i],
             "customValues": customValues
         };
-        await callPatch(url,body);
+        await callPatch(url, body);
     }
 }
 
 // Funzione pe aggiornare i difetti da inviare a testing
-async function updateTestingDefects(plant,order) {
+async function updateTestingDefects(plant, order) {
     var ordersToCheck = await ordersChildrenRecursion(plant, order);
     await updateDefectsToTesting(plant, ordersToCheck);
 }
 
 // Funzione pe aggiornare modifiche da inviare a testing
-async function updateTestingModifiche(plant,project, wbeMachine, section) {
+async function updateTestingModifiche(plant, project, wbeMachine, section) {
     await updateModificheToTesting(plant, wbeMachine, section, project);
 }
 
@@ -171,9 +171,14 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
     var resultOrders = [];
     var index = 0;
     while (index < childOrders.length) {
+        // controllo che questo ordine non l'ho già analizzato
+        if (resultOrders.some(item => item.order === childOrders[index].child_order)) {
+            index++;
+            continue;
+        }
         // Check sullo stato degli ordini sul valore "executionStatus"
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
-        var selectedOrder = await callGet(url);
+        var selectedOrder = await callGet(url); console
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             // Check superato
             var sfcOrder = {
@@ -189,7 +194,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                 operations: []
             };
             // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
-            var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+sfcOrder.sfc;
+            var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
             var response = await callGet(url);
             var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
             for (var j = 0; j < stepNotDone.length; j++) {
@@ -202,14 +207,13 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                     workCenter: item.plannedWorkCenter
                 }
                 // Recupero campi custom
-                var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+sfcOrder.routing+"&type=SHOP_ORDER";
+                var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
                 var responseRouting = await callGet(url);
-                var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0 
+                var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
                     ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
                 if (selectedOpt != null) {
                     opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
                     opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                    opt.CONFIRMATION_NUMBER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "CONFIRMATION_NUMBER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "CONFIRMATION_NUMBER").value : null;
                 }
                 // Recupero ulteriori dettagli, dai campi custom
                 if (opt.MES_ORDER != null) {
@@ -233,8 +237,6 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
     }
     // Creazione dei dati estratti nel Testing
     await insertZAddtionalOperations(resultOrders);
-    // Creazione riga con ordine
-    
     return true;
 }
 
@@ -268,7 +270,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
             // Informazioni dalla testata (selectedData)
             doc.fontSize(12).font('Helvetica-Bold');
-            
+
             if (selectedData?.sfc) {
                 doc.text(`SFC: `, 50, doc.y, { continued: true }).font('Helvetica').text(selectedData.sfc);
                 doc.moveDown(0.5);
@@ -284,7 +286,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
             // Data e ora di generazione (fuso orario CET/CEST)
             const now = new Date();
-            const formattedDate = now.toLocaleString('it-IT', { 
+            const formattedDate = now.toLocaleString('it-IT', {
                 timeZone: 'Europe/Rome',
                 day: '2-digit',
                 month: '2-digit',
@@ -349,12 +351,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                         doc.rect(colPositions.nome, doc.y, colWidths.nome, 20).stroke();
                         doc.rect(colPositions.valore, doc.y, colWidths.valore, 20).stroke();
                         doc.rect(colPositions.commento, doc.y, colWidths.commento, 20).stroke();
-                        
+
                         const headerY = doc.y + 6;
                         doc.text('Nome Parametro', colPositions.nome + 5, headerY, { width: colWidths.nome - 10, align: 'left' });
                         doc.text('Valore', colPositions.valore + 5, headerY, { width: colWidths.valore - 10, align: 'left' });
                         doc.text('Commento', colPositions.commento + 5, headerY, { width: colWidths.commento - 10, align: 'left' });
-                        
+
                         doc.y += 20;
 
                         // Disegna righe della tabella
@@ -397,12 +399,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                             // Scrivi il contenuto (salva e ripristina Y per ogni cella)
                             doc.fontSize(9).font('Helvetica');
-                            
+
                             const textY = rowY + 5;
                             doc.text(nome, colPositions.nome + 5, textY, { width: colWidths.nome - 10, align: 'left', lineBreak: true });
-                            
+
                             doc.text(value.toString(), colPositions.valore + 5, textY, { width: colWidths.valore - 10, align: 'left', lineBreak: true });
-                            
+
                             doc.text(commento, colPositions.commento + 5, textY, { width: colWidths.commento - 10, align: 'left', lineBreak: true });
 
                             doc.y = rowY + rowHeight;
@@ -411,10 +413,162 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                         doc.fontSize(10).font('Helvetica-Oblique').text('  Nessun parametro disponibile');
                     }
 
+                    // TABELLA NON CONFORMITA' PENDING (se richiesta per questa collection)
+                    if (collection.viewCustomTableNC === true && ncCustomTable && ncCustomTable.length > 0) {
+                        doc.x = 50;
+                        doc.moveDown(1);
+
+                        // Sottotitolo per la tabella NC
+                        doc.fontSize(12).font('Helvetica-Bold')
+                            .text('Non Conformità Pending', { align: 'left' });
+                        doc.moveDown(0.5);
+
+                        // Definizione colonne
+                        const colWidthsNC = {
+                            priority: 80,
+                            description: 200,
+                            quantity: 70,
+                            weight: 70,
+                            value: 70
+                        };
+                        const colPositionsNC = {
+                            priority: 50,
+                            description: 50 + colWidthsNC.priority + 2,
+                            quantity: 50 + colWidthsNC.priority + colWidthsNC.description + 4,
+                            weight: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + 6,
+                            value: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + colWidthsNC.weight + 8
+                        };
+
+                        // Intestazione tabella
+                        doc.fontSize(10).font('Helvetica-Bold');
+                        doc.rect(colPositionsNC.priority, doc.y, colWidthsNC.priority, 20).stroke();
+                        doc.rect(colPositionsNC.description, doc.y, colWidthsNC.description, 20).stroke();
+                        doc.rect(colPositionsNC.quantity, doc.y, colWidthsNC.quantity, 20).stroke();
+                        doc.rect(colPositionsNC.weight, doc.y, colWidthsNC.weight, 20).stroke();
+                        doc.rect(colPositionsNC.value, doc.y, colWidthsNC.value, 20).stroke();
+
+                        const headerYNC = doc.y + 6;
+                        doc.text('Priority', colPositionsNC.priority + 5, headerYNC, { width: colWidthsNC.priority - 10, align: 'left' });
+                        doc.text('Description', colPositionsNC.description + 5, headerYNC, { width: colWidthsNC.description - 10, align: 'left' });
+                        doc.text('Quantity', colPositionsNC.quantity + 5, headerYNC, { width: colWidthsNC.quantity - 10, align: 'left' });
+                        doc.text('Weight', colPositionsNC.weight + 5, headerYNC, { width: colWidthsNC.weight - 10, align: 'left' });
+                        doc.text('Value', colPositionsNC.value + 5, headerYNC, { width: colWidthsNC.value - 10, align: 'left' });
+
+                        doc.y += 20;
+
+                        // Righe tabella
+                        ncCustomTable.forEach(nc => {
+                            const priority = nc.priority || 'N/A';
+                            const description = nc.description || 'N/A';
+                            const weight = nc.weight !== undefined && nc.weight !== null ? nc.weight.toString() : 'N/A';
+                            const quantity = nc.quantity !== undefined && nc.quantity !== null ? nc.quantity.toString() : 'N/A';
+                            const value = nc.value !== undefined && nc.value !== null ? nc.value.toString() : 'N/A';
+
+                            // Calcola altezza riga
+                            const priorityHeight = doc.heightOfString(priority, { width: colWidthsNC.priority - 10 });
+                            const descriptionHeight = doc.heightOfString(description, { width: colWidthsNC.description - 10 });
+                            const weightHeight = doc.heightOfString(weight, { width: colWidthsNC.weight - 10 });
+                            const quantityHeight = doc.heightOfString(quantity, { width: colWidthsNC.quantity - 10 });
+                            const valueHeight = doc.heightOfString(value, { width: colWidthsNC.value - 10 });
+                            const rowHeight = Math.max(priorityHeight, descriptionHeight, weightHeight, quantityHeight, valueHeight) + 10;
+
+                            // Nuova pagina se necessario
+                            if (doc.y + rowHeight > doc.page.height - 100) {
+                                doc.addPage();
+                                doc.y = 50;
+                            }
+
+                            const rowY = doc.y;
+                            doc.rect(colPositionsNC.priority, rowY, colWidthsNC.priority, rowHeight).stroke();
+                            doc.rect(colPositionsNC.description, rowY, colWidthsNC.description, rowHeight).stroke();
+                            doc.rect(colPositionsNC.quantity, rowY, colWidthsNC.quantity, rowHeight).stroke();
+                            doc.rect(colPositionsNC.weight, rowY, colWidthsNC.weight, rowHeight).stroke();
+                            doc.rect(colPositionsNC.value, rowY, colWidthsNC.value, rowHeight).stroke();
+
+                            doc.fontSize(9).font('Helvetica');
+                            const textY = rowY + 5;
+                            doc.text(priority, colPositionsNC.priority + 5, textY, { width: colWidthsNC.priority - 10, align: 'left', lineBreak: true });
+                            doc.text(description, colPositionsNC.description + 5, textY, { width: colWidthsNC.description - 10, align: 'left', lineBreak: true });
+                            doc.text(quantity, colPositionsNC.quantity + 5, textY, { width: colWidthsNC.quantity - 10, align: 'left', lineBreak: true });
+                            doc.text(weight, colPositionsNC.weight + 5, textY, { width: colWidthsNC.weight - 10, align: 'left', lineBreak: true });
+                            doc.text(value, colPositionsNC.value + 5, textY, { width: colWidthsNC.value - 10, align: 'left', lineBreak: true });
+
+                            doc.y = rowY + rowHeight;
+                        });
+                    }
+
+                    // TABELLA RISULTATO DELL'ISPEZIONE (se richiesta per questa collection)
+                    if (collection.viewCustomTableResults === true && resultCustomTable && resultCustomTable.length > 0) {
+                        doc.x = 50;
+                        doc.moveDown(1);
+
+                        // Sottotitolo per la tabella Risultato
+                        doc.fontSize(12).font('Helvetica-Bold')
+                            .text('Risultato dell\'Ispezione', { align: 'left' });
+                        doc.moveDown(0.5);
+
+                        // Definizione colonne
+                        const colWidthsResult = {
+                            section: 200,
+                            weight: 150,
+                            vote: 150
+                        };
+                        const colPositionsResult = {
+                            section: 50,
+                            weight: 50 + colWidthsResult.section + 2,
+                            vote: 50 + colWidthsResult.section + colWidthsResult.weight + 4
+                        };
+
+                        // Intestazione tabella
+                        doc.fontSize(10).font('Helvetica-Bold');
+                        doc.rect(colPositionsResult.section, doc.y, colWidthsResult.section, 20).stroke();
+                        doc.rect(colPositionsResult.weight, doc.y, colWidthsResult.weight, 20).stroke();
+                        doc.rect(colPositionsResult.vote, doc.y, colWidthsResult.vote, 20).stroke();
+
+                        const headerYResult = doc.y + 6;
+                        doc.text('Section', colPositionsResult.section + 5, headerYResult, { width: colWidthsResult.section - 10, align: 'left' });
+                        doc.text('Weight', colPositionsResult.weight + 5, headerYResult, { width: colWidthsResult.weight - 10, align: 'left' });
+                        doc.text('Vote', colPositionsResult.vote + 5, headerYResult, { width: colWidthsResult.vote - 10, align: 'left' });
+
+                        doc.y += 20;
+
+                        // Righe tabella
+                        resultCustomTable.forEach(result => {
+                            const section = result.section || 'N/A';
+                            const weight = result.weight !== undefined && result.weight !== null ? result.weight.toString() : 'N/A';
+                            const vote = result.vote !== undefined && result.vote !== null ? result.vote.toString() : 'N/A';
+
+                            // Calcola altezza riga
+                            const sectionHeight = doc.heightOfString(section, { width: colWidthsResult.section - 10 });
+                            const weightHeight = doc.heightOfString(weight, { width: colWidthsResult.weight - 10 });
+                            const voteHeight = doc.heightOfString(vote, { width: colWidthsResult.vote - 10 });
+                            const rowHeight = Math.max(sectionHeight, weightHeight, voteHeight) + 10;
+
+                            // Nuova pagina se necessario
+                            if (doc.y + rowHeight > doc.page.height - 100) {
+                                doc.addPage();
+                                doc.y = 50;
+                            }
+
+                            const rowY = doc.y;
+                            doc.rect(colPositionsResult.section, rowY, colWidthsResult.section, rowHeight).stroke();
+                            doc.rect(colPositionsResult.weight, rowY, colWidthsResult.weight, rowHeight).stroke();
+                            doc.rect(colPositionsResult.vote, rowY, colWidthsResult.vote, rowHeight).stroke();
+
+                            doc.fontSize(9).font('Helvetica');
+                            const textY = rowY + 5;
+                            doc.text(section, colPositionsResult.section + 5, textY, { width: colWidthsResult.section - 10, align: 'left', lineBreak: true });
+                            doc.text(weight, colPositionsResult.weight + 5, textY, { width: colWidthsResult.weight - 10, align: 'left', lineBreak: true });
+                            doc.text(vote, colPositionsResult.vote + 5, textY, { width: colWidthsResult.vote - 10, align: 'left', lineBreak: true });
+
+                            doc.y = rowY + rowHeight;
+                        });
+                    }
+
                     // Reset posizione X e Y dopo la tabella
                     doc.x = 50;
                     doc.moveDown(1);
-                    
+
                     // Separatore tra sezioni (tranne l'ultima)
                     if (index < dataCollections.length - 1) {
                         doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
@@ -425,171 +579,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.fontSize(12).font('Helvetica-Oblique').text('Nessuna data collection disponibile', { align: 'center' });
             }
 
-            // SEZIONE NON CONFORMITA' PENDING
-            if (ncCustomTable && ncCustomTable.length > 0) {
-                // Nuova pagina per le non conformità
-                doc.addPage();
-                doc.x = 50;
-                doc.y = 50;
 
-                // Titolo sezione
-                doc.fontSize(18).font('Helvetica-Bold')
-                    .text('NON CONFORMITA\' PENDING', { align: 'center' });
-                doc.moveDown(0.5);
-                doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
-                doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
-                doc.moveDown(1);
-                doc.moveDown(0.5);
-
-                // Definizione colonne
-                const colWidthsNC = {
-                    priority: 80,
-                    description: 200,
-                    quantity: 70,
-                    weight: 70,
-                    value: 70
-                };
-                const colPositionsNC = {
-                    priority: 50,
-                    description: 50 + colWidthsNC.priority + 2,
-                    quantity: 50 + colWidthsNC.priority + colWidthsNC.description + 4,
-                    weight: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + 6,
-                    value: 50 + colWidthsNC.priority + colWidthsNC.description + colWidthsNC.quantity + colWidthsNC.weight + 8
-                };
-
-                // Intestazione tabella
-                doc.fontSize(10).font('Helvetica-Bold');
-                doc.rect(colPositionsNC.priority, doc.y, colWidthsNC.priority, 20).stroke();
-                doc.rect(colPositionsNC.description, doc.y, colWidthsNC.description, 20).stroke();
-                doc.rect(colPositionsNC.quantity, doc.y, colWidthsNC.quantity, 20).stroke();
-                doc.rect(colPositionsNC.weight, doc.y, colWidthsNC.weight, 20).stroke();
-                doc.rect(colPositionsNC.value, doc.y, colWidthsNC.value, 20).stroke();
-
-                const headerYNC = doc.y + 6;
-                doc.text('Priority', colPositionsNC.priority + 5, headerYNC, { width: colWidthsNC.priority - 10, align: 'left' });
-                doc.text('Description', colPositionsNC.description + 5, headerYNC, { width: colWidthsNC.description - 10, align: 'left' });
-                doc.text('Quantity', colPositionsNC.quantity + 5, headerYNC, { width: colWidthsNC.quantity - 10, align: 'left' });
-                doc.text('Weight', colPositionsNC.weight + 5, headerYNC, { width: colWidthsNC.weight - 10, align: 'left' });
-                doc.text('Value', colPositionsNC.value + 5, headerYNC, { width: colWidthsNC.value - 10, align: 'left' });
-
-                doc.y += 20;
-
-                // Righe tabella
-                ncCustomTable.forEach(nc => {
-                    const priority = nc.priority || 'N/A';
-                    const description = nc.description || 'N/A';
-                    const weight = nc.weight !== undefined && nc.weight !== null ? nc.weight.toString() : 'N/A';
-                    const quantity = nc.quantity !== undefined && nc.quantity !== null ? nc.quantity.toString() : 'N/A';
-                    const value = nc.value !== undefined && nc.value !== null ? nc.value.toString() : 'N/A';
-
-                    // Calcola altezza riga
-                    const priorityHeight = doc.heightOfString(priority, { width: colWidthsNC.priority - 10 });
-                    const descriptionHeight = doc.heightOfString(description, { width: colWidthsNC.description - 10 });
-                    const weightHeight = doc.heightOfString(weight, { width: colWidthsNC.weight - 10 });
-                    const quantityHeight = doc.heightOfString(quantity, { width: colWidthsNC.quantity - 10 });
-                    const valueHeight = doc.heightOfString(value, { width: colWidthsNC.value - 10 });
-                    const rowHeight = Math.max(priorityHeight, descriptionHeight, weightHeight, quantityHeight, valueHeight) + 10;
-
-                    // Nuova pagina se necessario
-                    if (doc.y + rowHeight > doc.page.height - 100) {
-                        doc.addPage();
-                        doc.y = 50;
-                    }
-
-                    const rowY = doc.y;
-                    doc.rect(colPositionsNC.priority, rowY, colWidthsNC.priority, rowHeight).stroke();
-                    doc.rect(colPositionsNC.description, rowY, colWidthsNC.description, rowHeight).stroke();
-                    doc.rect(colPositionsNC.quantity, rowY, colWidthsNC.quantity, rowHeight).stroke();
-                    doc.rect(colPositionsNC.weight, rowY, colWidthsNC.weight, rowHeight).stroke();
-                    doc.rect(colPositionsNC.value, rowY, colWidthsNC.value, rowHeight).stroke();
-
-                    doc.fontSize(9).font('Helvetica');
-                    const textY = rowY + 5;
-                    doc.text(priority, colPositionsNC.priority + 5, textY, { width: colWidthsNC.priority - 10, align: 'left', lineBreak: true });
-                    doc.text(description, colPositionsNC.description + 5, textY, { width: colWidthsNC.description - 10, align: 'left', lineBreak: true });
-                    doc.text(quantity, colPositionsNC.quantity + 5, textY, { width: colWidthsNC.quantity - 10, align: 'left', lineBreak: true });
-                    doc.text(weight, colPositionsNC.weight + 5, textY, { width: colWidthsNC.weight - 10, align: 'left', lineBreak: true });
-                    doc.text(value, colPositionsNC.value + 5, textY, { width: colWidthsNC.value - 10, align: 'left', lineBreak: true });
-
-                    doc.y = rowY + rowHeight;
-                });
-                doc.x = 50;
-            }
-
-            // SEZIONE RISULTATO DELL'ISPEZIONE
-            if (resultCustomTable && resultCustomTable.length > 0) {
-                // Nuova pagina per i risultati
-                doc.addPage();
-                doc.x = 50;
-                doc.y = 50;
-
-                // Titolo sezione
-                doc.fontSize(18).font('Helvetica-Bold')
-                    .text('RISULTATO DELL\'ISPEZIONE', { align: 'center' });
-                doc.moveDown(0.5);
-                doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
-                doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
-                doc.moveDown(1);
-                doc.moveDown(0.5);
-
-                // Definizione colonne
-                const colWidthsResult = {
-                    section: 200,
-                    weight: 150,
-                    vote: 150
-                };
-                const colPositionsResult = {
-                    section: 50,
-                    weight: 50 + colWidthsResult.section + 2,
-                    vote: 50 + colWidthsResult.section + colWidthsResult.weight + 4
-                };
-
-                // Intestazione tabella
-                doc.fontSize(10).font('Helvetica-Bold');
-                doc.rect(colPositionsResult.section, doc.y, colWidthsResult.section, 20).stroke();
-                doc.rect(colPositionsResult.weight, doc.y, colWidthsResult.weight, 20).stroke();
-                doc.rect(colPositionsResult.vote, doc.y, colWidthsResult.vote, 20).stroke();
-
-                const headerYResult = doc.y + 6;
-                doc.text('Section', colPositionsResult.section + 5, headerYResult, { width: colWidthsResult.section - 10, align: 'left' });
-                doc.text('Weight', colPositionsResult.weight + 5, headerYResult, { width: colWidthsResult.weight - 10, align: 'left' });
-                doc.text('Vote', colPositionsResult.vote + 5, headerYResult, { width: colWidthsResult.vote - 10, align: 'left' });
-
-                doc.y += 20;
-
-                // Righe tabella
-                resultCustomTable.forEach(result => {
-                    const section = result.section || 'N/A';
-                    const weight = result.weight !== undefined && result.weight !== null ? result.weight.toString() : 'N/A';
-                    const vote = result.vote !== undefined && result.vote !== null ? result.vote.toString() : 'N/A';
-
-                    // Calcola altezza riga
-                    const sectionHeight = doc.heightOfString(section, { width: colWidthsResult.section - 10 });
-                    const weightHeight = doc.heightOfString(weight, { width: colWidthsResult.weight - 10 });
-                    const voteHeight = doc.heightOfString(vote, { width: colWidthsResult.vote - 10 });
-                    const rowHeight = Math.max(sectionHeight, weightHeight, voteHeight) + 10;
-
-                    // Nuova pagina se necessario
-                    if (doc.y + rowHeight > doc.page.height - 100) {
-                        doc.addPage();
-                        doc.y = 50;
-                    }
-
-                    const rowY = doc.y;
-                    doc.rect(colPositionsResult.section, rowY, colWidthsResult.section, rowHeight).stroke();
-                    doc.rect(colPositionsResult.weight, rowY, colWidthsResult.weight, rowHeight).stroke();
-                    doc.rect(colPositionsResult.vote, rowY, colWidthsResult.vote, rowHeight).stroke();
-
-                    doc.fontSize(9).font('Helvetica');
-                    const textY = rowY + 5;
-                    doc.text(section, colPositionsResult.section + 5, textY, { width: colWidthsResult.section - 10, align: 'left', lineBreak: true });
-                    doc.text(weight, colPositionsResult.weight + 5, textY, { width: colWidthsResult.weight - 10, align: 'left', lineBreak: true });
-                    doc.text(vote, colPositionsResult.vote + 5, textY, { width: colWidthsResult.vote - 10, align: 'left', lineBreak: true });
-
-                    doc.y = rowY + rowHeight;
-                });
-                doc.x = 50;
-            }
 
             // SEZIONE DIFETTI
             if (defects && defects.length > 0) {
@@ -705,7 +695,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Scrivi il contenuto
                         doc.fontSize(7).font('Helvetica');
-                        
+
                         const textY = rowY + 4;
                         doc.text(group, colPositionsDefects.group + 2, textY, { width: colWidthsDefects.group - 4, align: 'left', lineBreak: true });
                         doc.text(code, colPositionsDefects.code + 2, textY, { width: colWidthsDefects.code - 4, align: 'left', lineBreak: true });
@@ -814,7 +804,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                         const progEco = modifica.progEco || 'N/A';
                         const processId = modifica.processId || 'N/A';
                         const material = modifica.material || 'N/A';
-                        
+
                         // Mappa lo status numerico in testo
                         let status = 'N/A';
                         if (modifica.status === 0 || modifica.status === '0') {
@@ -826,7 +816,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                         } else if (modifica.status) {
                             status = modifica.status.toString();
                         }
-                        
+
                         const fluxType = modifica.fluxType || 'N/A';
                         const qty = modifica.qty !== undefined && modifica.qty !== null ? modifica.qty.toString() : 'N/A';
                         const childMaterial = modifica.childMaterial || 'N/A';
@@ -865,7 +855,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Scrivi il contenuto
                         doc.fontSize(6).font('Helvetica');
-                        
+
                         const textY = rowY + 4;
                         doc.text(type, colPositionsModifiche.type + 2, textY, { width: colWidthsModifiche.type - 4, align: 'left', lineBreak: true });
                         doc.text(progEco, colPositionsModifiche.progEco + 2, textY, { width: colWidthsModifiche.progEco - 4, align: 'left', lineBreak: true });
@@ -1068,7 +1058,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const compDesc = manc.component_description || 'N/A';
                     const missingType = manc.type_mancante || 'N/A';
                     const coverType = manc.type_cover_element || 'N/A';
-                    
+
                     // Formatta la data in DD/MM/YYYY
                     let receiptDate = 'N/A';
                     if (manc.receipt_expected_date) {
@@ -1136,16 +1126,16 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
             // Finalizza il documento
             doc.end();
-            
+
 
         } catch (error) {
             reject(error);
         }
     });
-}   
+}
 
 // utils
-function generateTreeTable(data) { 
+function generateTreeTable(data) {
     var tree = [];
     for (var i = 0; i < data.length; i++) {
         var child = {
