@@ -66,5 +66,20 @@ module.exports.listenerSetup = (app) => {
         }
     });
     
+    app.post("/db/getModificationsByWBE", async (req, res) => {
+        const { plant, wbe } = req.body;
+
+        if (!plant || !wbe) {
+            return res.status(400).json({ error: "Missing required query parameter: plant or wbe" });
+        }
+
+        try {
+            let responseDataModification = await postgresdbService.getModificationsByWBEService(plant,wbe);
+            res.status(200).json(responseDataModification); 
+        } catch (error) {
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    });
+    
 };
 
