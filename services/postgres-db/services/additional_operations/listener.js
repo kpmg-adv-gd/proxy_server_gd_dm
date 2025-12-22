@@ -27,9 +27,9 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/db/completeAdditionalOperation", async (req, res) => {
-        const { plant, sfc, operation, phase } = req.body;
+        const { plant, sfc, operation, project, phase, order, checkModificheLastOperation, checkMancantiLastOperation, valueModifica } = req.body;
         try {
-            var execute = await postgresdbService.completeAdditionalOperation(plant, sfc, operation, phase);
+            var execute = await postgresdbService.completeAdditionalOperation(plant, sfc, operation, project, phase, order, checkModificheLastOperation, checkMancantiLastOperation, valueModifica);
             if (execute.result) {
                 res.status(200).json({ message: execute.message });
             } else {

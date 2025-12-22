@@ -329,90 +329,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                         });
                     }
 
-                    // Parametri della collection
-                    if (collection.parameters && Array.isArray(collection.parameters) && collection.parameters.length > 0) {
-                        doc.moveDown(0.5);
-
-                        // Definizione delle colonne della tabella
-                        const tableTop = doc.y;
-                        const colWidths = {
-                            nome: 200,
-                            valore: 150,
-                            commento: 150
-                        };
-                        const colPositions = {
-                            nome: 50,
-                            valore: 50 + colWidths.nome + 10,
-                            commento: 50 + colWidths.nome + colWidths.valore + 20
-                        };
-
-                        // Disegna intestazione tabella
-                        doc.fontSize(10).font('Helvetica-Bold');
-                        doc.rect(colPositions.nome, doc.y, colWidths.nome, 20).stroke();
-                        doc.rect(colPositions.valore, doc.y, colWidths.valore, 20).stroke();
-                        doc.rect(colPositions.commento, doc.y, colWidths.commento, 20).stroke();
-
-                        const headerY = doc.y + 6;
-                        doc.text('Nome Parametro', colPositions.nome + 5, headerY, { width: colWidths.nome - 10, align: 'left' });
-                        doc.text('Valore', colPositions.valore + 5, headerY, { width: colWidths.valore - 10, align: 'left' });
-                        doc.text('Commento', colPositions.commento + 5, headerY, { width: colWidths.commento - 10, align: 'left' });
-
-                        doc.y += 20;
-
-                        // Disegna righe della tabella
-                        collection.parameters.forEach((param, paramIndex) => {
-                            // Determina il valore del parametro
-                            let value = 'N/A';
-                            if (param.valueText !== undefined && param.valueText !== null) {
-                                value = param.valueText;
-                            } else if (param.valueNumber !== undefined && param.valueNumber !== null) {
-                                value = param.valueNumber.toString();
-                            } else if (param.valueData !== undefined && param.valueData !== null) {
-                                value = param.valueData;
-                            } else if (param.valueBoolean !== undefined && param.valueBoolean !== null) {
-                                value = param.valueBoolean;
-                            } else if (param.valueList !== undefined && param.valueList !== null) {
-                                value = Array.isArray(param.valueList) ? param.valueList.join(', ') : param.valueList;
-                            }
-
-                            const nome = param.description || 'Parametro N/A';
-                            const commento = param.comment || '';
-
-                            // Calcola l'altezza necessaria per il testo più lungo
-                            const nomeHeight = doc.heightOfString(nome, { width: colWidths.nome - 10 });
-                            const valoreHeight = doc.heightOfString(value.toString(), { width: colWidths.valore - 10 });
-                            const commentoHeight = doc.heightOfString(commento, { width: colWidths.commento - 10 });
-                            const rowHeight = Math.max(nomeHeight, valoreHeight, commentoHeight) + 10;
-
-                            // Verifica se serve una nuova pagina
-                            if (doc.y + rowHeight > doc.page.height - 100) {
-                                doc.addPage();
-                                doc.y = 50;
-                            }
-
-                            const rowY = doc.y;
-
-                            // Disegna bordi della riga
-                            doc.rect(colPositions.nome, rowY, colWidths.nome, rowHeight).stroke();
-                            doc.rect(colPositions.valore, rowY, colWidths.valore, rowHeight).stroke();
-                            doc.rect(colPositions.commento, rowY, colWidths.commento, rowHeight).stroke();
-
-                            // Scrivi il contenuto (salva e ripristina Y per ogni cella)
-                            doc.fontSize(9).font('Helvetica');
-
-                            const textY = rowY + 5;
-                            doc.text(nome, colPositions.nome + 5, textY, { width: colWidths.nome - 10, align: 'left', lineBreak: true });
-
-                            doc.text(value.toString(), colPositions.valore + 5, textY, { width: colWidths.valore - 10, align: 'left', lineBreak: true });
-
-                            doc.text(commento, colPositions.commento + 5, textY, { width: colWidths.commento - 10, align: 'left', lineBreak: true });
-
-                            doc.y = rowY + rowHeight;
-                        });
-                    } else {
-                        doc.fontSize(10).font('Helvetica-Oblique').text('  Nessun parametro disponibile');
-                    }
-
                     // TABELLA NON CONFORMITA' PENDING (se richiesta per questa collection)
                     if (collection.viewCustomTableNC === true && ncCustomTable && ncCustomTable.length > 0) {
                         doc.x = 50;
@@ -563,6 +479,90 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                             doc.y = rowY + rowHeight;
                         });
+                    }
+
+                    // Parametri della collection
+                    if (collection.parameters && Array.isArray(collection.parameters) && collection.parameters.length > 0) {
+                        doc.moveDown(0.5);
+
+                        // Definizione delle colonne della tabella
+                        const tableTop = doc.y;
+                        const colWidths = {
+                            nome: 200,
+                            valore: 150,
+                            commento: 150
+                        };
+                        const colPositions = {
+                            nome: 50,
+                            valore: 50 + colWidths.nome + 10,
+                            commento: 50 + colWidths.nome + colWidths.valore + 20
+                        };
+
+                        // Disegna intestazione tabella
+                        doc.fontSize(10).font('Helvetica-Bold');
+                        doc.rect(colPositions.nome, doc.y, colWidths.nome, 20).stroke();
+                        doc.rect(colPositions.valore, doc.y, colWidths.valore, 20).stroke();
+                        doc.rect(colPositions.commento, doc.y, colWidths.commento, 20).stroke();
+
+                        const headerY = doc.y + 6;
+                        doc.text('Nome Parametro', colPositions.nome + 5, headerY, { width: colWidths.nome - 10, align: 'left' });
+                        doc.text('Valore', colPositions.valore + 5, headerY, { width: colWidths.valore - 10, align: 'left' });
+                        doc.text('Commento', colPositions.commento + 5, headerY, { width: colWidths.commento - 10, align: 'left' });
+
+                        doc.y += 20;
+
+                        // Disegna righe della tabella
+                        collection.parameters.forEach((param, paramIndex) => {
+                            // Determina il valore del parametro
+                            let value = 'N/A';
+                            if (param.valueText !== undefined && param.valueText !== null) {
+                                value = param.valueText;
+                            } else if (param.valueNumber !== undefined && param.valueNumber !== null) {
+                                value = param.valueNumber.toString();
+                            } else if (param.valueData !== undefined && param.valueData !== null) {
+                                value = param.valueData;
+                            } else if (param.valueBoolean !== undefined && param.valueBoolean !== null) {
+                                value = param.valueBoolean;
+                            } else if (param.valueList !== undefined && param.valueList !== null) {
+                                value = Array.isArray(param.valueList) ? param.valueList.join(', ') : param.valueList;
+                            }
+
+                            const nome = param.description || 'Parametro N/A';
+                            const commento = param.comment || '';
+
+                            // Calcola l'altezza necessaria per il testo più lungo
+                            const nomeHeight = doc.heightOfString(nome, { width: colWidths.nome - 10 });
+                            const valoreHeight = doc.heightOfString(value.toString(), { width: colWidths.valore - 10 });
+                            const commentoHeight = doc.heightOfString(commento, { width: colWidths.commento - 10 });
+                            const rowHeight = Math.max(nomeHeight, valoreHeight, commentoHeight) + 10;
+
+                            // Verifica se serve una nuova pagina
+                            if (doc.y + rowHeight > doc.page.height - 100) {
+                                doc.addPage();
+                                doc.y = 50;
+                            }
+
+                            const rowY = doc.y;
+
+                            // Disegna bordi della riga
+                            doc.rect(colPositions.nome, rowY, colWidths.nome, rowHeight).stroke();
+                            doc.rect(colPositions.valore, rowY, colWidths.valore, rowHeight).stroke();
+                            doc.rect(colPositions.commento, rowY, colWidths.commento, rowHeight).stroke();
+
+                            // Scrivi il contenuto (salva e ripristina Y per ogni cella)
+                            doc.fontSize(9).font('Helvetica');
+
+                            const textY = rowY + 5;
+                            doc.text(nome, colPositions.nome + 5, textY, { width: colWidths.nome - 10, align: 'left', lineBreak: true });
+
+                            doc.text(value.toString(), colPositions.valore + 5, textY, { width: colWidths.valore - 10, align: 'left', lineBreak: true });
+
+                            doc.text(commento, colPositions.commento + 5, textY, { width: colWidths.commento - 10, align: 'left', lineBreak: true });
+
+                            doc.y = rowY + rowHeight;
+                        });
+                    } else {
+                        doc.fontSize(10).font('Helvetica-Oblique').text('  Nessun parametro disponibile');
                     }
 
                     // Reset posizione X e Y dopo la tabella

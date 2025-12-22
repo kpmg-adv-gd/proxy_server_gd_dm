@@ -208,4 +208,4 @@ async function hasMancanti(plant,order){
     }
 }
 
-module.exports = { manageCompleteSfcPhase };
+module.exports = { manageCompleteSfcPhase, hasMancanti, modificheHasDone };

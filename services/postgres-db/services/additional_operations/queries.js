@@ -4,6 +4,8 @@ FROM z_additional_operations z where plant = $1 and project = $2`;
 
 const getAdditionalOperationsToVerbaleQuery = `SELECT z.* FROM z_additional_operations z where plant = $1 and project = $2 and section = $3`;
 
+const checkDefectCompleteOperation = `SELECT * FROM z_additional_operations where plant = $1 and order = $2 and status != 'Done' AND operation != $3`;
+
 const getInfoAdditionalOperation =`SELECT * FROM z_additional_operations where plant = $1 and sfc = $2 and operation = $3 and phase = $4`;
 
 const startAdditionalOperation =`UPDATE z_additional_operations set status = 'In Work' where plant = $1 and sfc = $2 and operation = $3 and phase = $4`;
@@ -31,4 +33,4 @@ $15 -- work_center
 );
 `;
 
-module.exports = { getAdditionalOperationsQuery, getInfoAdditionalOperation, startAdditionalOperation, completeAdditionalOperation, getAdditionalOperationsToVerbaleQuery, insertZAddtionalOperationsQuery };
+module.exports = { getAdditionalOperationsQuery, getInfoAdditionalOperation, startAdditionalOperation, completeAdditionalOperation, checkDefectCompleteOperation, getAdditionalOperationsToVerbaleQuery, insertZAddtionalOperationsQuery };

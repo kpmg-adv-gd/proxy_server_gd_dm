@@ -1,6 +1,7 @@
 const postgresdbService = require('../../connection');
 const queryAdditionalOperations = require("./queries");
 const { dispatch } = require("../../../mdo/library");
+const { hasMancanti, modificheHasDone } = require("../../../api/complete/library");
 const { callGet, callPost } = require("../../../../utility/CommonCallApi");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -46,13 +47,23 @@ async function startAdditionalOperation(plant, sfc, operation, phase) {
     }
 }
 
-async function completeAdditionalOperation(plant, sfc, operation, phase) {
+async function completeAdditionalOperation(plant, sfc, operation, project, phase, order, checkModificheLastOperation, checkMancantiLastOperation, valueModifica) {
     try {
+        if(checkMancantiLastOperation) await hasMancanti(plant,order);
+        if(checkModificheLastOperation) await modificheHasDone(plant,project,sfc,order,valueModifica);
         var data = await postgresdbService.executeQuery(queryAdditionalOperations.getInfoAdditionalOperation, [plant, sfc, operation, phase]);
         if (data.length == 0 || data[0].status == 'New') {
             return { result: false, message: "Operation is not started yet." };
         } else if (data[0].status == 'Done') {
             return { result: false, message: "Operation already done." };
+        }
+        // Check difetti bloccanti (solo se sto mettendo in DONE ultima operazione)
+        var operationsNotDone = await postgresdbService.executeQuery(queryAdditionalOperations.checkDefectCompleteOperation, [plant, order, operation]);
+        if (operationsNotDone.length == 0) {
+            var defects = await postgresdbService.executeQuery(`SELECT * FROM z_defects where plant = $1 and mes_order = $2 and status = 'OPEN' and blocking = true`, [plant, order]);
+            if (defects.length > 0) {
+                return { result: false, message: "The operation cannot be completed because there are open blocking defects." };
+            }
         }
         // complete standard operation
         var url = hostname+"/sfc/v1/sfcs/complete";
