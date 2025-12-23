@@ -62,4 +62,4 @@ async function getProjectData(plant) {
     return data;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData }
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData };

@@ -22,12 +22,22 @@ const insertMarkingRecapQuery = `INSERT INTO z_marking_recap(plant,project,wbe_m
 
 const getMarkingByConfirmationNumberQuery = `SELECT * FROM z_marking_recap WHERE confirmation_number = $1`;
 
-const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,zrc.planned_labor,zrc.uom_planned_labor,zrc.marked_labor AS marked_labor_total,zrc.uom_marked_labor as uom_marked_labor_total,zrc.remaining_labor,zrc.uom_remaining_labor,zrc.variance_labor AS variance_labor_total,zrc.uom_variance AS uom_variance_total,zvt.description AS variance_description,zdef.title AS defect_description, zol.child_material
-                                                FROM z_op_confirmations zoc
-                                                LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number
-                                                LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order
-                                                LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
-                                                LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
+const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,
+COALESCE(zrc.planned_labor, zmt.planned_labor) as planned_labor,
+COALESCE(zrc.uom_planned_labor, zmt.uom_planned_labor) as uom_planned_labor,
+COALESCE(zrc.marked_labor,zmt.marked_labor) AS marked_labor_total,
+COALESCE(zrc.uom_marked_labor,zmt.uom_marked_labor) as uom_marked_labor_total,
+COALESCE(zrc.remaining_labor,zmt.remaining_labor) as remaining_labor,
+COALESCE(zrc.uom_remaining_labor,zmt.uom_remaining_labor) as uom_remaining_labor,
+COALESCE(zrc.variance_labor,zmt.variance_labor) AS variance_labor_total,
+COALESCE(zrc.uom_variance,zmt.uom_variance) AS uom_variance_total,
+zvt.description AS variance_description,zdef.title AS defect_description, zol.child_material
+FROM z_op_confirmations zoc
+LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number
+left join z_marking_testing zmt on zoc.confirmation_number = zmt.confirmation_number 
+LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order or zol.child_order = zmt."order"  
+LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
+LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
                                                 `;
 
 const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations

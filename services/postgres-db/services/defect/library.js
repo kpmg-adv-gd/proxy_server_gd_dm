@@ -290,7 +290,9 @@ async function getDefectsTI(plant, project) {
             modifiedDateTime: defects[i].defectStandard.modifiedDateTime,
             hasAttachment: defects[i].defectStandard.fileIds && defects[i].defectStandard.fileIds.length > 0,
             fileIds: defects[i].defectStandard.fileIds || [],
-            numDefect: defects[i].defectStandard.quantity || 1
+            numDefect: defects[i].defectStandard.quantity || 1,
+            sfc: defects[i].sfc,
+            dm_order: defects[i].dm_order
         };
         if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
             treeTable.push({
@@ -386,7 +388,9 @@ async function getDefectsFromAdditionalOperationsTI(plant, project, operation, s
             modifiedDateTime: defects[i].defectStandard.modifiedDateTime,
             hasAttachment: defects[i].defectStandard.fileIds && defects[i].defectStandard.fileIds.length > 0,
             fileIds: defects[i].defectStandard.fileIds || [],
-            numDefect: defects[i].defectStandard.quantity || 1
+            numDefect: defects[i].defectStandard.quantity || 1,
+            sfc: defects[i].sfc,
+            dm_order: defects[i].dm_order
         };
         if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
             treeTable.push({

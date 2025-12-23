@@ -14,6 +14,7 @@ async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operatio
 }
 
 async function modificheHasDone(plant,project,sfc,order,valueModifica){
+    console.log("MARCO PROJECT: "+project+" SFC: "+sfc+" ORDER: "+order +" VALUE MODIFICA: "+valueModifica);
     let responseHasModificheToDo = await getModificheToDo(plant,sfc);
     if(responseHasModificheToDo.length > 0 ){
         await addModificheToParent(plant,project,order,valueModifica,sfc,order);
@@ -38,15 +39,6 @@ async function addModificheToParent(plant,project,order,valueModifica,sfcComplet
     } else {
         await addModificheToParent(plant,project,parentOrder,valueModifica,sfcCompleted,orderCompleted);
     }
-    //Se CO2 le modifiche non ha senso mandarle agli ordini macchina in quanto i gruppi CO2 non vengono montati in macchina => errore
-    // if(isCO2){
-    //     const linkedOrders = await getZOrdersLinkByPlantProjectOrderType(plant, project, "MACH");
-    //     for (const el of linkedOrders) {
-    //         const { parentSfc } = await getBomByOrderAndPlant(plant,el.child_order);
-    //         await updateZModifyCO2ByOrder(plant,parentSfc,sfcCompleted);
-    //         await updateCustomModificaOrder(plant,el.child_order,valueModifica);
-    //     }
-    // } else{
 
 }
 

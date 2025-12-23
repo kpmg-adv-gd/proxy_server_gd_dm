@@ -10,9 +10,7 @@ const hostname = credentials.DM_API_URL;
 
 
 async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh) {
-    console.log("AUTO COMPILE PARAMETRI:", JSON.stringify(parametriAuto));
     var filter = `(DATA_FIELD_VALUE eq '${selected.project_parent}' and DATA_FIELD eq 'COMMESSA')`;
-    console.log("FILTER:", filter);
     var mockReq = {
         path: "/mdo/ORDER_CUSTOM_DATA",
         query: { $apply: `filter(${filter})` },
@@ -20,7 +18,6 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     };
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-    console.log("DC DATA inizio:", JSON.stringify(dcData));
 
     for (var i = 0; i < parametriAuto.length; i++) {
         var numParametro = parametriAuto[i].parametro;

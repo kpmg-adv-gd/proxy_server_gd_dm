@@ -1,10 +1,10 @@
 const getAdditionalOperationsQuery = `SELECT z.*,
 (select case when count(*) > 0 then true else false end from z_defects where operation = z.operation and mes_order = z.mes_order and sfc = z.sfc and status = 'OPEN') as nonconformances
-FROM z_additional_operations z where plant = $1 and project = $2`;
+FROM z_additional_operations z where plant = $1 and project = $2 order by "order", operation, phase`;
 
 const getAdditionalOperationsToVerbaleQuery = `SELECT z.* FROM z_additional_operations z where plant = $1 and project = $2 and section = $3`;
 
-const checkDefectCompleteOperation = `SELECT * FROM z_additional_operations where plant = $1 and order = $2 and status != 'Done' AND operation != $3`;
+const checkDefectCompleteOperation = `SELECT * FROM z_additional_operations where plant = $1 and "order" = $2 and status != 'Done' AND operation != $3`;
 
 const getInfoAdditionalOperation =`SELECT * FROM z_additional_operations where plant = $1 and sfc = $2 and operation = $3 and phase = $4`;
 
