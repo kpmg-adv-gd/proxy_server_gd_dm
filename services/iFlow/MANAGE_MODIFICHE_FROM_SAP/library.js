@@ -82,11 +82,6 @@ async function manageModifica(objModifica){
 }
 
 async function getOrderFromApi(plant, order) {
-    // const cacheKey = `${plant}_${order}`;
-
-    // if (orderCache.has(cacheKey)) {
-    //     return orderCache.get(cacheKey);
-    // }
 
     const url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     const orderResponse = await callGet(url);

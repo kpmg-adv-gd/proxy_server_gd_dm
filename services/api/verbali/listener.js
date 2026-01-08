@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -27,6 +27,40 @@ module.exports.listenerSetup = (app) => {
         try {
             const { plant } = req.body;
             const projects = await getProjectsVerbaliSupervisoreAssembly(plant);
+            if (projects === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(projects);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+
+    app.post("/api/getVerbaliTileSupervisoreTesting", async (req, res) => {
+        try {
+            const { plant, project, wbs, startDate, endDate } = req.body;
+            const verbali = await getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, endDate);
+            if (verbali === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(verbali);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+    
+    // Endpoint per ottenere i progetti per filtro su supervisore assembly
+    app.post("/api/getProjectsVerbaliTileSupervisoreTesting", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const projects = await getProjectsVerbaliTileSupervisoreTesting(plant);
             if (projects === false) {
                 res.status(500).json({ error: "Error while executing query" });
                 return;
