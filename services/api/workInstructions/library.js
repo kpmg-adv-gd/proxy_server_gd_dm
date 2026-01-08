@@ -3,7 +3,7 @@ const FormData = require('form-data');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function filteredWorkInstructionsTI(plant, response, idLev3) {
+async function filteredWorkInstructionsTI(plant, response, idLev1, idLev2, idLev3) {
 
     var consolidatedData = [];
     try{
@@ -11,8 +11,10 @@ async function filteredWorkInstructionsTI(plant, response, idLev3) {
         for (var i = 0; i < response.length; i++) {
             var url = hostname + "/workinstruction/v1/workinstructions?plant=" + plant + "&workinstruction=" + response[i].workInstruction;
             var dataWI = await callGet(url);
-            if (dataWI && dataWI.length > 0 && dataWI[0].customValues.some(cv => cv.attribute == "TASK_ID" && cv.value.split(";").includes(idLev3))) {
-                consolidatedData.push(response[i]);
+            if (dataWI && dataWI.length > 0 && dataWI[0].customValues.some(cv => cv.attribute == "ACTIVITY_ID" && cv.value.split(";").includes(idLev2))) {
+                if (dataWI[0].customValues.some(cv => cv.attribute == "TASK_ID" && cv.value.split(";").includes(idLev3))) {
+                    consolidatedData.push(response[i]);
+                }
             }
         }
         return consolidatedData;
@@ -38,9 +40,7 @@ async function saveWorkInstructionPDF(base64Data, wiName, plant) {
 
         const url = hostname + "/workinstruction/v1/workinstructions/file";
         const response = await callPostMultipart(url, formData);
-        console.log("Risposta upload file:", response);
         var externalFileUrl = response.externalFileUrl;
-        console.log("File caricato con successo. URL esterno:", externalFileUrl);
 
         // Ora aggiorna la Work Instruction per collegare il file caricato
         const urlWI = hostname + "/workinstruction/v1/workinstructions";
@@ -102,19 +102,6 @@ async function getWorkInstructionPDF(plant, wiName) {
         throw new Error("Work Instruction non trovata");
     }
 }
-
-// Funzione che converte base64 in Blob
-function base64ToBlob(base64) {
-    // Rimuove il prefisso data:application/pdf;base64, se presente
-    const base64String = base64.includes(',') ? base64.split(',')[1] : base64;
-    
-    // Decodifica la stringa base64
-    const binaryString = Buffer.from(base64String, 'base64');
-    
-    // Crea e ritorna il Blob
-    return new Blob([binaryString], { type: 'application/pdf' });
-}
-
 
 // Esporta la funzione
 module.exports = { filteredWorkInstructionsTI, saveWorkInstructionPDF, getWorkInstructionPDF

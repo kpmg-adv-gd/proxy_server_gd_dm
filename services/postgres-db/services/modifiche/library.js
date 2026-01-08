@@ -71,20 +71,6 @@ async function getModificheToDataCollections(plant,project,wbe,section, type){
 
 async function getModificheToTesting(plant, project){
     const data = await postgresdbService.executeQuery(queryModifiche.getModificheToTestingQuery, [plant, project]);
-    // Recupero descrizione materiali
-    for (var i=0;i<data.length;i++) {
-        var filter = `PLANT eq '${plant}' and (MATERIAL eq '${data[i].material}' or MATERIAL eq '${data[i].child_material}')`;
-        var mockReq = {
-            path: "/mdo/MATERIAL_TEXT",
-            query: { $apply: `filter(${filter})` },
-            method: "GET"
-        };
-        var result = await dispatch(mockReq);
-        if (result && result.length > 0) {
-            data[i].material_description = result.find(item => item.MATERIAL == data[i].material)?.DESCRIPTION || "";
-            data[i].child_material_description = result.find(item => item.MATERIAL == data[i].child_material)?.DESCRIPTION || "";
-        }
-    }
     // Creazione TreeTable
     var treeTable = [], childId = 0;
     for (var i=0;i<data.length;i++) {
@@ -92,7 +78,6 @@ async function getModificheToTesting(plant, project){
             level: 2,
             wbe: data[i].wbe,
             childMaterial: data[i].child_material,
-            childMaterialDescription: data[i].child_material_description,
             qty: data[i].qty,
             fluxType: data[i].flux_type,
             status: data[i].status,
@@ -100,16 +85,16 @@ async function getModificheToTesting(plant, project){
             resolution: data[i].resolution,
             note: data[i].note,
             mark: data[i].type == "MA",
+            order: data[i].order,
             childId: childId++
         }
-        if (treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material).length == 0) {
+        if (treeTable.filter(item => item.progEco ==  parseInt(data[i].prog_eco, 10) && item.processId == parseInt(data[i].process_id, 10) && item.material == data[i].material).length == 0) {
             treeTable.push({
                 level: 1,
                 type: data[i].type,
-                progEco: data[i].prog_eco,
-                processId: data[i].process_id,
+                progEco: parseInt(data[i].prog_eco, 10),
+                processId: parseInt(data[i].process_id, 10),  
                 material: data[i].material,
-                materialDescription: data[i].material_description,
                 mark: data[i].type == "MT" || data[i].type == "MK",
                 project: data[i].project,
                 machineSection: data[i].machine_section,

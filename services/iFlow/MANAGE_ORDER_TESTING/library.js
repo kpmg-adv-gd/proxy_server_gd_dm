@@ -42,7 +42,7 @@ async function manageNewOrderTesting(jsonOrderTesting) {
     var resultSaveZVerbale3 = await saveZVerbale3(plant, jsonOrderTesting);
     if (!resultSaveZVerbale3) return { result: false, message: "Error saving z_verbale_lev3" };
     // 9. Compilazione z_marking_testing
-    var resultSavMarkingTesting = await saveZMarkingTesting(plant, jsonOrderTesting, workCenterDmValue);
+    var resultSavMarkingTesting = await saveZMarkingTesting(plant, jsonOrderTesting);
     if (!resultSavMarkingTesting) return { result: false, message: "Error saving z_marking_testing" };
 
     // Tutto ok!
@@ -411,7 +411,7 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
 }
 
 // Fase 9: Salvataggio z_marking_testing
-async function saveZMarkingTesting(plant, jsonOrderTesting, workCenterDmValue) {
+async function saveZMarkingTesting(plant, jsonOrderTesting) {
     var result = true;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];

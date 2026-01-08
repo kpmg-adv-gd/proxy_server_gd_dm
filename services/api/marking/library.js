@@ -1,6 +1,7 @@
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost } = require("../../../utility/CommonCallApi");
 const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData } = require("../../postgres-db/services/marking/library");
+const { updateZMarkingTesting, getMarkingTestingByConfirmationNumber } = require("../../postgres-db/services/marking_testing/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -64,14 +65,22 @@ async function getFilterMarkingReport(plant){
 }
 
 async function mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,opDescription,project, defectId){
-    let responseSAPMarkingService = await sendMarkingToSap(plant,personalNumber,confirmation_number,reason_for_variance,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,confirmation,cancellation,cancelled_confirmation);
-    if(responseSAPMarkingService && responseSAPMarkingService?.OUTPUT?.confirmation_counter == 0 ){
-        let errorMessage = "Errore in responseSAPMarkingService";
-        throw { status: 500, message: errorMessage};
+    // Recupero dati da z_marking_testing entrando con confirmation_number
+    var data = await getMarkingTestingByConfirmationNumber(plant, confirmation_number);
+    if (data.length == 0) { 
+        // Assembly
+        let responseSAPMarkingService = await sendMarkingToSap(plant,personalNumber,confirmation_number,reason_for_variance,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,confirmation,cancellation,cancelled_confirmation);
+        if(responseSAPMarkingService && responseSAPMarkingService?.OUTPUT?.confirmation_counter == 0 ){
+            let errorMessage = "Errore in responseSAPMarkingService";
+            throw { status: 500, message: errorMessage};
+        } 
+        let confirmation_counter = responseSAPMarkingService?.OUTPUT?.confirmation_counter || 0;
+        await insertOpConfirmation(plant,wbe_machine,operation,mes_order,sfc,confirmation_number,confirmation_counter,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,personalNumber,false,cancelled_confirmation,modification,workCenter,opDescription,project, defectId); 
+        await updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor, variance_labor);
+    } else {
+        // Testing
+        await sendZDMConfirmationsTesting(plant, sfc, mes_order, personalNumber, data[0].network, data[0].activity_id, cancellation, "", "", confirmation_number, marking_date, (marked_labor + variance_labor).toString(), uom_marked_labor, reason_for_variance, "", "X", { wbe: wbe_machine, wbs_description: operation, wbs: mes_order }, user_id);
     }
-    let confirmation_counter = responseSAPMarkingService?.OUTPUT?.confirmation_counter || 0;
-    await insertOpConfirmation(plant,wbe_machine,operation,mes_order,sfc,confirmation_number,confirmation_counter,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,personalNumber,false,cancelled_confirmation,modification,workCenter,opDescription,project, defectId); 
-    await updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor, variance_labor);
     if(cancellation=="X"){
         await updateCancelFlagOpConfirmation(confirmation_number,cancelled_confirmation,user_id);
     }
@@ -154,6 +163,52 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
 
 }
 
+async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
+    var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
+    if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
+    var url = hostname + pathZDMConfirmations;      
+
+    var body = {
+        "personalNumber": personalNumber,
+        "activityNumber": activityNumber,
+        "activityNumberId": activityNumberId,
+        "cancellation": cancellation,
+        "confirmation": confirmation,
+        "confirmationCounter": confirmationCounter,
+        "confirmationNumber": confirmationNumber,
+        "date": date,
+        "duration": duration,
+        "durationUom": durationUom,
+        "reasonForVariance": reasonForVariance,
+        "unCancellation": unCancellation,
+        "unConfirmation": unConfirmation
+    };
+
+    console.log("SAP body:"+JSON.stringify(body));
+    let response = await callPost(url,body);
+    console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+    if (response.OUTPUT && response.OUTPUT.type == "S") {
+        // Se la risposta è OK, aggiorno le conferme in ZDM
+        if (reasonForVariance == null || reasonForVariance == "") {
+            var durationMarked = Number(duration);
+            var durationVariance = 0;
+        }else{
+            var durationMarked = 0;
+            var durationVariance = Number(duration);
+        }
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+        await updateZMarkingTesting(plant, confirmationNumber, durationMarked, durationVariance);
+    } else {
+        // Se la risposta non è OK, lancio un errore
+        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
+        throw { status: 400, message: errorMessage };
+    }
+
+   return response;
+
+}
+
 
 async function sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
@@ -208,4 +263,4 @@ async function getAccessUserGroupWBS (plant) {
 }
 
 // Esporta la funzione
-module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations, sendStornoUnproductive, getAccessUserGroupWBS };
+module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations, sendZDMConfirmationsTesting, sendStornoUnproductive, getAccessUserGroupWBS };

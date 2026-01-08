@@ -226,4 +226,17 @@ module.exports.listenerSetup = (app) => {
         }
     }); 
 
+    app.post("/db/getDefectsFromAdditionalOperationsTI", async (req, res) => {
+        const { plant, project, operation, sfc } = req.body;
+        try {
+            const result = await postgresdbService.getDefectsFromAdditionalOperationsTI(plant, project, operation, sfc);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+    
+
 }

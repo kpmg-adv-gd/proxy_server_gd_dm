@@ -34,7 +34,7 @@ module.exports.listenerSetup = (app) => {
             console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });
         }
-    })  
+    }) 
 
     app.post("/db/updateMarkingRecap", async (req, res) => {
         const { confirmation_number } = req.body;

@@ -191,10 +191,9 @@ async function generateJsonParameters(parameters) {
         else if (param.dataType == "NUMBER" && param.valueNumber) value = param.valueNumber;
         else if (param.dataType == "BOOLEAN" && param.valueBoolean) value = param.valueBoolean;
         else if (param.dataType == "LIST" && param.valueList) value = param.valueList;
-        if (value == "" && param.comment == "") continue;
         result.push({
             name: param.parameterName || "",
-            value: value || "",
+            value: value == "" ? null : value,
             comment: param.comment || ""
         });
     }
