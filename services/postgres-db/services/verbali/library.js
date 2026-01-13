@@ -234,5 +234,17 @@ async function ordersChildrenRecursion(plant, order) {
     return ordersToCheck;
 }
 
+// Recupero livello 2 per ordine
+async function getVerbaleLev2ByOrder(order, plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByOrder, [order, plant]);
+    return data;
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion }
+// Recupero livello 3 per ordine
+async function getVerbaleLev3ByOrder(order, plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev3ByOrder, [order, plant]);
+    return data;
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder }

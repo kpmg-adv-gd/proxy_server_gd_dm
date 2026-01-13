@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -108,6 +108,57 @@ module.exports.listenerSetup = (app) => {
             const { plant, sfc } = req.body;
             var base64 = await getWorkInstructionPDF(plant, "Verbale_Ispezione_" + sfc);
             res.status(200).json({ base64: base64 });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per ottenere i filtri per Verbal Management
+    app.post("/api/getFilterVerbalManagement", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterVerbalManagement(plant);
+            if (filters === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per popolare la tabella del Verbal Management con filtri opzionali
+    app.post("/api/getVerbalManagementTable", async (req, res) => {
+        try {
+            const { plant, project, co, order, customer, showAll } = req.body;
+            const tableData = await getVerbalManagementTable(plant, project, co, order, customer, showAll);
+            if (tableData === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(tableData);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per popolare la TreeTable del Verbal Management Detail
+    app.post("/api/getVerbalManagementTreeTable", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            const treeTableData = await getVerbalManagementTreeTable(plant, order);
+            if (treeTableData === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(treeTableData);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

@@ -99,6 +99,16 @@ const getGroupByPriorityDefects = `with PRIO as (
 
 const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;
 
+const getVerbaleLev2ByOrder = `SELECT "order", id_lev_1, lev_2, id_lev_2, machine_type, workcenter_lev_2, safety, active 
+    FROM z_verbale_lev_2 
+    WHERE "order" = $1 AND plant = $2
+    ORDER BY id_lev_1, id_lev_2`;
+
+const getVerbaleLev3ByOrder = `SELECT "order", id_lev_2, id_lev_3, lev_3 
+    FROM z_verbale_lev_3 
+    WHERE "order" = $1 AND plant = $2
+    ORDER BY id_lev_2, id_lev_3`;
+
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder };
