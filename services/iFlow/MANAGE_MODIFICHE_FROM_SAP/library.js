@@ -356,7 +356,7 @@ async function checkOrCreateMaterial(plant,childMaterial){
                 "isCurrentVersion": true,
                 "lotSize": 1,
                 "material": childMaterial,
-                "materialType": "FINISHED",
+                "materialType": "SEMIFINISHED_PRODUCT",
                 "origin": "ME",
                 "orderProcessingMode": "DEFAULT",
                 "plant": plant,
