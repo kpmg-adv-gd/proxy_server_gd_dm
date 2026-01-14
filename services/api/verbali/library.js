@@ -257,6 +257,7 @@ async function updateCustomAssemblyReportStatusOrderDone(plant, order, user) {
     let customValues = [
         { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "DONE" },
         { "attribute": "ASSEMBLY_REPORT_USER", "value": user },
+        { "attribute": "ASSEMBLY_REPORT_DATE", "value": new Date() },
     ];
     let body = {
         "plant": plant,

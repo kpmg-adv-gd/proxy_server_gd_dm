@@ -55,9 +55,13 @@ async function createOperations(plant, jsonOrderTesting) {
     // ciclo le operazioni di livello 1
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const operation = jsonOrderTesting.level1[i];
+        if (operation.areaRelevance == "M") {
+            console.log("Skipping operation creation for area relevance M: "+operation.operationActivity);
+            continue; 
+        }   
         const mockReq = {
             path: "/mdo/OPERATION_ACTIVITY",
-            query:  { $apply: "filter(PLANT eq '"+plant+"' and OPERATION_ACTIVITY eq '"+operation.operationActivity+"' and IS_CURRENT_VERSION eq 'true' and STATUS eq 'RELEASABLE')"},
+            query:  { $apply: "filter(PLANT eq '"+plant+"' and OPERATION_ACTIVITY eq '"+operation.operationActivity+"' and CURRENT_VERSION eq 'true' and STATUS eq 'RELEASABLE')"},
             method: "GET"
         };
         var resultMDOOperation = await dispatch(mockReq);
@@ -217,6 +221,7 @@ async function createOrder(plant, jsonOrderTesting) {
     var sequenceOperation = 20;
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         operazioniWithID.push({ operationActivity: level1.operationActivity, stepId: String(sequenceOperation) });
         routingOperationGroups.push({
             "routingOperationGroup": level1.operationActivity,
@@ -237,7 +242,7 @@ async function createOrder(plant, jsonOrderTesting) {
                 }
             },
             "customValues": [
-                { "attribute": "DURATION", "value": "" }, // todo da capire
+                { "attribute": "DURATION", "value": "" },
                 { "attribute": "WORK_CENTER_ERP", "value": level1.workCenterERP },
                 { "attribute": "CONFIRMATION_NUMBER", "value": level1.confirmationNumber },
                 { "attribute": "DATE", "value": level1.date }
@@ -275,7 +280,6 @@ async function createOrder(plant, jsonOrderTesting) {
 	    "baseUnit": "ST",
         "customValues": [
             { "attribute": "COMMESSA", "value": jsonOrderTesting.wbs },
-            // { "attribute": "WBE", "value": "WBE" },
             { "attribute": "MANCANTI", "value": false},
             { "attribute": "DEFECTS", "value": false },
             { "attribute": "CO_PREV", "value": jsonOrderTesting.coPrev },
@@ -284,13 +288,13 @@ async function createOrder(plant, jsonOrderTesting) {
         ],
         "bom": {
             "bom": jsonOrderTesting.idOrdine,
-            "description": "DESCRIZIONE BOM", // todo: definire descrizione
+            "description": jsonOrderTesting.idOrdine,
             "components": componentBoms
         },
         "routing": {
             "routing":  jsonOrderTesting.idOrdine,
             "routingType": "SHOP_ORDER",
-            "description": "DESCRIZIONE ROUTING", // todo: definire descrizione
+            "description": jsonOrderTesting.idOrdine,
             "entryRoutingStepId": "0010",
             "routingOperationGroups": routingOperationGroups, 
             "routingSteps": routingSteps
@@ -384,6 +388,7 @@ async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
     var result = true;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
             var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
@@ -398,6 +403,7 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
     var result = true;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
             for (var k=0; k<level2.level3.length; k++) {
