@@ -1380,12 +1380,28 @@ async function getFilterVerbalManagement(plant) {
         
         // Estraggo valori distinti per Customer
         const customers = [...new Set(customersData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
+
+
+         // Step 7: Recupero i Workcenters dalla tabella SAP_MDO_WORKCENTER_V (mi servono dopo per la tree table dei verbali)
+        const filterWorkcenter = `(PLANT eq '${plant}' AND STATUS eq 'ENABLED' AND IS_DELETED eq 'false')`;
+        const mockReqWorkcenter = {
+            path: "/mdo/WORKCENTER",
+            query: { $apply: `filter(${filterWorkcenter})` },
+            method: "GET"
+        };
+        const outMockWorkcenter = await dispatch(mockReqWorkcenter);
+        const workcentersData = outMockWorkcenter?.data?.value?.length > 0 ? outMockWorkcenter.data.value : [];
+        // Estraggo i workcenters con codice e descrizione
+        const workcenters = workcentersData.map(item => ({
+            workcenter: item.WORKCENTER,
+            description: item.DESCRIPTION
+        }));
         return {
             projects: projects,
             cos: cos,
             orders: orders,
-            customers: customers
+            customers: customers,
+            workcenters: workcenters
         };
     } catch (error) {
         console.error("Error in getFilterVerbalManagement:", error);
