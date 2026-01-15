@@ -42,6 +42,13 @@ const getCommentsVerbaleForApproval = `SELECT sfc, plant, id_lev_2, id_lev_3, ma
 const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, (current_timestamp AT TIME ZONE 'UTC'), $8, 'Waiting')`;
 
+const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
+
+const getSafetyApprovalComments = `SELECT sfc, plant, lev_2, machine_type, "user", comment, status,
+    TO_CHAR((datetime AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime
+    FROM z_comments 
+    WHERE plant = $1 AND comment_type = 'M'`;
+
 const startTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'In Work', start_date = (current_timestamp AT TIME ZONE 'UTC'), start_user = $7
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
@@ -142,4 +149,4 @@ const deleteMarkingRecapByOperation = `DELETE FROM z_marking_recap
 
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments };

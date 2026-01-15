@@ -281,5 +281,17 @@ async function deleteMarkingRecap(plant, order, operation) {
     await postgresdbService.executeQuery(queryVerbali.deleteMarkingRecapByOperation, [plant, order, operation]);
 }
 
+// Get SFC from comments for safety approval
+async function getSfcFromComments(plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getSfcFromCommentsSafetyApproval, [plant]);
+    return data;
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap }
+// Get safety approval comments data
+async function getSafetyApprovalCommentsData(plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getSafetyApprovalComments, [plant]);
+    return data;
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData }

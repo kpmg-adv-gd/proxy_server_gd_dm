@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -172,6 +172,42 @@ module.exports.listenerSetup = (app) => {
             const { plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1 } = req.body;
             await saveVerbalManagementTreeTableChanges(plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1);
             res.status(200).json({ message: "Changes saved successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/releaseVerbalManagement", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            await releaseVerbalManagement(plant, order);
+            res.status(200).json({ message: "Verbal released successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFilterSafetyApproval", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterSafetyApproval(plant);
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getSafetyApprovalData", async (req, res) => {
+        try {
+            const { plant, project, sfc, co, startDate, endDate, showAll } = req.body;
+            const data = await getSafetyApprovalData(plant, project, sfc, co, startDate, endDate, showAll);
+            res.status(200).json(data);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

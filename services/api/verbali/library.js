@@ -1,12 +1,13 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap } = require("../../postgres-db/services/verbali/library");
+const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData } = require("../../postgres-db/services/verbali/library");
 const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
 const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/library");
 const { getMappingPhase } = require("../../postgres-db/services/mapping_phases/library");
+const { updateRoutingForReleaseUtility } = require("../../iFlow/UPDATE_ROUTING/library");
 const PDFDocument = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -1421,6 +1422,251 @@ async function getFilterVerbalManagement(plant) {
     }
 }
 
+// Funzione per recuperare tutti i filtri per Safety Approval
+async function getFilterSafetyApproval(plant) {
+    try {
+        // Step 1: Recupero tutti gli SFC dalla tabella Z_COMMENTS con comment_type='M'
+        const sfcsFromComments = await getSfcFromComments(plant);
+        
+        if (!sfcsFromComments || sfcsFromComments.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: []
+            };
+        }
+        
+        // Estraggo la lista degli SFC
+        const sfcList = sfcsFromComments.map(item => item.sfc).filter(sfc => sfc);
+        
+        if (sfcList.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: []
+            };
+        }
+        
+        // Step 2: Recupero gli MFG_ORDER dalla tabella SAP_MDO_SFC_V con gli SFC trovati
+        const sfcFilter = sfcList.map(sfc => `SFC eq '${sfc}'`).join(' or ');
+        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        if (sfcData.length === 0) {
+            return {
+                projects: [],
+                sfcs: sfcList,
+                cos: []
+            };
+        }
+        
+        // Estraggo gli MFG_ORDER
+        const ordersList = sfcData.map(item => item.MFG_ORDER).filter(order => order);
+        
+        if (ordersList.length === 0) {
+            return {
+                projects: [],
+                sfcs: sfcList,
+                cos: []
+            };
+        }
+        
+        // Creo il filtro per gli ordini
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Step 3: Recupero i progetti (COMMESSA) dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Estraggo valori distinti per progetti
+        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 4: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Estraggo valori distinti per CO
+        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        return {
+            projects: projects,
+            sfcs: sfcList,
+            cos: cos
+        };
+    } catch (error) {
+        console.error("Error in getFilterSafetyApproval:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la tabella Safety Approval con filtri opzionali
+async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate, showAll) {
+    try {
+        // Step 1: Recupero tutti i commenti di tipo 'M' dalla tabella Z_COMMENTS
+        const commentsData = await getSafetyApprovalCommentsData(plant);
+        
+        if (!commentsData || commentsData.length === 0) {
+            return [];
+        }
+        
+        // Step 2: Filtro per status se showAll è false
+        let filteredComments = [...commentsData];
+        if (showAll === false || showAll === 'false') {
+            filteredComments = filteredComments.filter(comment => comment.status === 'Waiting');
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 3: Filtro per SFC se presente
+        if (sfc && sfc !== '') {
+            filteredComments = filteredComments.filter(comment => comment.sfc === sfc);
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 4: Filtro per date range se presente
+        if (startDate && startDate !== '') {
+            filteredComments = filteredComments.filter(comment => {
+                if (!comment.datetime) return false;
+                // Parsing DD/MM/YYYY HH24:MI:SS format
+                const [datePart] = comment.datetime.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const commentDate = new Date(`${year}-${month}-${day}`);
+                const start = new Date(startDate);
+                return commentDate >= start;
+            });
+        }
+        
+        if (endDate && endDate !== '') {
+            filteredComments = filteredComments.filter(comment => {
+                if (!comment.datetime) return false;
+                // Parsing DD/MM/YYYY HH24:MI:SS format
+                const [datePart] = comment.datetime.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const commentDate = new Date(`${year}-${month}-${day}`);
+                const end = new Date(endDate);
+                return commentDate <= end;
+            });
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 5: Recupero gli MFG_ORDER per gli SFC dei commenti filtrati
+        const sfcList = [...new Set(filteredComments.map(c => c.sfc).filter(s => s))];
+        const sfcFilter = sfcList.map(s => `SFC eq '${s}'`).join(' or ');
+        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        // Creo una mappa SFC -> MFG_ORDER
+        const sfcToOrderMap = {};
+        sfcData.forEach(item => {
+            sfcToOrderMap[item.SFC] = item.MFG_ORDER;
+        });
+        
+        // Step 6: Recupero COMMESSA e CO per tutti gli ordini
+        const ordersList = [...new Set(sfcData.map(item => item.MFG_ORDER).filter(order => order))];
+        
+        if (ordersList.length === 0) {
+            return [];
+        }
+        
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Recupero COMMESSA
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> COMMESSA
+        const orderToProjectMap = {};
+        projectsData.forEach(item => {
+            orderToProjectMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Recupero CO
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> CO
+        const orderToCoMap = {};
+        cosData.forEach(item => {
+            orderToCoMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 7: Costruisco i risultati finali
+        const results = [];
+        
+        for (const comment of filteredComments) {
+            const order = sfcToOrderMap[comment.sfc] || '';
+            const projectValue = orderToProjectMap[order] || '';
+            const coValue = orderToCoMap[order] || '';
+            
+            // Applico i filtri rimanenti
+            if (project && project !== '' && projectValue !== project) continue;
+            if (co && co !== '' && coValue !== co) continue;
+            
+            // Aggiungo la riga al risultato
+            results.push({
+                project: projectValue,
+                sfc: comment.sfc || '',
+                co: coValue,
+                macroActivity: comment.lev_2 || '',
+                machineType: comment.machine_type || '',
+                user: comment.user || '',
+                datetime: comment.datetime || '',
+                comment: comment.comment || '',
+                status: comment.status || ''
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        console.error("Error in getSafetyApprovalData:", error);
+        return false;
+    }
+}
+
 // Funzione per popolare la tabella del Verbal Management con filtri opzionali
 async function getVerbalManagementTable(plant, project, co, order, customer, showAll) {
     try {
@@ -1865,6 +2111,43 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
     }
 }
 
+// Funzione per rilasciare il verbale
+async function releaseVerbalManagement(plant, order) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere il ROUTING
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            throw new Error("Order not found");
+        }
+        
+        const routing = orderData.ROUTING;
+        
+        // Step 2: Aggiorno il routing chiamando doUpdateNoMachRouting
+        await updateRoutingForReleaseUtility(plant, routing);
+        
+        // Step 3: Rilascio l'ordine
+        const urlRelease = `${hostname}/order/v2/orders/release`;
+        const releaseBody = {
+            order: order,
+            plant: plant
+        };
+        await callPost(urlRelease, releaseBody);
+        
+        return true;
+    } catch (error) {
+        console.error("Error in releaseVerbalManagement:", error);
+        throw error;
+    }
+}
+
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData };
