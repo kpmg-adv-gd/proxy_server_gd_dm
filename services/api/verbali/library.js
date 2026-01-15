@@ -1,6 +1,6 @@
-const { callPatch, callGet } = require("../../../utility/CommonCallApi");
+const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder } = require("../../postgres-db/services/verbali/library");
+const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap } = require("../../postgres-db/services/verbali/library");
 const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
@@ -1566,6 +1566,9 @@ async function getVerbalManagementTreeTable(plant, order) {
             const operationActivity = step.routingOperation?.operationActivity?.operationActivity || '';
             const workCenter = step.workCenter?.workCenter || '';
             
+            // Verifica se è una duplicazione controllando se l'operationActivity contiene un suffisso _1, _2, etc.
+            const isDuplicate = /_\d+$/.test(operationActivity);
+            
             // Livello 1
             const level1Node = {
                 level: 1,
@@ -1573,6 +1576,12 @@ async function getVerbalManagementTreeTable(plant, order) {
                 workcenter: workCenter,
                 description: description,
                 operationActivity: operationActivity,
+                __isDuplicate: isDuplicate,
+                _original: {
+                    workcenter: workCenter,
+                    safety: false,
+                    active: false
+                },
                 children: []
             };
             
@@ -1586,9 +1595,14 @@ async function getVerbalManagementTreeTable(plant, order) {
                     description: lev2.lev_2 || '',
                     machineType: lev2.machine_type || '',
                     workcenter: lev2.workcenter_lev_2 || '',
-                    safety: lev2.safety || '',
-                    active: lev2.active || false,
+                    safety: lev2.safety != null ? lev2.safety : false,
+                    active: lev2.active != null ? lev2.active : false,
                     idLev2: lev2.id_lev_2,
+                    _original: {
+                        workcenter: lev2.workcenter_lev_2 || '',
+                        safety: lev2.safety != null ? lev2.safety : false,
+                        active: lev2.active != null ? lev2.active : false
+                    },
                     children: []
                 };
                 
@@ -1619,6 +1633,227 @@ async function getVerbalManagementTreeTable(plant, order) {
     }
 }
 
+// Funzione per salvare le modifiche alla TreeTable del Verbal Management
+async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere ROUTING, ROUTING_VERSION e ROUTING_TYPE
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            throw new Error("Order not found");
+        }
+        
+        const routing = orderData.ROUTING;
+        const routingVersion = orderData.ROUTING_VERSION;
+        const routingType = orderData.ROUTING_TYPE;
+        
+        // Step 2: Modifica WC livello 1 - Aggiornare il routing tramite API PUT
+        if (level1Changes && level1Changes.length > 0) {
+            // Recupero il routing completo
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            // Modifico i workCenter per gli stepId specificati
+            for (const change of level1Changes) {
+                const step = routingResponse[0].routingSteps?.find(s => s.stepId === change.stepId);
+                if (step) {
+                    // Aggiorno il workcenter
+                    if (!step.workCenter) {
+                        step.workCenter = {};
+                    }
+                    step.workCenter.workCenter = change.workcenter;
+                }
+            }
+            
+            // Salvo il routing aggiornato tramite PUT
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+        }
+        
+        // Step 3: Modifica livello 2 - Aggiornare la tabella Z_VERBALE_LEV2
+        if (level2Changes && level2Changes.length > 0) {
+            for (const change of level2Changes) {
+                // Aggiorno solo i campi specificati (workcenter, safety, active)
+                await updateVerbaleLev2(
+                    plant,
+                    change.idLev2,
+                    change.workcenter !== undefined ? change.workcenter : null,
+                    change.safety !== undefined ? change.safety : null,
+                    change.active !== undefined ? change.active : null
+                );
+            }
+        }
+        
+        // Step 4: Gestione duplicazioni livello 1 (operationActivity e routing)
+        if (newLevel1 && newLevel1.length > 0) {
+            // Recupero il routing completo per le duplicazioni
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            for (const duplication of newLevel1) {
+                const { originalStepId, stepId, originalOperationActivity, operationActivity, workcenter, description } = duplication;
+                
+                // Verifica se l'operationActivity esiste già
+                const urlCheckOperation = `${hostname}/operationActivity/v1/operationActivities?plant=${plant}&operation=${operationActivity}`;
+            
+                const operationCheck = await callGet(urlCheckOperation);
+                // Se non esiste, la creo duplicando quella originale
+                if (!operationCheck || (operationCheck.empty === true) || (operationCheck.content.length === 0)) {
+                    const urlGetOriginalOperation = `${hostname}/operationActivity/v1/operationActivities?plant=${plant}&operation=${originalOperationActivity}`;
+                    const originalOperationData = await callGet(urlGetOriginalOperation);
+                    if (originalOperationData && originalOperationData.content.length > 0) {
+                        const newOperationData = JSON.parse(JSON.stringify(originalOperationData.content[0]));
+                        newOperationData.operation = operationActivity;
+                        if (description) {
+                            newOperationData.description = description;
+                        }
+                        
+                        const urlPutOperation = `${hostname}/operationActivity/v1/operationActivities`;
+                        await callPost(urlPutOperation, [newOperationData]);
+                    }
+                }
+                
+                // Duplica il routingStep nel routing
+                const originalStep = routingResponse[0].routingSteps?.find(s => s.stepId === originalStepId);
+                if (originalStep) {
+                    const newStep = JSON.parse(JSON.stringify(originalStep));
+                    newStep.stepId = stepId;
+                    newStep.entry = false;
+                    newStep.routingOperation.operationActivity.operationActivity = operationActivity;
+                    newStep.description = description || originalStep.description;
+                    if (workcenter) {
+                        if (!newStep.workCenter) {
+                            newStep.workCenter = {};
+                        }
+                        newStep.workCenter.workCenter = workcenter;
+                    }
+                    
+                    // Inserisco il nuovo step nella lista routingSteps
+                    routingResponse[0].routingSteps.push(newStep);
+                }
+
+                // Duplica il routingOperationGroups nel routing
+                const originalOperationGroups = routingResponse[0].routingOperationGroups?.find(s => s.routingOperationGroup === originalOperationActivity);
+                if (originalOperationGroups) {
+                    const newStepOpGrouup = JSON.parse(JSON.stringify(originalOperationGroups));
+                    newStepOpGrouup.routingOperationGroup = operationActivity;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.stepId = stepId;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.description = description;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.routingOperation.operationActivity.operationActivity = operationActivity;
+                    if (workcenter) {
+                        newStepOpGrouup.routingOperationGroupSteps[0].routingStep.workCenter.workCenter = workcenter;
+                    }
+                    // Inserisco il nuovo step nella lista routingSteps
+                    routingResponse[0].routingOperationGroups.push(newStepOpGrouup);
+                }
+                // Duplica anche il marking recap se esiste
+                await duplicateMarkingRecap(plant, order, operationActivity, description, originalOperationActivity);
+            }
+            // Salvo il routing aggiornato con i nuovi step
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+            
+        }
+        
+        // Step 5: Duplicazione livello 2
+        if (newLevel2 && newLevel2.length > 0) {
+            for (const duplication of newLevel2) {
+                const { originalStepId, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = duplication;
+                
+                await duplicateVerbaleLev2(
+                    order,
+                    plant,
+                    stepId,
+                    suffix,
+                    safety !== undefined ? safety : null,
+                    workcenter !== undefined ? workcenter : null,
+                    active !== undefined ? active : null,
+                    originalStepId
+                );
+            }
+        }
+        
+        // Step 6: Duplicazione livello 3
+        if (newLevel3 && newLevel3.length > 0) {
+            for (const duplication of newLevel3) {
+                const { stepId, suffix, originalLev2Id } = duplication;
+                
+                await duplicateVerbaleLev3(
+                    order,
+                    plant,
+                    stepId,
+                    suffix,
+                    originalLev2Id
+                );
+            }
+        }
+        
+        // Step 7: Eliminazione livello 1 (operationActivity e routing)
+        if (deletedLevel1 && deletedLevel1.length > 0) {
+            // Recupero il routing completo per le eliminazioni
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            for (const deletion of deletedLevel1) {
+                const { stepId, operationActivity } = deletion;
+                
+                // Rimuovo lo step dal routing
+                // Rimuovo da routingSteps
+                routingResponse[0].routingSteps = routingResponse[0].routingSteps?.filter(s => s.stepId !== stepId) || [];
+                
+                // Rimuovo da routingStepGroups se presente
+                if (routingResponse[0].routingStepGroups) {
+                    routingResponse[0].routingStepGroups.forEach(group => {
+                        if (group.routingStepGroupStepList) {
+                            group.routingStepGroupStepList = group.routingStepGroupStepList.filter(step => step.routingStep !== stepId);
+                        }
+                    });
+                }
+                
+                // Rimuovo da routingOperationGroups
+                if (routingResponse[0].routingOperationGroups) {
+                    routingResponse[0].routingOperationGroups = routingResponse[0].routingOperationGroups.filter(
+                        opGroup => opGroup.routingOperationGroup !== operationActivity
+                    );
+                }
+                
+                // Elimino le righe dal database
+                await deleteVerbaleLev3(order, plant, stepId); // Prima elimino lev3 per rispettare le foreign key
+                await deleteVerbaleLev2(order, plant, stepId);
+                await deleteMarkingRecap(plant, order, operationActivity);
+            }
+            
+            // Salvo il routing aggiornato senza gli step eliminati
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error("Error in saveVerbalManagementTreeTableChanges:", error);
+        throw error;
+    }
+}
+
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges };

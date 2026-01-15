@@ -246,5 +246,40 @@ async function getVerbaleLev3ByOrder(order, plant) {
     return data;
 }
 
+// Update level 2 fields (workcenter, safety, active)
+async function updateVerbaleLev2(plant, idLev2, workcenter, safety, active) {
+    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Fields, [plant, idLev2, workcenter, safety, active]);
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder }
+// Duplicate level 2 by stepId
+async function duplicateVerbaleLev2(order, plant, newStepId, suffix, safety, workcenter, active, originalStepId) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev2ByStepId, [order, plant, newStepId, suffix, safety, workcenter, active, originalStepId]);
+}
+
+// Duplicate level 3 by lev2 id
+async function duplicateVerbaleLev3(order, plant, newStepId, suffix, originalLev2Id) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev3ByLev2Ids, [order, plant, newStepId, suffix, originalLev2Id]);
+}
+
+// Duplicate marking recap
+async function duplicateMarkingRecap(plant, order, newOperation, newOperationDescritption, originalOperation) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateMarkingRecap, [plant, order, newOperation, newOperationDescritption, originalOperation]);
+}
+
+// Delete level 2 by stepId
+async function deleteVerbaleLev2(order, plant, stepId) {
+    await postgresdbService.executeQuery(queryVerbali.deleteVerbaleLev2ByStepId, [order, plant, stepId]);
+}
+
+// Delete level 3 by stepId
+async function deleteVerbaleLev3(order, plant, stepId) {
+    await postgresdbService.executeQuery(queryVerbali.deleteVerbaleLev3ByStepId, [order, plant, stepId]);
+}
+
+// Delete marking recap by operation
+async function deleteMarkingRecap(plant, order, operation) {
+    await postgresdbService.executeQuery(queryVerbali.deleteMarkingRecapByOperation, [plant, order, operation]);
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap }

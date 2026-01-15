@@ -13,15 +13,18 @@ async function manageRelabelSfc(plant,order,sfcs){
     let parentAssemblyField = customValues.find(obj => obj.attribute == "PARENT_ASSEMBLY");
     let parentAssemblyValueFromSAP = parentAssemblyField.value || "";
     let parentAssemblyValue = parentAssemblyValueFromSAP === "X";
+    let phaseField= customValues.find(obj => obj.attribute == "PHASE");
+    let phaseValue = phaseField ? phaseField.value : "";
+    let material = responseGetOrder?.material?.material || "";
 
-    let newSfcs = await manageSfc(sfcs,wbsValue,plant);
+    let newSfcs = await manageSfc(sfcs,wbsValue,plant,phaseValue,material);
     if(parentAssemblyValue || orderTypeValue=="ZMGF"){
         await manageParentAssemblyMGFOrder(newSfcs,plant);
     }
 
 }
 
-async function manageSfc(sfcs,wbsValue,plant){
+async function manageSfc(sfcs,wbsValue,plant,phaseValue,material){
     if(!wbsValue || sfcs.length==0){
         return;
     }
@@ -29,6 +32,9 @@ async function manageSfc(sfcs,wbsValue,plant){
     for(let sfc of sfcs){
         let sfcOld = sfc.sfc;
         let sfcNew = wbsValue + "_" + sfcOld;
+        if(phaseValue=="TESTING"){
+            sfcNew = wbsValue + "_" + material;
+        }
         let url = hostname + "/sfc/v1/sfcs/relabel";
         let body = {
             "plant": plant,

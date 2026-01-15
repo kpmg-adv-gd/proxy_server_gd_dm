@@ -109,6 +109,37 @@ const getVerbaleLev3ByOrder = `SELECT "order", id_lev_2, id_lev_3, lev_3
     WHERE "order" = $1 AND plant = $2
     ORDER BY id_lev_2, id_lev_3`;
 
+const updateVerbaleLev2Fields = `UPDATE z_verbale_lev_2
+SET
+    workcenter_lev_2 = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE workcenter_lev_2 END,
+    safety = CASE WHEN $4::boolean IS NOT NULL THEN $4 ELSE safety END,
+    active = CASE WHEN $5::boolean IS NOT NULL THEN $5 ELSE active END
+WHERE plant = $1 AND id_lev_2 = $2`;
+
+const duplicateVerbaleLev2ByStepId = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe, sfc)
+    SELECT "order", $3, lev_2, CONCAT(id_lev_2, $4::text), machine_type, $5, time_lev_2, uom, $6, status_lev_2, plant, $7, priority, wbe, sfc
+    FROM z_verbale_lev_2 
+    WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $8`;
+
+const duplicateVerbaleLev3ByLev2Ids = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances, sfc)
+    SELECT "order", $3, CONCAT(id_lev_2, $4::text), CONCAT(id_lev_3, $4::text), lev_3, machine_type, plant, status_lev_3, nonconformances, sfc
+    FROM z_verbale_lev_3 
+    WHERE "order" = $1 AND plant = $2 AND id_lev_2 = $5`;
+
+const duplicateMarkingRecap = `INSERT INTO z_marking_recap (plant, project, wbe_machine, operation, mes_order, confirmation_number, planned_labor, uom_planned_labor, marked_labor, uom_marked_labor, remaining_labor, uom_remaining_labor, variance_labor, uom_variance, operation_description, modify)
+    SELECT plant, project, wbe_machine, $3, mes_order, confirmation_number, planned_labor, uom_planned_labor, marked_labor, uom_marked_labor, remaining_labor, uom_remaining_labor, variance_labor, uom_variance, $4, modify
+    FROM z_marking_recap
+    WHERE plant = $1 AND mes_order = $2 AND operation = $5`;
+
+const deleteVerbaleLev2ByStepId = `DELETE FROM z_verbale_lev_2 
+    WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $3`;
+
+const deleteVerbaleLev3ByStepId = `DELETE FROM z_verbale_lev_3 
+    WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $3`;
+
+const deleteMarkingRecapByOperation = `DELETE FROM z_marking_recap 
+    WHERE plant = $1 AND mes_order = $2 AND operation = $3`;
+
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation };

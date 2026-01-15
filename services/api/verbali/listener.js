@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -159,6 +159,19 @@ module.exports.listenerSetup = (app) => {
                 return;
             }
             res.status(200).json(treeTableData);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per salvare le modifiche alla TreeTable del Verbal Management
+    app.post("/api/saveVerbalManagementTreeTableChanges", async (req, res) => {
+        try {
+            const { plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1 } = req.body;
+            await saveVerbalManagementTreeTableChanges(plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1);
+            res.status(200).json({ message: "Changes saved successfully" });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

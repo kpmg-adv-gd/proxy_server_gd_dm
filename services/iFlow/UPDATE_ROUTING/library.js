@@ -9,6 +9,12 @@ async function manageRouting(plantValue,order,routingRef,bomRef,customValues){
     console.log("responseGetRouting= "+JSON.stringify(responseGetRouting[0]));
     let orderTypeField= customValues.find(obj => obj.attribute == "ORDER_TYPE");
     let orderTypeValue = orderTypeField.value || "";
+    let phaseField= customValues.find(obj => obj.attribute == "PHASE");
+    let phaseValue = phaseField ? phaseField.value : "";
+    //NEl testing dobbiamo skippare l'aggiornamento del routing
+    if(phaseValue=="TESTING"){
+        return;
+    }
     let routingSteps = [];
     if(responseGetRouting && responseGetRouting.length>0){
         routingSteps = responseGetRouting[0].routingSteps;
