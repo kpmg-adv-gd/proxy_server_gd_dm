@@ -48,7 +48,7 @@ module.exports.listenerSetup = (app) => {
             }
             var details = {
                 history: history,
-                comments: await postgresdbService.getCommentsVerbale(plant, sfc, id_lev_2, id_lev_3, machine_type)
+                comments: await postgresdbService.getCommentsVerbale(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type)
             };
             res.status(200).json(details);
         } catch (error) {
@@ -58,9 +58,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per salvare commento
     app.post("/db/saveCommentsVerbale", async (req, res) => {
-        const { plant, sfc, id_lev_2, id_lev_3, machine_type, user, comment, comment_type } = req.body;
+        const { plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3, machine_type, user, comment, comment_type, status } = req.body;
         try {
-            await postgresdbService.saveCommentsVerbale(plant, sfc, id_lev_2, id_lev_3, machine_type, user, comment, comment_type);
+            await postgresdbService.saveCommentsVerbale(plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3, machine_type, user, comment, comment_type, status);
             res.status(200).json({ message: "Comments saved successfully" });
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });
@@ -69,9 +69,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per ottenere stato approvazione commenti
     app.post("/db/getCommentsVerbaleForApproval", async (req, res) => {
-        const { plant, sfc, id_lev_2, id_lev_3, machine_type } = req.body;
+        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type } = req.body;
         try {
-            const status = await postgresdbService.getCommentsVerbaleForApproval(plant, sfc, id_lev_2, id_lev_3, machine_type);
+            const status = await postgresdbService.getCommentsVerbaleForApproval(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type);
             res.status(200).json({ status });
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });

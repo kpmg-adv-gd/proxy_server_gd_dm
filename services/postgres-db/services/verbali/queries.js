@@ -22,25 +22,15 @@ const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, mac
 const getCommentsVerbale = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
     TO_CHAR((datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
     TO_CHAR((approval_datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
-    FROM z_comments 
-    WHERE plant = $1 AND sfc = $2 
-    AND id_lev_2 = $3
-    AND id_lev_3 = $4
-    AND machine_type = $5 AND comment_type = 'C'
-    ORDER BY datetime DESC`;
-
-const getCommentsVerbaleForApproval = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
-    TO_CHAR((datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
-    TO_CHAR((approval_datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
     FROM z_comments
-    WHERE plant = $1 AND sfc = $2 
-    AND id_lev_2 = $3
-    AND id_lev_3 = $4
-    AND machine_type = $5 AND comment_type = 'M'
+    WHERE plant = $1 AND sfc = $2 AND id_lev_1 = $3
+    AND id_lev_2 = $4
+    AND id_lev_3 = $5
+    AND machine_type = $6 AND comment_type = $7
     ORDER BY datetime DESC`;
 
-const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, (current_timestamp AT TIME ZONE 'UTC'), $8, 'Waiting')`;
+const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev1, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, (current_timestamp AT TIME ZONE 'UTC'), $10, $11)`;
 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
 
@@ -149,4 +139,4 @@ const deleteMarkingRecapByOperation = `DELETE FROM z_marking_recap
 
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode };
