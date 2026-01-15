@@ -77,14 +77,14 @@ async function getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, mac
 }
 
 // Recupero commenti sul task terzo livello
-async function getCommentsVerbale(plant, sfc, id_lev_2, id_lev_3, machine_type) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getCommentsVerbale, [plant, sfc, id_lev_2, id_lev_3, machine_type]);
+async function getCommentsVerbale(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getCommentsVerbale, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, "C"]);
     return data;
 }
 
 // Recupero commenti per approvazione del task terzo livello
-async function getCommentsVerbaleForApproval(plant, sfc, id_lev_2, id_lev_3, machine_type) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getCommentsVerbaleForApproval, [plant, sfc, id_lev_2, id_lev_3, machine_type]);
+async function getCommentsVerbaleForApproval(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getCommentsVerbale, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, "M"]);
     if (data.length == 0) {
         return "NO-REQUEST";
     } else if (data.filter(item => item.status == 'Approved').length > 0) {
@@ -97,9 +97,9 @@ async function getCommentsVerbaleForApproval(plant, sfc, id_lev_2, id_lev_3, mac
 }
 
 // Salvataggio commenti sul task terzo livello
-async function saveCommentsVerbale(plant, sfc, id_lev_2, id_lev_3, machine_type, user, comment, comment_type) {
+async function saveCommentsVerbale(plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3, machine_type, user, comment, comment_type, status) {
     try {
-        await postgresdbService.executeQuery(queryVerbali.saveCommentsVerbale, [plant, sfc, id_lev_2, id_lev_3, machine_type, user, comment, comment_type]);
+        await postgresdbService.executeQuery(queryVerbali.saveCommentsVerbale, [plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3, machine_type, user, comment, comment_type, status]);
         return true;
     } catch (error) {
         return false;
