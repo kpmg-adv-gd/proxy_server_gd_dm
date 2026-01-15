@@ -118,10 +118,21 @@ async function updateCustomAssemblyReportStatusOrderInWork(plant, order) {
 // Funzione per aggiornare lo stato del verbale di ispezione su DONE e salvare l'utente che ha generato il verbale
 async function updateCustomAssemblyReportStatusOrderDone(plant, order, user) {
     let url = hostname + "/order/v1/orders/customValues";
+    const now = new Date();
+    const formattedDate = now.toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).replace(',', '');
     let customValues = [
         { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "DONE" },
         { "attribute": "ASSEMBLY_REPORT_USER", "value": user },
-        { "attribute": "ASSEMBLY_REPORT_DATE", "value": new Date() },
+        { "attribute": "ASSEMBLY_REPORT_DATE", "value": formattedDate },
     ];
     let body = {
         "plant": plant,
