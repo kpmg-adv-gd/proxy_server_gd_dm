@@ -296,6 +296,7 @@ async function createOrder(plant, jsonOrderTesting) {
             "routingType": "SHOP_ORDER",
             "description": jsonOrderTesting.idOrdine,
             "entryRoutingStepId": "0010",
+            "quantityValidation": true,
             "routingOperationGroups": routingOperationGroups, 
             "routingSteps": routingSteps
         }
