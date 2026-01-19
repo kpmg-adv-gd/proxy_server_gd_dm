@@ -1,4 +1,4 @@
-const { callGet, callPatch } = require("../../../utility/CommonCallApi");
+const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { insertZModifiche } = require("../../postgres-db/services/modifiche/library");
 const { getZOrdersLinkByPlantProjectOrderType } = require("../../postgres-db/services/orders_link/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
@@ -348,9 +348,11 @@ async function checkOrCreateMaterial(plant,childMaterial){
     const url = hostname + "/material/v1/materials?plant=" + plant + "&material=" + childMaterial;  
     try{
         var materialResponse = await callGet(url);
-    } catch(error){
+        if(materialResponse && materialResponse[0] && materialResponse[0].material){
+            return;
+        } else{
             //Creo il materiale se non esiste
-            let bodyCreateMaterial={
+            let bodyCreateMaterial=[{
                 "description": childMaterial,
                 "isAutocompleteAndConfirmed": true,
                 "isCurrentVersion": true,
@@ -364,9 +366,35 @@ async function checkOrCreateMaterial(plant,childMaterial){
                 "putawayStorageLocation": ".",
                 "status": "RELEASABLE",
                 "unitOfMeasure": "ST",
-                "version": "1"
-            };
-            await callPatch(hostname + "/material/v1/materials",bodyCreateMaterial);
+                "version": "1",
+                "createdDateTime": new Date(),
+                "modifiedDateTime":  new Date()
+            }];
+            let url = hostname + "/material/v1/materials";
+            await callPost(url, bodyCreateMaterial);
+        }
+    } catch(error){
+            //Creo il materiale se non esiste
+            let bodyCreateMaterial=[{
+                "description": childMaterial,
+                "isAutocompleteAndConfirmed": true,
+                "isCurrentVersion": true,
+                "lotSize": 1,
+                "material": childMaterial,
+                "materialType": "SEMIFINISHED_PRODUCT",
+                "origin": "ME",
+                "orderProcessingMode": "DEFAULT",
+                "plant": plant,
+                "procurementType": "MANUFACTURED_PURCHASED",
+                "putawayStorageLocation": ".",
+                "status": "RELEASABLE",
+                "unitOfMeasure": "ST",
+                "version": "1",
+                "createdDateTime": new Date(),
+                "modifiedDateTime":  new Date()
+            }];
+            let url = hostname + "/material/v1/materials";
+            await callPost(url, bodyCreateMaterial);
     }  
 }
 
