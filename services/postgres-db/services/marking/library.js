@@ -62,4 +62,14 @@ async function getProjectData(plant) {
     return data;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData };
+async function getSumMarkedLaborByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getSumMarkedLaborByOrderQuery, [plant, order]);
+    return data && data.length > 0 ? data[0].total_marked_labor : 0;
+}
+
+async function getSumVarianceLaborByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getSumVarianceLaborByOrderQuery, [plant, order]);
+    return data && data.length > 0 ? data[0].total_variance_labor : 0;
+}
+
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder };

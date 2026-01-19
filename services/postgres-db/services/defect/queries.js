@@ -92,4 +92,6 @@ const insertZDefectTesting = `INSERT INTO z_defect_testing (defect_id, plant, sf
 
 const updateDefectsToTesting = `UPDATE z_defects SET sent_to_testing = TRUE WHERE plant = $1 AND dm_order = ANY($2) AND status = 'OPEN'`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting };
+const getDefectsTestingQuery = `SELECT * FROM z_defects WHERE mes_order = ANY($1) AND status = 'OPEN' ORDER BY "group", code`;
+
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting, getDefectsTestingQuery };

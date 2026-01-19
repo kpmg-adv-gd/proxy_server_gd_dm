@@ -293,5 +293,43 @@ async function getSafetyApprovalCommentsData(plant) {
     return data;
 }
 
+// Update comment approval
+async function updateCommentApprovalStatus(plant, sfc, idLev2, user) {
+    await postgresdbService.executeQuery(queryVerbali.updateCommentApproval, [plant, sfc, idLev2, user]);
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData }
+// Update comment cancel
+async function updateCommentCancelStatus(plant, sfc, idLev2, user) {
+    await postgresdbService.executeQuery(queryVerbali.updateCommentCancel, [plant, sfc, idLev2, user]);
+}
+
+// Unblock verbale lev2
+async function unblockVerbaleLev2(plant, sfc, idLev2, machineType) {
+    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Unblock, [plant, sfc, idLev2, machineType]);
+}
+
+// Get verbale lev2 for unblocking
+async function getVerbaleLev2ToUnblock(plant, sfc, machineType) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ForUnblocking, [plant, sfc, machineType]);
+    return data;
+}
+
+// Get report weight sections
+async function getReportWeightSectionsData(report) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getReportWeightSections, [report]);
+    return data;
+}
+
+// Get report weight by ID and report
+async function getReportWeightData(report, id) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getReportWeightByIdAndReport, [report, id]);
+    return data;
+}
+
+async function getActivitiesTesting(plant, sfcs) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getActivitiesTestingQuery, [plant, sfcs]);
+    return data;
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting };

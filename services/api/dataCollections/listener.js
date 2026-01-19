@@ -1,5 +1,5 @@
 const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
-const { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters } = require("./library");
+const { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, elaborateDataCollectionstTesting, getCustomWeights } = require("./library");
 const { updateCustomAssemblyReportStatusOrderInWork } = require("../../api/verbali/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -25,7 +25,12 @@ module.exports.listenerSetup = (app) => {
 
             const datacollectionsResponse = await callGet(url);
             if (datacollectionsResponse && datacollectionsResponse.length > 0) {
-                var results = await elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollectionsResponse, refresh);
+                if(resource==="REPORT_ASSEMBLY"){
+                    var results = await elaborateDataCollectionsSupervisoreAssembly(plant, selected, resource, datacollectionsResponse, refresh);
+                } 
+                if(resource==="REPORT_TESTING"){
+                    var results = await elaborateDataCollectionstTesting(plant, selected, resource, datacollectionsResponse, refresh);
+                } 
                 if (!results) {
                     res.status(500).json({ error: "Error while executing query" });
                     return;
@@ -99,6 +104,19 @@ module.exports.listenerSetup = (app) => {
             return;
         }
         res.status(200).json({ message: "Data Collections saved successfully" });
+    });
+
+    // Endpoint per ottenere i custom weights per il report TESTING
+    app.post("/api/getCustomWeights", async (req, res) => {
+        try {
+            const { plant, sfc, resource, report } = req.body;
+            const data = await getCustomWeights(plant, sfc, resource, report);
+            res.status(200).json(data);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
     });
 
 }

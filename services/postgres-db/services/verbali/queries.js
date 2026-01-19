@@ -29,12 +29,22 @@ const getCommentsVerbale = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type,
     AND machine_type = $6 AND comment_type = $7
     ORDER BY datetime DESC`;
 
+const getCommentsVerbaleForApproval = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
+    TO_CHAR((datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
+    TO_CHAR((approval_datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
+    FROM z_comments
+    WHERE plant = $1 AND sfc = $2 
+    AND id_lev_2 = $3
+    AND id_lev_3 = $4
+    AND machine_type = $5 AND comment_type = 'M'
+    ORDER BY datetime DESC`;
+
 const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev1, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, (current_timestamp AT TIME ZONE 'UTC'), $10, $11)`;
 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
 
-const getSafetyApprovalComments = `SELECT sfc, plant, lev_2, machine_type, "user", comment, status,
+const getSafetyApprovalComments = `SELECT sfc, plant, id_lev_2, machine_type, id_lev_3, "user", comment, status, id_lev_1, wbe,
     TO_CHAR((datetime AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime
     FROM z_comments 
     WHERE plant = $1 AND comment_type = 'M'`;
@@ -137,6 +147,38 @@ const deleteVerbaleLev3ByStepId = `DELETE FROM z_verbale_lev_3
 const deleteMarkingRecapByOperation = `DELETE FROM z_marking_recap 
     WHERE plant = $1 AND mes_order = $2 AND operation = $3`;
 
+const updateCommentApproval = `UPDATE z_comments
+    SET status = 'Approved', approval_user = $4, approval_datetime = (current_timestamp AT TIME ZONE 'UTC')
+    WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3`;
+
+const updateCommentCancel = `UPDATE z_comments
+    SET status = 'Not Approved', approval_user = $4, approval_datetime = (current_timestamp AT TIME ZONE 'UTC')
+    WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3`;
+
+const updateVerbaleLev2Unblock = `UPDATE z_verbale_lev_2
+    SET blocked = false
+    WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3 AND machine_type = $4`;
+
+const getVerbaleLev2ForUnblocking = `SELECT id_lev_2, safety, blocked
+    FROM z_verbale_lev_2
+    WHERE plant = $1 AND sfc = $2 AND machine_type = $3
+    ORDER BY id_lev_2 ASC`;
+
+const getReportWeightSections = `SELECT DISTINCT * 
+    FROM z_report_weight 
+    WHERE report = $1 
+    ORDER BY section`;
+
+const getReportWeightByIdAndReport = `SELECT section, weight 
+    FROM z_report_weight 
+    WHERE report = $1 AND id = $2 
+    ORDER BY section`;
+
+const getActivitiesTestingQuery = `SELECT * 
+                                    FROM z_verbale_lev_2 
+                                    WHERE plant = $1 AND sfc = ANY($2) AND status_lev_2 != 'Done' AND active = true
+                                    ORDER BY id_lev_1, id_lev_2`;
+
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery };

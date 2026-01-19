@@ -51,4 +51,12 @@ const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
 
 const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery };
+const getSumMarkedLaborByOrderQuery = `SELECT COALESCE(SUM(marked_labor), 0) as total_marked_labor 
+                                        FROM z_marking_recap 
+                                        WHERE plant = $1 AND mes_order = $2`;
+
+const getSumVarianceLaborByOrderQuery = `SELECT COALESCE(SUM(variance_labor), 0) as total_variance_labor 
+                                          FROM z_marking_recap 
+                                          WHERE plant = $1 AND mes_order = $2`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery };

@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -211,6 +211,77 @@ module.exports.listenerSetup = (app) => {
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/doSafetyApproval", async (req, res) => {
+        try {
+            const { plant, sfc, idLev2, machineType, user } = req.body;
+            const result = await doSafetyApproval(plant, sfc, idLev2, machineType, user);
+            res.status(200).json({ success: result });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/doCancelSafety", async (req, res) => {
+        try {
+            const { plant, sfc, idLev2, user } = req.body;
+            const result = await doCancelSafety(plant, sfc, idLev2, user);
+            res.status(200).json({ success: result });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFilterFinalCollaudo", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterFinalCollaudo(plant);
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFinalCollaudoData", async (req, res) => {
+        try {
+            const { plant, project, sfc, co, customer, showAll, sentToTesting } = req.body;
+            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToTesting);
+            res.status(200).json(data);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per recuperare activities Testing in formato tree table
+    app.post("/api/getActivitiesTesting", async (req, res) => {
+        try {
+            const { plant, project } = req.body;
+            if (!plant || !project) {
+                return res.status(400).json({ error: "Missing required parameters: plant, project" });
+            }
+
+            const result = await getActivitiesTestingData(plant, project);
+            
+            if (result === false) {
+                return res.status(500).json({ error: "Error retrieving activities testing data" });
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in getActivitiesTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });
