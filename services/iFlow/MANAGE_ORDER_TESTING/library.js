@@ -24,6 +24,7 @@ async function manageNewOrderTesting(jsonOrderTesting) {
     // 4. Check WorkCenter DM value
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         var workCenterDmValue = await getWorkCenterDmValueByErp(level1.workCenterERP, plant);
         if(!workCenterDmValue){
             return { result: false, message: `WorkCenter DM value not found for WorkCenter ERP: ${level1.workCenterERP} and Plant: ${plant}` };
