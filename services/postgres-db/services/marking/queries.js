@@ -59,4 +59,8 @@ const getSumVarianceLaborByOrderQuery = `SELECT COALESCE(SUM(variance_labor), 0)
                                           FROM z_marking_recap 
                                           WHERE plant = $1 AND mes_order = $2`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery };
+const getMarkingTestingDataByOrderQuery = `SELECT * 
+                                             FROM z_marking_testing 
+                                             WHERE plant = $1 AND "order" = $2 AND type = $3`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery };

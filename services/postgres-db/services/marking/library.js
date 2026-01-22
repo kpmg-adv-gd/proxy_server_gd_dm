@@ -72,4 +72,9 @@ async function getSumVarianceLaborByOrder(plant, order) {
     return data && data.length > 0 ? data[0].total_variance_labor : 0;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder };
+async function getMarkingTestingDataByOrder(plant, order, type) {
+    const data = await postgresdbService.executeQuery(queryMarking.getMarkingTestingDataByOrderQuery, [plant, order, type]);
+    return data || [];
+}
+
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder };

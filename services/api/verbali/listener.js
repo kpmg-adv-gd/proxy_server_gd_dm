@@ -253,8 +253,8 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/getFinalCollaudoData", async (req, res) => {
         try {
-            const { plant, project, sfc, co, customer, showAll, sentToTesting } = req.body;
-            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToTesting);
+            const { plant, project, sfc, co, customer, showAll, sentToInstallation } = req.body;
+            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation);
             res.status(200).json(data);
         } catch (error) {
             let status = error.status || 500;

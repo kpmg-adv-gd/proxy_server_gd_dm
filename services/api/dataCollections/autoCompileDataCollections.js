@@ -4,7 +4,7 @@ const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memo
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getTotalQuantityFromOrders } = require("../../postgres-db/services/mancanti/library");
 const { getModificheToDataCollections } = require("../../postgres-db/services/modifiche/library");
-const { getSumMarkedLaborByOrder, getSumVarianceLaborByOrder } = require("../../postgres-db/services/marking/library");
+const { getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder } = require("../../postgres-db/services/marking/library");
 const { ref } = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -349,81 +349,26 @@ async function ruleParameter2Testing(data, group, parameterName, selected, refre
     return data;
 }
 async function ruleParameter3Testing(data, group, parameterName, selected, plant, refresh) {
-    // Parametro 3 -> Campo Ore Base Line
+    // Parametro 3 -> Campo Ore Base Line (somma planned_labor da z_marking_testing)
     try {
         const order = selected.order || '';
         
-        // Step 1: Recupero ROUTING e ROUTING_VERSION da SAP_MDO_ORDER_V
-        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
-        const mockReqOrder = {
-            path: "/mdo/ORDER",
-            query: { $apply: `filter(${filterOrder})` },
-            method: "GET"
-        };
-        const outMockOrder = await dispatch(mockReqOrder);
-        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
         
-        if (!orderData || !orderData.ROUTING || !orderData.ROUTING_VERSION) {
-            // Se non trovo routing, imposto valore vuoto
-            for (var i = 0; i < data.length; i++) {
-                if (data[i].group === group) {
-                    for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                            data[i].parameters[j].valueText = "0";
-                        }
-                    }
-                }
-            }
-            return data;
-        }
-        
-        const routing = orderData.ROUTING;
-        const routingVersion = orderData.ROUTING_VERSION;
-        
-        // Step 2: Recupero lista operazioni da SAP_MDO_ROUTING_STEP_V
-        const filterRoutingStep = `(ROUTING eq '${routing}' and ROUTING_VERSION eq '${routingVersion}' and ROUTING_STEP_OPERATION_ACTIVITY ne null)`;
-        const mockReqRoutingStep = {
-            path: "/mdo/ROUTING_STEP",
-            query: { $apply: `filter(${filterRoutingStep})` },
-            method: "GET"
-        };
-        const outMockRoutingStep = await dispatch(mockReqRoutingStep);
-        const routingStepData = outMockRoutingStep?.data?.value?.length > 0 ? outMockRoutingStep.data.value : [];
-        
-        if (routingStepData.length === 0) {
-            // Nessuna operazione trovata
-            for (var i = 0; i < data.length; i++) {
-                if (data[i].group === group) {
-                    for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                            data[i].parameters[j].valueText = "0";
-                        }
-                    }
-                }
-            }
-            return data;
-        }
-        
-        // Estraggo le operazioni distinte
-        const operations = [...new Set(routingStepData.map(item => item.ROUTING_STEP_OPERATION_ACTIVITY).filter(op => op))];
-        
-        // Step 3: Recupero PLAN_SETUP_TIME e PLAN_PROCESSING_TIME da SAP_MDO_ORDER_SCHEDULE_V per ogni operazione
-        const operationsFilter = operations.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(' or ');
-        const filterSchedule = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}' and ROUTING eq '${routing}' and ROUTING_VERSION eq '${routingVersion}' and (${operationsFilter}))`;
-        const mockReqSchedule = {
-            path: "/mdo/ORDER_SCHEDULE",
-            query: { $apply: `filter(${filterSchedule})` },
-            method: "GET"
-        };
-        const outMockSchedule = await dispatch(mockReqSchedule);
-        const scheduleData = outMockSchedule?.data?.value?.length > 0 ? outMockSchedule.data.value : [];
-        
-        // Sommo PLAN_SETUP_TIME e PLAN_PROCESSING_TIME
+        // Sommo planned_labor e converto da HCN a ore se necessario
         let totalHours = 0;
-        for (const schedule of scheduleData) {
-            const setupTime = parseFloat(schedule.PLAN_SETUP_TIME || 0);
-            const processingTime = parseFloat(schedule.PLAN_PROCESSING_TIME || 0);
-            totalHours += setupTime + processingTime;
+        for (const marking of markingData) {
+            const plannedLabor = parseFloat(marking.planned_labor || 0);
+            const uom = marking.uom_planned_labor || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += plannedLabor * 60 / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += plannedLabor;
+            }
         }
         
         // Arrotondo a 2 decimali
@@ -442,29 +387,41 @@ async function ruleParameter3Testing(data, group, parameterName, selected, plant
         
         return data;
     } catch (error) {
-        console.error("Error in ruleParameter3 Testing:", error);
+        console.error("Error in ruleParameter3Testing:", error);
         return data;
     }
 }
 async function ruleParameter4Testing(data, group, parameterName, selected, plant, refresh) {
-    // Parametro 4 -> Campo Ore consuntivo (somma marked_labor da Z_MARKING_RECAP convertita da HCN a ore)
+    // Parametro 4 -> Campo Ore consuntivo (somma marked_labor da z_marking_testing)
     try {
         const order = selected.order || '';
         
-        // Recupero la somma di marked_labor da Z_MARKING_RECAP
-        const totalMarkedLabor = await getSumMarkedLaborByOrder(plant, order);
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
         
-        // Converto da HCN (centesimi di ora) a ore: divido per 100
-        const totalHours = totalMarkedLabor / 100;
+        // Sommo marked_labor e converto da HCN a ore se necessario
+        let totalHours = 0;
+        for (const marking of markingData) {
+            const markedLabor = parseFloat(marking.marked_labor || 0);
+            const uom = marking.uom_marked_labor || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += markedLabor * 60 / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += markedLabor;
+            }
+        }
         
         // Arrotondo a 2 decimali
-        const roundedHours = Math.round(totalHours * 100) / 100;
+        totalHours = Math.round(totalHours * 100) / 100;
         
         for (var i = 0; i < data.length; i++) {
             if (data[i].group === group) {
                 for (var j = 0; j < data[i].parameters.length; j++) {
                     if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                        data[i].parameters[j].valueText = roundedHours.toString();
+                        data[i].parameters[j].valueText = totalHours.toString();
                     }
                 }
             }
@@ -472,29 +429,41 @@ async function ruleParameter4Testing(data, group, parameterName, selected, plant
         
         return data;
     } catch (error) {
-        console.error("Error in ruleParameter4 Testing:", error);
+        console.error("Error in ruleParameter4Testing:", error);
         return data;
     }
 }
 async function ruleParameter5Testing(data, group, parameterName, selected, plant, refresh) {
-    // Parametro 5 -> Campo Ore varianza (somma variance_labor da Z_MARKING_RECAP convertita da HCN a ore)
+    // Parametro 5 -> Campo Ore varianza (somma variance_labor da z_marking_testing)
     try {
         const order = selected.order || '';
         
-        // Recupero la somma di variance_labor da Z_MARKING_RECAP
-        const totalVarianceLabor = await getSumVarianceLaborByOrder(plant, order);
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
         
-        // Converto da HCN (centesimi di ora) a ore: divido per 100
-        const totalHours = totalVarianceLabor / 100;
+        // Sommo variance_labor e converto da HCN a ore se necessario
+        let totalHours = 0;
+        for (const marking of markingData) {
+            const varianceLabor = parseFloat(marking.variance_labor || 0);
+            const uom = marking.uom_variance || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += (varianceLabor * 60) / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += varianceLabor;
+            }
+        }
         
         // Arrotondo a 2 decimali
-        const roundedHours = Math.round(totalHours * 100) / 100;
+        totalHours = Math.round(totalHours * 100) / 100;
         
         for (var i = 0; i < data.length; i++) {
             if (data[i].group === group) {
                 for (var j = 0; j < data[i].parameters.length; j++) {
                     if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                        data[i].parameters[j].valueText = roundedHours.toString();
+                        data[i].parameters[j].valueText = totalHours.toString();
                     }
                 }
             }
@@ -502,7 +471,7 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
         
         return data;
     } catch (error) {
-        console.error("Error in ruleParameter5 Testing:", error);
+        console.error("Error in ruleParameter5Testing:", error);
         return data;
     }
 }

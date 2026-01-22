@@ -139,8 +139,8 @@ async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, 
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
             
-            // Recupero data SENT_TO_TESTING
-            var dateFilter = `(DATA_FIELD eq 'SENT_TO_TESTING' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
+            // Recupero data ASSEMBLY_REPORT_DATE
+            var dateFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_DATE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
             var mockReqDate = {
                 path: "/mdo/ORDER_CUSTOM_DATA",
                 query: { $apply: `filter(${dateFilter})` },
@@ -148,7 +148,7 @@ async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, 
             };
             var outMockDate = await dispatch(mockReqDate);
             var dateData = outMockDate?.data?.value.length>0 ? outMockDate.data.value : [];
-            data.sentToTestingDate = dateData.length > 0 ? dateData[0].DATA_FIELD_VALUE : "";
+            data.assemblyReportDate = dateData.length > 0 ? dateData[0].DATA_FIELD_VALUE : "";
             
             // Recupero user ASSEMBLY_REPORT_USER
             var userFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_USER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
@@ -173,9 +173,32 @@ async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, 
             if (project != "" && data.project != project) continue;
             if (wbs != "" && data.wbs != wbs) continue;
             
-            // Filtro su date
-            if (startDate != "" && data.sentToTestingDate != "" && data.sentToTestingDate < startDate) continue;
-            if (endDate != "" && data.sentToTestingDate != "" && data.sentToTestingDate > endDate) continue;
+            // Filtro su date - conversione formati con gestione fuso orario italiano
+            if (startDate != "" && data.assemblyReportDate != "") {
+                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
+                const [datePart, timePart] = data.assemblyReportDate.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                // Calcolo offset italiano in millisecondi (differenza tra locale e UTC)
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
+                const startDateObj = new Date(startDate);
+                if (assemblyDate < startDateObj) continue;
+            }
+            if (endDate != "" && data.assemblyReportDate != "") {
+                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
+                const [datePart, timePart] = data.assemblyReportDate.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
+                const endDateObj = new Date(endDate);
+                if (assemblyDate > endDateObj) continue;
+            }
             
             // Aggiungo elemento
             results.push(data);
@@ -1295,7 +1318,7 @@ function generateTreeTable(data) {
             status: data[i].status,
             reportStatus: data[i].reportStatus,
             order: data[i].order,
-            sentToTestingDate: data[i].sentToTestingDate || "",
+            assemblyReportDate: data[i].assemblyReportDate || "",
             user: data[i].user || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
@@ -1619,7 +1642,7 @@ async function getFilterFinalCollaudo(plant) {
 }
 
 // Funzione per popolare la tabella Final Collaudo con filtri opzionali
-async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToTesting) {
+async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation) {
     try {
         // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
         const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
@@ -1758,11 +1781,11 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             if (co && co !== '' && coValue !== co) continue;
             if (customer && customer !== '' && customerValue !== customer) continue;
             
-            // Filtro per sentToTesting (se specificato)
-            if (sentToTesting !== undefined && sentToTesting !== null) {
+            // Filtro per sentToInstallation (se specificato)
+            if (sentToInstallation !== undefined && sentToInstallation !== null) {
                 const isSentToInstallation = sentToInstallationValue === 'true' || sentToInstallationValue === true;
-                if (sentToTesting && !isSentToInstallation) continue;
-                if (!sentToTesting && isSentToInstallation) continue;
+                if (sentToInstallation && !isSentToInstallation) continue;
+                if (!sentToInstallation && isSentToInstallation) continue;
             }
             
             // Filtro per showAll (TESTING_REPORT_STATUS)
@@ -1819,14 +1842,18 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
             return [];
         }
         
-        // Step 4: Filtro per date range se presente
+        // Step 4: Filtro per date range se presente con gestione fuso orario italiano
         if (startDate && startDate !== '') {
             filteredComments = filteredComments.filter(comment => {
                 if (!comment.datetime) return false;
-                // Parsing DD/MM/YYYY HH24:MI:SS format
-                const [datePart] = comment.datetime.split(' ');
+                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
+                const [datePart, timePart] = comment.datetime.split(' ');
                 const [day, month, year] = datePart.split('/');
-                const commentDate = new Date(`${year}-${month}-${day}`);
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
                 const start = new Date(startDate);
                 return commentDate >= start;
             });
@@ -1835,10 +1862,14 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
         if (endDate && endDate !== '') {
             filteredComments = filteredComments.filter(comment => {
                 if (!comment.datetime) return false;
-                // Parsing DD/MM/YYYY HH24:MI:SS format
-                const [datePart] = comment.datetime.split(' ');
+                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
+                const [datePart, timePart] = comment.datetime.split(' ');
                 const [day, month, year] = datePart.split('/');
-                const commentDate = new Date(`${year}-${month}-${day}`);
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
                 const end = new Date(endDate);
                 return commentDate <= end;
             });
@@ -1986,9 +2017,9 @@ async function getVerbalManagementTable(plant, project, co, order, customer, sho
         // Creo un array di ordini filtrati
         let filteredOrders = [...activeOrders];
         
-        // Filtro per Order specifico se presente
+        // Filtro per Order specifico se presente (contains)
         if (order && order !== '') {
-            filteredOrders = filteredOrders.filter(o => o.MFG_ORDER === order);
+            filteredOrders = filteredOrders.filter(o => o.MFG_ORDER && o.MFG_ORDER.toUpperCase().includes(order.toUpperCase()));
         }
         
         if (filteredOrders.length === 0) {
@@ -2030,10 +2061,10 @@ async function getVerbalManagementTable(plant, project, co, order, customer, sho
             const coValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CO')?.DATA_FIELD_VALUE || '';
             const customerValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CUSTOMER')?.DATA_FIELD_VALUE || '';
             
-            // Applico i filtri opzionali
-            if (project && project !== '' && projectValue !== project) continue;
-            if (co && co !== '' && coValue !== co) continue;
-            if (customer && customer !== '' && customerValue !== customer) continue;
+            // Applico i filtri opzionali (contains, case-insensitive)
+            if (project && project !== '' && !projectValue.toUpperCase().includes(project.toUpperCase())) continue;
+            if (co && co !== '' && !coValue.toUpperCase().includes(co.toUpperCase())) continue;
+            if (customer && customer !== '' && !customerValue.toUpperCase().includes(customer.toUpperCase())) continue;
             
             // Estraggo l'SFC per questo ordine
             const sfcValue = sfcList.find(sfc => sfc.MFG_ORDER === mfgOrder)?.SFC || '';
@@ -2138,7 +2169,7 @@ async function getVerbalManagementTreeTable(plant, order) {
                 };
                 
                 // Filtra i dati di livello 3 che corrispondono a questo ID_Lev2
-                const matchingLev3 = lev3Data.filter(l3 => l3.id_lev_2 === lev2.id_lev_2);
+                const matchingLev3 = lev3Data.filter(l3 => l3.id_lev_2 === lev2.id_lev_2 && l3.id_lev_1 === stepId);
                 
                 for (const lev3 of matchingLev3) {
                     // Livello 3
@@ -2322,12 +2353,12 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
         // Step 6: Duplicazione livello 3
         if (newLevel3 && newLevel3.length > 0) {
             for (const duplication of newLevel3) {
-                const { stepId, suffix, originalLev2Id } = duplication;
+                const { newStepId, suffix, originalLev2Id } = duplication;
                 
                 await duplicateVerbaleLev3(
                     order,
                     plant,
-                    stepId,
+                    newStepId,
                     suffix,
                     originalLev2Id
                 );
