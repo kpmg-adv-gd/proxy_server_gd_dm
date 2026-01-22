@@ -1,5 +1,5 @@
 const getAdditionalOperationsQuery = `SELECT z.*,
-(select case when count(*) > 0 then true else false end from z_defects where operation = z.operation and mes_order = z.mes_order and sfc = z.sfc and status = 'OPEN') as nonconformances
+(select case when count(*) > 0 then true else false end from z_defects where operation = z.operation and dm_order = z.order and sfc = z.sfc and status = 'OPEN') as nonconformances
 FROM z_additional_operations z where plant = $1 and project = $2 order by "order", operation, phase`;
 
 const getAdditionalOperationsToVerbaleQuery = `SELECT z.* FROM z_additional_operations z where plant = $1 and project = $2 and section = $3`;

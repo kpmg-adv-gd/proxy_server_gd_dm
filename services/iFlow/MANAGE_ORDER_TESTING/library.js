@@ -24,6 +24,7 @@ async function manageNewOrderTesting(jsonOrderTesting) {
     // 4. Check WorkCenter DM value
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         var workCenterDmValue = await getWorkCenterDmValueByErp(level1.workCenterERP, plant);
         if(!workCenterDmValue){
             return { result: false, message: `WorkCenter DM value not found for WorkCenter ERP: ${level1.workCenterERP} and Plant: ${plant}` };
@@ -296,6 +297,7 @@ async function createOrder(plant, jsonOrderTesting) {
             "routingType": "SHOP_ORDER",
             "description": jsonOrderTesting.idOrdine,
             "entryRoutingStepId": "0010",
+            "quantityValidation": true,
             "routingOperationGroups": routingOperationGroups, 
             "routingSteps": routingSteps
         }
@@ -427,7 +429,7 @@ async function saveZMarkingTesting(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             plannedLabor += level2.timeLevel2;
         }
-        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, level1.operationActivity, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
+        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, level1.stepId, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
         if (!res) result = false;
     }
     return result;

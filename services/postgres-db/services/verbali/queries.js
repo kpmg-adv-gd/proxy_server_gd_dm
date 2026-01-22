@@ -9,7 +9,7 @@ const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_t
     AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.active = true 
     ORDER BY l3.id_lev_2, l3.id_lev_3`;
 
-const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and id_lev_1 = $2 ORDER BY wbe, machine_type`;
+const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and sfc = $2 ORDER BY wbe, machine_type`;
 
 const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, machine_type, status_lev_3, 
     TO_CHAR((start_date  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as start_date,
@@ -39,7 +39,7 @@ const getCommentsVerbaleForApproval = `SELECT sfc, plant, id_lev_2, id_lev_3, ma
     AND machine_type = $5 AND comment_type = 'M'
     ORDER BY datetime DESC`;
 
-const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev1, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
+const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3, machine_type, "user", comment, datetime, comment_type, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, (current_timestamp AT TIME ZONE 'UTC'), $10, $11)`;
 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
