@@ -1,12 +1,13 @@
-const { callPatch, callGet } = require("../../../utility/CommonCallApi");
+const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
+const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting } = require("../../postgres-db/services/verbali/library");
 const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
 const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/library");
 const { getMappingPhase } = require("../../postgres-db/services/mapping_phases/library");
+const { updateRoutingForReleaseUtility } = require("../../iFlow/UPDATE_ROUTING/library");
 const PDFDocument = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -93,6 +94,165 @@ async function getProjectsVerbaliSupervisoreAssembly(plant) {
             var outMockProject = await dispatch(mockReqProject);
             var projectData = outMockProject?.data?.value.length > 0 ? outMockProject.data.value : [];
             if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE))
+                projects.push({ project: projectData[0].DATA_FIELD_VALUE });
+        }
+        return projects;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, endDate) {
+    var results = [];
+    try {
+        const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
+        const mockReq = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filter})` },
+            method: "GET"
+        };
+        var outMock = await dispatch(mockReq);
+        var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
+        // rientro nella MDO con la lista degli ordini trovati (creo lista di OR)
+        var ordersList = orders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        if (project != "") {
+            const filter2 = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersList}))`;
+            const mockReq2 = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${filter2})` },
+                method: "GET"
+            };
+            var outMock2 = await dispatch(mockReq2);
+            var orders = outMock2?.data?.value.length>0 ? outMock2.data.value : [];
+        }
+        // Ciclo gli ordini trovati
+        for (var i = 0; i < orders.length; i++) {
+            var mfg_order = orders[i].MFG_ORDER;
+            var data = { order: mfg_order };
+            var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
+            var orderResponse = await callGet(url);
+            data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
+            data.material  = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
+            data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
+            if (data.reportStatus !== "DONE") continue;
+            data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
+            if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
+            
+            // Recupero data ASSEMBLY_REPORT_DATE
+            var dateFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_DATE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
+            var mockReqDate = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${dateFilter})` },
+                method: "GET"
+            };
+            var outMockDate = await dispatch(mockReqDate);
+            var dateData = outMockDate?.data?.value.length>0 ? outMockDate.data.value : [];
+            data.assemblyReportDate = dateData.length > 0 ? dateData[0].DATA_FIELD_VALUE : "";
+            
+            // Recupero user ASSEMBLY_REPORT_USER
+            var userFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_USER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
+            var mockReqUser = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${userFilter})` },
+                method: "GET"
+            };
+            var outMockUser = await dispatch(mockReqUser);
+            var userData = outMockUser?.data?.value.length>0 ? outMockUser.data.value : [];
+            data.user = userData.length > 0 ? userData[0].DATA_FIELD_VALUE : "";
+            
+            // Recupero status con api sfcdetail
+            try {
+                var urlStatus = hostname + "/sfc/v1/sfcdetail?plant="+plant+"&sfc="+data.sfc;
+                let responseGetSfc = await callGet(urlStatus);
+                data.status = responseGetSfc.status.description;
+            } catch (error) {
+                continue;
+            }
+            // Filtri su progetto e wbs
+            if (project != "" && data.project != project) continue;
+            if (wbs != "" && data.wbs != wbs) continue;
+            
+            // Filtro su date - conversione formati con gestione fuso orario italiano
+            if (startDate != "" && data.assemblyReportDate != "") {
+                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
+                const [datePart, timePart] = data.assemblyReportDate.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                // Calcolo offset italiano in millisecondi (differenza tra locale e UTC)
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
+                const startDateObj = new Date(startDate);
+                if (assemblyDate < startDateObj) continue;
+            }
+            if (endDate != "" && data.assemblyReportDate != "") {
+                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
+                const [datePart, timePart] = data.assemblyReportDate.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
+                const endDateObj = new Date(endDate);
+                if (assemblyDate > endDateObj) continue;
+            }
+            
+            // Aggiungo elemento
+            results.push(data);
+        }
+        // Una volta estratti i dati, genero la TreeTable
+        return generateTreeTable(results);
+    } catch (error) {
+        return false
+    }
+}
+
+// Funzione per ottenere i progetti per filtro su tile supervsiore testing
+async function getProjectsVerbaliTileSupervisoreTesting(plant) {
+    var projects = [];
+    try {
+        // Step 1: Individuare tutte le macchine
+        const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
+        const mockReq = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filter})` },
+            method: "GET"
+        };
+        var outMock = await dispatch(mockReq);
+        var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
+        
+        // Step 2: Individuare le macchine che hanno il verbale completato
+        var completedOrders = [];
+        for (var i = 0; i < orders.length; i++) {
+            var mfg_order = orders[i].MFG_ORDER;
+            var statusFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_STATUS' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}' AND DATA_FIELD_VALUE eq 'DONE')`;
+            var mockReqStatus = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${statusFilter})` },
+                method: "GET"
+            };
+            var outMockStatus = await dispatch(mockReqStatus);
+            var statusData = outMockStatus?.data?.value.length>0 ? outMockStatus.data.value : [];
+            if (statusData.length > 0) {
+                completedOrders.push(mfg_order);
+            }
+        }
+        
+        // Step 3: Individuare il progetto associato alle macchine con verbale completato
+        for (var i = 0; i < completedOrders.length; i++) {
+            var mfg_order = completedOrders[i];
+            var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
+            var mockReqProject = {
+                path: "/mdo/ORDER_CUSTOM_DATA",
+                query: { $apply: `filter(${projectFilter})` },
+                method: "GET"
+            };
+            var outMockProject = await dispatch(mockReqProject);
+            var projectData = outMockProject?.data?.value.length>0 ? outMockProject.data.value : [];
+            if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE)) 
                 projects.push({ project: projectData[0].DATA_FIELD_VALUE });
         }
         return projects;
@@ -1157,7 +1317,9 @@ function generateTreeTable(data) {
             material: data[i].material,
             status: data[i].status,
             reportStatus: data[i].reportStatus,
-            order: data[i].order
+            order: data[i].order,
+            assemblyReportDate: data[i].assemblyReportDate || "",
+            user: data[i].user || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });
@@ -1168,6 +1330,1269 @@ function generateTreeTable(data) {
     return tree;
 }
 
+// Funzione per recuperare tutti i filtri per Verbal Management (Home)
+async function getFilterVerbalManagement(plant) {
+    try {
+        // Step 1: Recupero tutti i verbali con PHASE='TEST'
+        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
+        const mockReqPhase = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterPhase})` },
+            method: "GET"
+        };
+        const outMockPhase = await dispatch(mockReqPhase);
+        const ordersPhase = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
+        
+        if (ordersPhase.length === 0) {
+            return {
+                projects: [],
+                cos: [],
+                orders: [],
+                customers: []
+            };
+        }
+
+        // Step 2: Filtrare per verbali attivi (EXECUTION_STATUS = 'ACTIVE' OR 'NOT_IN_EXECUTION')
+        const ordersList = ordersPhase.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        const filterActive = `(PLANT eq '${plant}' AND (EXECUTION_STATUS eq 'ACTIVE' or EXECUTION_STATUS eq 'NOT_IN_EXECUTION') AND (${ordersList}))`;
+        const mockReqActive = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterActive})` },
+            method: "GET"
+        };
+        const outMockActive = await dispatch(mockReqActive);
+        const activeOrders = outMockActive?.data?.value?.length > 0 ? outMockActive.data.value : [];
+        
+        if (activeOrders.length === 0) {
+            return {
+                projects: [],
+                cos: [],
+                orders: [],
+                customers: []
+            };
+        }
+
+        // Creo la lista degli ordini attivi
+        const activeOrdersList = activeOrders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        
+        // Step 3: Recupero i progetti (COMMESSA)
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Estraggo valori distinti per progetti
+        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 4: Recupero i CO
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Estraggo valori distinti per CO
+        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 5: Recupero gli ordini (MFG_ORDER)
+        const orders = activeOrders.map(item => item.MFG_ORDER);
+        
+        // Step 6: Recupero i Customer
+        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
+        const mockReqCustomer = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCustomer})` },
+            method: "GET"
+        };
+        const outMockCustomer = await dispatch(mockReqCustomer);
+        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
+        
+        // Estraggo valori distinti per Customer
+        const customers = [...new Set(customersData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+
+
+         // Step 7: Recupero i Workcenters dalla tabella SAP_MDO_WORKCENTER_V (mi servono dopo per la tree table dei verbali)
+        const filterWorkcenter = `(PLANT eq '${plant}' AND STATUS eq 'ENABLED' AND IS_DELETED eq 'false')`;
+        const mockReqWorkcenter = {
+            path: "/mdo/WORKCENTER",
+            query: { $apply: `filter(${filterWorkcenter})` },
+            method: "GET"
+        };
+        const outMockWorkcenter = await dispatch(mockReqWorkcenter);
+        const workcentersData = outMockWorkcenter?.data?.value?.length > 0 ? outMockWorkcenter.data.value : [];
+        // Estraggo i workcenters con codice e descrizione
+        const workcenters = workcentersData.map(item => ({
+            workcenter: item.WORKCENTER,
+            description: item.DESCRIPTION
+        }));
+        return {
+            projects: projects,
+            cos: cos,
+            orders: orders,
+            customers: customers,
+            workcenters: workcenters
+        };
+    } catch (error) {
+        console.error("Error in getFilterVerbalManagement:", error);
+        return false;
+    }
+}
+
+// Funzione per recuperare tutti i filtri per Safety Approval
+async function getFilterSafetyApproval(plant) {
+    try {
+        // Step 1: Recupero tutti gli SFC dalla tabella Z_COMMENTS con comment_type='M'
+        const sfcsFromComments = await getSfcFromComments(plant);
+        
+        if (!sfcsFromComments || sfcsFromComments.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: []
+            };
+        }
+        
+        // Estraggo la lista degli SFC
+        const sfcList = sfcsFromComments.map(item => item.sfc).filter(sfc => sfc);
+        
+        if (sfcList.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: []
+            };
+        }
+        
+        // Step 2: Recupero gli MFG_ORDER dalla tabella SAP_MDO_SFC_V con gli SFC trovati
+        const sfcFilter = sfcList.map(sfc => `SFC eq '${sfc}'`).join(' or ');
+        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        if (sfcData.length === 0) {
+            return {
+                projects: [],
+                sfcs: sfcList,
+                cos: []
+            };
+        }
+        
+        // Estraggo gli MFG_ORDER
+        const ordersList = sfcData.map(item => item.MFG_ORDER).filter(order => order);
+        
+        if (ordersList.length === 0) {
+            return {
+                projects: [],
+                sfcs: sfcList,
+                cos: []
+            };
+        }
+        
+        // Creo il filtro per gli ordini
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Step 3: Recupero i progetti (COMMESSA) dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Estraggo valori distinti per progetti
+        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 4: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Estraggo valori distinti per CO
+        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        return {
+            projects: projects,
+            sfcs: sfcList,
+            cos: cos
+        };
+    } catch (error) {
+        console.error("Error in getFilterSafetyApproval:", error);
+        return false;
+    }
+}
+
+// Funzione per ottenere i filtri per Final Collaudo
+async function getFilterFinalCollaudo(plant) {
+    try {
+        // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
+        const mockReqPhase = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterPhase})` },
+            method: "GET"
+        };
+        const outMockPhase = await dispatch(mockReqPhase);
+        const phaseData = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
+        
+        if (phaseData.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: [],
+                customers: []
+            };
+        }
+        
+        // Estraggo gli MFG_ORDER di tipo TESTING
+        const ordersList = phaseData.map(item => item.MFG_ORDER).filter(order => order);
+        
+        if (ordersList.length === 0) {
+            return {
+                projects: [],
+                sfcs: [],
+                cos: [],
+                customers: []
+            };
+        }
+        
+        // Creo il filtro per gli ordini
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Step 2: Recupero i progetti (COMMESSA) dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Estraggo valori distinti per progetti
+        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 3: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Estraggo valori distinti per CO
+        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        // Step 4: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
+        const filterSFC = `(PLANT eq '${plant}' AND (${ordersFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        // Estraggo valori distinti per SFC
+        const sfcs = [...new Set(sfcData.map(item => item.SFC).filter(val => val))];
+        
+        // Step 5: Recupero i Customer dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCustomer = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCustomer})` },
+            method: "GET"
+        };
+        const outMockCustomer = await dispatch(mockReqCustomer);
+        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
+        
+        // Estraggo valori distinti per Customer
+        const customers = [...new Set(customersData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
+        
+        return {
+            projects: projects,
+            sfcs: sfcs,
+            cos: cos,
+            customers: customers
+        };
+    } catch (error) {
+        console.error("Error in getFilterFinalCollaudo:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la tabella Final Collaudo con filtri opzionali
+async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation) {
+    try {
+        // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
+        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
+        const mockReqPhase = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterPhase})` },
+            method: "GET"
+        };
+        const outMockPhase = await dispatch(mockReqPhase);
+        const phaseData = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
+        
+        if (phaseData.length === 0) {
+            return [];
+        }
+        
+        // Estraggo gli MFG_ORDER di tipo TESTING
+        let ordersList = phaseData.map(item => item.MFG_ORDER).filter(order => order);
+        
+        if (ordersList.length === 0) {
+            return [];
+        }
+        
+        // Step 2: Creo il filtro per gli ordini
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Step 3: Recupero i progetti (COMMESSA)
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> COMMESSA
+        const orderToProjectMap = {};
+        projectsData.forEach(item => {
+            orderToProjectMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 4: Recupero i CO
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> CO
+        const orderToCoMap = {};
+        cosData.forEach(item => {
+            orderToCoMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 5: Recupero i Customer
+        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCustomer = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCustomer})` },
+            method: "GET"
+        };
+        const outMockCustomer = await dispatch(mockReqCustomer);
+        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> CUSTOMER
+        const orderToCustomerMap = {};
+        customersData.forEach(item => {
+            orderToCustomerMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 6: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
+        const filterSFC = `(PLANT eq '${plant}' AND (${ordersFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        if (sfcData.length === 0) {
+            return [];
+        }
+        
+        // Step 7: Recupero TESTING_REPORT_STATUS per tutti gli ordini
+        const filterReportStatus = `(DATA_FIELD eq 'TESTING_REPORT_STATUS' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqReportStatus = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterReportStatus})` },
+            method: "GET"
+        };
+        const outMockReportStatus = await dispatch(mockReqReportStatus);
+        const reportStatusData = outMockReportStatus?.data?.value?.length > 0 ? outMockReportStatus.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> TESTING_REPORT_STATUS
+        const orderToReportStatusMap = {};
+        reportStatusData.forEach(item => {
+            orderToReportStatusMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 8: Recupero SENT_TO_INSTALLATION per tutti gli ordini
+        const filterSentToInstallation = `(DATA_FIELD eq 'SENT_TO_INSTALLATION' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqSentToInstallation = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterSentToInstallation})` },
+            method: "GET"
+        };
+        const outMockSentToInstallation = await dispatch(mockReqSentToInstallation);
+        const sentToInstallationData = outMockSentToInstallation?.data?.value?.length > 0 ? outMockSentToInstallation.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> SENT_TO_INSTALLATION
+        const orderToSentToInstallationMap = {};
+        sentToInstallationData.forEach(item => {
+            orderToSentToInstallationMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 9: Costruisco i risultati finali
+        const results = [];
+        
+        for (const sfcItem of sfcData) {
+            const order = sfcItem.MFG_ORDER;
+            const sfcValue = sfcItem.SFC || '';
+            const projectValue = orderToProjectMap[order] || '';
+            const coValue = orderToCoMap[order] || '';
+            const customerValue = orderToCustomerMap[order] || '';
+            const sfcStatus = sfcItem.STATUS || '';
+            const reportStatusValue = orderToReportStatusMap[order] || '';
+            const sentToInstallationValue = orderToSentToInstallationMap[order] || '';
+            
+            // Applico i filtri dell'utente
+            if (project && project !== '' && projectValue !== project) continue;
+            if (sfc && sfc !== '' && sfcValue !== sfc) continue;
+            if (co && co !== '' && coValue !== co) continue;
+            if (customer && customer !== '' && customerValue !== customer) continue;
+            
+            // Filtro per sentToInstallation (se specificato)
+            if (sentToInstallation !== undefined && sentToInstallation !== null) {
+                const isSentToInstallation = sentToInstallationValue === 'true' || sentToInstallationValue === true;
+                if (sentToInstallation && !isSentToInstallation) continue;
+                if (!sentToInstallation && isSentToInstallation) continue;
+            }
+            
+            // Filtro per showAll (TESTING_REPORT_STATUS)
+            if (showAll === false || showAll === 'false') {
+                if (reportStatusValue === 'DONE') continue;
+            }
+            
+            // Aggiungo la riga al risultato
+            results.push({
+                project: projectValue,
+                sfc: sfcValue,
+                co: coValue,
+                customer: customerValue,
+                sfcStatus: sfcStatus,
+                sentToInstallation: sentToInstallationValue === 'true' || sentToInstallationValue === true,
+                reportStatus: reportStatusValue,
+                order: order
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        console.error("Error in getFinalCollaudoData:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la tabella Safety Approval con filtri opzionali
+async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate, showAll) {
+    try {
+        // Step 1: Recupero tutti i commenti di tipo 'M' dalla tabella Z_COMMENTS
+        const commentsData = await getSafetyApprovalCommentsData(plant);
+        
+        if (!commentsData || commentsData.length === 0) {
+            return [];
+        }
+        
+        // Step 2: Filtro per status se showAll è false
+        let filteredComments = [...commentsData];
+        if (showAll === false || showAll === 'false') {
+            filteredComments = filteredComments.filter(comment => comment.status === 'Waiting');
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 3: Filtro per SFC se presente
+        if (sfc && sfc !== '') {
+            filteredComments = filteredComments.filter(comment => comment.sfc === sfc);
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 4: Filtro per date range se presente con gestione fuso orario italiano
+        if (startDate && startDate !== '') {
+            filteredComments = filteredComments.filter(comment => {
+                if (!comment.datetime) return false;
+                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
+                const [datePart, timePart] = comment.datetime.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
+                const start = new Date(startDate);
+                return commentDate >= start;
+            });
+        }
+        
+        if (endDate && endDate !== '') {
+            filteredComments = filteredComments.filter(comment => {
+                if (!comment.datetime) return false;
+                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
+                const [datePart, timePart] = comment.datetime.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
+                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
+                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
+                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
+                const end = new Date(endDate);
+                return commentDate <= end;
+            });
+        }
+        
+        if (filteredComments.length === 0) {
+            return [];
+        }
+        
+        // Step 5: Recupero gli MFG_ORDER per gli SFC dei commenti filtrati
+        const sfcList = [...new Set(filteredComments.map(c => c.sfc).filter(s => s))];
+        const sfcFilter = sfcList.map(s => `SFC eq '${s}'`).join(' or ');
+        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        // Creo una mappa SFC -> MFG_ORDER
+        const sfcToOrderMap = {};
+        sfcData.forEach(item => {
+            sfcToOrderMap[item.SFC] = item.MFG_ORDER;
+        });
+        
+        // Step 6: Recupero COMMESSA e CO per tutti gli ordini
+        const ordersList = [...new Set(sfcData.map(item => item.MFG_ORDER).filter(order => order))];
+        
+        if (ordersList.length === 0) {
+            return [];
+        }
+        
+        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
+        
+        // Recupero COMMESSA
+        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqProject = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterProject})` },
+            method: "GET"
+        };
+        const outMockProject = await dispatch(mockReqProject);
+        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> COMMESSA
+        const orderToProjectMap = {};
+        projectsData.forEach(item => {
+            orderToProjectMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Recupero CO
+        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const mockReqCO = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCO})` },
+            method: "GET"
+        };
+        const outMockCO = await dispatch(mockReqCO);
+        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
+        
+        // Creo mappa MFG_ORDER -> CO
+        const orderToCoMap = {};
+        cosData.forEach(item => {
+            orderToCoMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+        });
+        
+        // Step 7: Costruisco i risultati finali
+        const results = [];
+        
+        for (const comment of filteredComments) {
+            const order = sfcToOrderMap[comment.sfc] || '';
+            const projectValue = orderToProjectMap[order] || '';
+            const coValue = orderToCoMap[order] || '';
+            
+            // Applico i filtri rimanenti
+            if (project && project !== '' && projectValue !== project) continue;
+            if (co && co !== '' && coValue !== co) continue;
+            
+            // Aggiungo la riga al risultato
+            results.push({
+                project: projectValue,
+                sfc: comment.sfc || '',
+                id_lev_2: comment.id_lev_2 || '',
+                co: coValue,
+                macroActivity: comment.id_lev_2 || '',
+                machineType: comment.machine_type || '',
+                user: comment.user || '',
+                datetime: comment.datetime || '',
+                comment: comment.comment || '',
+                status: comment.status || ''
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        console.error("Error in getSafetyApprovalData:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la tabella del Verbal Management con filtri opzionali
+async function getVerbalManagementTable(plant, project, co, order, customer, showAll) {
+    try {
+        // Step 1: Recupero tutti i verbali di collaudo con PHASE='TESTING'
+        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
+        const mockReqPhase = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterPhase})` },
+            method: "GET"
+        };
+        const outMockPhase = await dispatch(mockReqPhase);
+        const ordersPhase = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
+        
+        if (ordersPhase.length === 0) {
+            return [];
+        }
+
+        // Step 2: Filtrare per verbali attivi e applicare filtro showAll
+        const ordersList = ordersPhase.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        
+        // Costruisco il filtro per RELEASE_STATUS in base a showAll
+        let releaseStatusFilter = '';
+        if (showAll === false || showAll === 'false') {
+            releaseStatusFilter = `RELEASE_STATUS eq 'RELEASABLE'`;
+        } else {
+            releaseStatusFilter = `(RELEASE_STATUS eq 'RELEASABLE' or RELEASE_STATUS eq 'RELEASED')`;
+        }
+        
+        const filterActive = `(PLANT eq '${plant}' AND (EXECUTION_STATUS eq 'ACTIVE' or EXECUTION_STATUS eq 'NOT_IN_EXECUTION') AND ${releaseStatusFilter} AND (${ordersList}))`;
+        const mockReqActive = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterActive})` },
+            method: "GET"
+        };
+        const outMockActive = await dispatch(mockReqActive);
+        let activeOrders = outMockActive?.data?.value?.length > 0 ? outMockActive.data.value : [];
+        
+        if (activeOrders.length === 0) {
+            return [];
+        }
+
+        // Step 3: Applicare i filtri opzionali dell'utente
+        // Creo un array di ordini filtrati
+        let filteredOrders = [...activeOrders];
+        
+        // Filtro per Order specifico se presente (contains)
+        if (order && order !== '') {
+            filteredOrders = filteredOrders.filter(o => o.MFG_ORDER && o.MFG_ORDER.toUpperCase().includes(order.toUpperCase()));
+        }
+        
+        if (filteredOrders.length === 0) {
+            return [];
+        }
+
+        // Recupero tutti i custom data per gli ordini filtrati
+        const filteredOrdersList = filteredOrders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
+        
+        // Recupero i dati custom (COMMESSA, CO, CUSTOMER) per tutti gli ordini
+        const filterCustomData = `(PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (DATA_FIELD eq 'COMMESSA' or DATA_FIELD eq 'CO' or DATA_FIELD eq 'CUSTOMER') AND (${filteredOrdersList}))`;
+        const mockReqCustomData = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${filterCustomData})` },
+            method: "GET"
+        };
+        const outMockCustomData = await dispatch(mockReqCustomData);
+        const customDataList = outMockCustomData?.data?.value?.length > 0 ? outMockCustomData.data.value : [];
+        
+        // Recupero gli SFC per tutti gli ordini
+        const filterSFC = `(PLANT eq '${plant}' AND (${filteredOrdersList}))`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcList = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
+        
+        // Step 4: Costruisco i risultati finali
+        const results = [];
+        
+        for (const orderData of filteredOrders) {
+            const mfgOrder = orderData.MFG_ORDER;
+            
+            // Estraggo i custom data per questo ordine
+            const orderCustomData = customDataList.filter(cd => cd.MFG_ORDER === mfgOrder);
+            const projectValue = orderCustomData.find(cd => cd.DATA_FIELD === 'COMMESSA')?.DATA_FIELD_VALUE || '';
+            const coValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CO')?.DATA_FIELD_VALUE || '';
+            const customerValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CUSTOMER')?.DATA_FIELD_VALUE || '';
+            
+            // Applico i filtri opzionali (contains, case-insensitive)
+            if (project && project !== '' && !projectValue.toUpperCase().includes(project.toUpperCase())) continue;
+            if (co && co !== '' && !coValue.toUpperCase().includes(co.toUpperCase())) continue;
+            if (customer && customer !== '' && !customerValue.toUpperCase().includes(customer.toUpperCase())) continue;
+            
+            // Estraggo l'SFC per questo ordine
+            const sfcValue = sfcList.find(sfc => sfc.MFG_ORDER === mfgOrder)?.SFC || '';
+            
+            // Aggiungo la riga al risultato
+            results.push({
+                project: projectValue,
+                sfc: sfcValue,
+                order: mfgOrder,
+                co: coValue,
+                customer: customerValue,
+                status: orderData.RELEASE_STATUS || ''
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        console.error("Error in getVerbalManagementTable:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la TreeTable del Verbal Management Detail
+async function getVerbalManagementTreeTable(plant, order) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere ROUTING, ROUTING_VERSION e ROUTING_TYPE
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            return [];
+        }
+        
+        const routing = orderData.ROUTING;
+        const routingVersion = orderData.ROUTING_VERSION;
+        const routingType = orderData.ROUTING_TYPE;
+        
+        // Step 2: Chiamata API per recuperare i Routing Steps
+        const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+        const routingResponse = await callGet(urlRouting);
+        const routingSteps = routingResponse[0]?.routingSteps || [];
+        
+        // Step 3: Recupero i dati di livello 2 dalla tabella Z_VERBALE_LEV2
+        const lev2Data = await getVerbaleLev2ByOrder(order, plant);
+        
+        // Step 4: Recupero i dati di livello 3 dalla tabella Z_VERBALE_LEV3
+        const lev3Data = await getVerbaleLev3ByOrder(order, plant);
+        
+        // Step 5: Costruisco la TreeTable
+        const treeTable = [];
+        
+        for (const step of routingSteps) {
+            const stepId = step.stepId;
+            const description = step.description || '';
+            const operationActivity = step.routingOperation?.operationActivity?.operationActivity || '';
+            const workCenter = step.workCenter?.workCenter || '';
+            
+            // Verifica se è una duplicazione controllando se l'operationActivity contiene un suffisso _1, _2, etc.
+            const isDuplicate = /_\d+$/.test(operationActivity);
+            
+            // Livello 1
+            const level1Node = {
+                level: 1,
+                stepId: stepId,
+                workcenter: workCenter,
+                description: description,
+                operationActivity: operationActivity,
+                __isDuplicate: isDuplicate,
+                _original: {
+                    workcenter: workCenter,
+                    safety: false,
+                    active: false
+                },
+                children: []
+            };
+            
+            // Filtra i dati di livello 2 che corrispondono a questo operationActivity (ID_Lev1)
+            const matchingLev2 = lev2Data.filter(l2 => l2.id_lev_1 === stepId);
+            
+            for (const lev2 of matchingLev2) {
+                // Livello 2
+                const level2Node = {
+                    level: 2,
+                    description: lev2.lev_2 || '',
+                    machineType: lev2.machine_type || '',
+                    workcenter: lev2.workcenter_lev_2 || '',
+                    safety: lev2.safety != null ? lev2.safety : false,
+                    active: lev2.active != null ? lev2.active : false,
+                    idLev2: lev2.id_lev_2,
+                    _original: {
+                        workcenter: lev2.workcenter_lev_2 || '',
+                        safety: lev2.safety != null ? lev2.safety : false,
+                        active: lev2.active != null ? lev2.active : false
+                    },
+                    children: []
+                };
+                
+                // Filtra i dati di livello 3 che corrispondono a questo ID_Lev2
+                const matchingLev3 = lev3Data.filter(l3 => l3.id_lev_2 === lev2.id_lev_2 && l3.id_lev_1 === stepId);
+                
+                for (const lev3 of matchingLev3) {
+                    // Livello 3
+                    const level3Node = {
+                        level: 3,
+                        description: lev3.lev_3 || '',
+                        idLev3: lev3.id_lev_3
+                    };
+                    
+                    level2Node.children.push(level3Node);
+                }
+                
+                level1Node.children.push(level2Node);
+            }
+            
+            treeTable.push(level1Node);
+        }
+        
+        return treeTable;
+    } catch (error) {
+        console.error("Error in getVerbalManagementTreeTable:", error);
+        return false;
+    }
+}
+
+// Funzione per salvare le modifiche alla TreeTable del Verbal Management
+async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere ROUTING, ROUTING_VERSION e ROUTING_TYPE
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            throw new Error("Order not found");
+        }
+        
+        const routing = orderData.ROUTING;
+        const routingVersion = orderData.ROUTING_VERSION;
+        const routingType = orderData.ROUTING_TYPE;
+        
+        // Step 2: Modifica WC livello 1 - Aggiornare il routing tramite API PUT
+        if (level1Changes && level1Changes.length > 0) {
+            // Recupero il routing completo
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            // Modifico i workCenter per gli stepId specificati
+            for (const change of level1Changes) {
+                const step = routingResponse[0].routingSteps?.find(s => s.stepId === change.stepId);
+                if (step) {
+                    // Aggiorno il workcenter
+                    if (!step.workCenter) {
+                        step.workCenter = {};
+                    }
+                    step.workCenter.workCenter = change.workcenter;
+                }
+            }
+            
+            // Salvo il routing aggiornato tramite PUT
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+        }
+        
+        // Step 3: Modifica livello 2 - Aggiornare la tabella Z_VERBALE_LEV2
+        if (level2Changes && level2Changes.length > 0) {
+            for (const change of level2Changes) {
+                // Aggiorno solo i campi specificati (workcenter, safety, active)
+                await updateVerbaleLev2(
+                    plant,
+                    change.idLev2,
+                    change.workcenter !== undefined ? change.workcenter : null,
+                    change.safety !== undefined ? change.safety : null,
+                    change.active !== undefined ? change.active : null
+                );
+            }
+        }
+        
+        // Step 4: Gestione duplicazioni livello 1 (operationActivity e routing)
+        if (newLevel1 && newLevel1.length > 0) {
+            // Recupero il routing completo per le duplicazioni
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            for (const duplication of newLevel1) {
+                const { originalStepId, stepId, originalOperationActivity, operationActivity, workcenter, description } = duplication;
+                
+                // Verifica se l'operationActivity esiste già
+                const urlCheckOperation = `${hostname}/operationActivity/v1/operationActivities?plant=${plant}&operation=${operationActivity}`;
+            
+                const operationCheck = await callGet(urlCheckOperation);
+                // Se non esiste, la creo duplicando quella originale
+                if (!operationCheck || (operationCheck.empty === true) || (operationCheck.content.length === 0)) {
+                    const urlGetOriginalOperation = `${hostname}/operationActivity/v1/operationActivities?plant=${plant}&operation=${originalOperationActivity}`;
+                    const originalOperationData = await callGet(urlGetOriginalOperation);
+                    if (originalOperationData && originalOperationData.content.length > 0) {
+                        const newOperationData = JSON.parse(JSON.stringify(originalOperationData.content[0]));
+                        newOperationData.operation = operationActivity;
+                        if (description) {
+                            newOperationData.description = description;
+                        }
+                        
+                        const urlPutOperation = `${hostname}/operationActivity/v1/operationActivities`;
+                        await callPost(urlPutOperation, [newOperationData]);
+                    }
+                }
+                
+                // Duplica il routingStep nel routing
+                const originalStep = routingResponse[0].routingSteps?.find(s => s.stepId === originalStepId);
+                if (originalStep) {
+                    const newStep = JSON.parse(JSON.stringify(originalStep));
+                    newStep.stepId = stepId;
+                    newStep.entry = false;
+                    newStep.routingOperation.operationActivity.operationActivity = operationActivity;
+                    newStep.description = description || originalStep.description;
+                    if (workcenter) {
+                        if (!newStep.workCenter) {
+                            newStep.workCenter = {};
+                        }
+                        newStep.workCenter.workCenter = workcenter;
+                    }
+                    
+                    // Inserisco il nuovo step nella lista routingSteps
+                    routingResponse[0].routingSteps.push(newStep);
+                }
+
+                // Duplica il routingOperationGroups nel routing
+                const originalOperationGroups = routingResponse[0].routingOperationGroups?.find(s => s.routingOperationGroup === originalOperationActivity);
+                if (originalOperationGroups) {
+                    const newStepOpGrouup = JSON.parse(JSON.stringify(originalOperationGroups));
+                    newStepOpGrouup.routingOperationGroup = operationActivity;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.stepId = stepId;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.description = description;
+                    newStepOpGrouup.routingOperationGroupSteps[0].routingStep.routingOperation.operationActivity.operationActivity = operationActivity;
+                    if (workcenter) {
+                        newStepOpGrouup.routingOperationGroupSteps[0].routingStep.workCenter.workCenter = workcenter;
+                    }
+                    // Inserisco il nuovo step nella lista routingSteps
+                    routingResponse[0].routingOperationGroups.push(newStepOpGrouup);
+                }
+                // Duplica anche il marking recap se esiste
+                await duplicateMarkingRecap(plant, order, operationActivity, description, originalOperationActivity);
+            }
+            // Salvo il routing aggiornato con i nuovi step
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+            
+        }
+        
+        // Step 5: Duplicazione livello 2
+        if (newLevel2 && newLevel2.length > 0) {
+            for (const duplication of newLevel2) {
+                const { originalStepId, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = duplication;
+                
+                await duplicateVerbaleLev2(
+                    order,
+                    plant,
+                    stepId,
+                    suffix,
+                    safety !== undefined ? safety : null,
+                    workcenter !== undefined ? workcenter : null,
+                    active !== undefined ? active : null,
+                    originalStepId
+                );
+            }
+        }
+        
+        // Step 6: Duplicazione livello 3
+        if (newLevel3 && newLevel3.length > 0) {
+            for (const duplication of newLevel3) {
+                const { newStepId, suffix, originalLev2Id } = duplication;
+                
+                await duplicateVerbaleLev3(
+                    order,
+                    plant,
+                    newStepId,
+                    suffix,
+                    originalLev2Id
+                );
+            }
+        }
+        
+        // Step 7: Eliminazione livello 1 (operationActivity e routing)
+        if (deletedLevel1 && deletedLevel1.length > 0) {
+            // Recupero il routing completo per le eliminazioni
+            const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+            const routingResponse = await callGet(urlRouting);
+            
+            if (!routingResponse[0]) {
+                throw new Error("Routing not found");
+            }
+            
+            for (const deletion of deletedLevel1) {
+                const { stepId, operationActivity } = deletion;
+                
+                // Rimuovo lo step dal routing
+                // Rimuovo da routingSteps
+                routingResponse[0].routingSteps = routingResponse[0].routingSteps?.filter(s => s.stepId !== stepId) || [];
+                
+                // Rimuovo da routingStepGroups se presente
+                if (routingResponse[0].routingStepGroups) {
+                    routingResponse[0].routingStepGroups.forEach(group => {
+                        if (group.routingStepGroupStepList) {
+                            group.routingStepGroupStepList = group.routingStepGroupStepList.filter(step => step.routingStep !== stepId);
+                        }
+                    });
+                }
+                
+                // Rimuovo da routingOperationGroups
+                if (routingResponse[0].routingOperationGroups) {
+                    routingResponse[0].routingOperationGroups = routingResponse[0].routingOperationGroups.filter(
+                        opGroup => opGroup.routingOperationGroup !== operationActivity
+                    );
+                }
+                
+                // Elimino le righe dal database
+                await deleteVerbaleLev3(order, plant, stepId); // Prima elimino lev3 per rispettare le foreign key
+                await deleteVerbaleLev2(order, plant, stepId);
+                await deleteMarkingRecap(plant, order, operationActivity);
+            }
+            
+            // Salvo il routing aggiornato senza gli step eliminati
+            const urlPutRouting = `${hostname}/routing/v1/routings`;
+            await callPut(urlPutRouting, routingResponse);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error("Error in saveVerbalManagementTreeTableChanges:", error);
+        throw error;
+    }
+}
+
+// Funzione per rilasciare il verbale
+async function releaseVerbalManagement(plant, order) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere il ROUTING
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            throw new Error("Order not found");
+        }
+        
+        const routing = orderData.ROUTING;
+        
+        // Step 2: Aggiorno il routing chiamando doUpdateNoMachRouting
+        await updateRoutingForReleaseUtility(plant, routing);
+        
+        // Step 3: Rilascio l'ordine
+        const urlRelease = `${hostname}/order/v2/orders/release`;
+        const releaseBody = {
+            order: order,
+            plant: plant
+        };
+        await callPost(urlRelease, releaseBody);
+        
+        return true;
+    } catch (error) {
+        console.error("Error in releaseVerbalManagement:", error);
+        throw error;
+    }
+}
+
+// Funzione per approvare la safety approval
+async function doSafetyApproval(plant, sfc, idLev2, machineType, user) {
+    try {
+        // Step 1: Aggiorno Z_COMMENTS con status = 'Approved', approval_user e approval_datetime
+        await updateCommentApprovalStatus(plant, sfc, idLev2, user);
+        
+        // Step 2: Sblocco la riga corrente in Z_VERBALE_LEV2
+        await unblockVerbaleLev2(plant, sfc, idLev2, machineType);
+        
+        // Step 3: Recupero tutte le righe successive ordinate per ID_LEV2 crescente
+        const allRows = await getVerbaleLev2ToUnblock(plant, sfc, machineType);
+        
+        // Trovo l'indice della riga corrente
+        const currentIndex = allRows.findIndex(row => row.id_lev_2 === idLev2);
+        
+        if (currentIndex === -1) {
+            throw new Error("Current row not found in Z_VERBALE_LEV2");
+        }
+        
+        // Step 4: Itero sulle righe successive
+        for (let i = currentIndex + 1; i < allRows.length; i++) {
+            const row = allRows[i];
+            
+            // Se safety = false, sblocco la riga
+            if (row.safety === false || row.safety === null) {
+                await unblockVerbaleLev2(plant, sfc, row.id_lev_2, machineType);
+            } else if (row.safety === true) {
+                // Se safety = true, interrompo la ricerca
+                break;
+            }
+        }
+        
+        return true;
+    } catch (error) {
+        console.error("Error in doSafetyApproval:", error);
+        throw error;
+    }
+}
+
+// Funzione per cancellare/respingere la safety approval
+async function doCancelSafety(plant, sfc, idLev2, user) {
+    try {
+        // Aggiorno Z_COMMENTS con status = 'Not Approved', approval_user e approval_datetime
+        await updateCommentCancelStatus(plant, sfc, idLev2, user);
+        
+        return true;
+    } catch (error) {
+        console.error("Error in doCancelSafety:", error);
+        throw error;
+    }
+}
+
+async function getActivitiesTestingData(plant, project) {
+    try {
+        // Step 1: Recupero SFC dalla tabella ORDER_CUSTOM_DATA con COMMESSA = project
+        const orderFilter = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and IS_DELETED eq 'false')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${orderFilter})` },
+            method: "GET"
+        };
+        const orderResult = await dispatch(mockReqOrder);
+        const orders = (orderResult?.data?.value && orderResult.data.value.length > 0) 
+            ? orderResult.data.value.map(item => item.MFG_ORDER) 
+            : [];
+
+        if (orders.length === 0) {
+            return [];
+        }
+
+        // Step 2: Recupero SFC dagli ordini
+        const sfcs = [];
+        for (const order of orders) {
+            try {
+                const orderUrl = `${hostname}/order/v1/orders?order=${order}&plant=${plant}`;
+                const orderResponse = await callGet(orderUrl);
+                if (orderResponse?.sfcs && orderResponse.sfcs.length > 0) {
+                    sfcs.push(...orderResponse.sfcs);
+                }
+            } catch (error) {
+                console.log(`Error fetching SFC for order ${order}: ${error.message}`);
+            }
+        }
+
+        if (sfcs.length === 0) {
+            return [];
+        }
+
+        // Step 3: Recupero activities da z_verbale_lev_2 con status != 'Done' e active = true
+        const activities = await getActivitiesTesting(plant, sfcs);
+
+        if (activities.length === 0) {
+            return [];
+        }
+
+        // Step 4: Creo tree table raggruppata per id_lev_1 (macrofase)
+        const treeTable = [];
+        
+        for (const activity of activities) {
+            // Elemento figlio (dettaglio) - livello 2
+            const child = {
+                level: 2,
+                id_lev_2: activity.id_lev_2 || "",
+                macroattivita: activity.lev_2 || "",
+                progressivo: activity.id_lev_2 || "",
+                workcenter: activity.workcenter_lev_2 || "",
+                machine_type: activity.machine_type || "",
+                status: activity.status_lev_2 || "",
+                safety: activity.safety || false,
+                owner: activity.owner || "", // nuova colonna
+                due_date: activity.due_date || "", // nuova colonna
+                sfc: activity.sfc || "",
+                order: activity.order || ""
+            };
+
+            // Cerco se esiste già il gruppo parent per id_lev_1
+            const existingGroup = treeTable.find(item => item.id_lev_1 === activity.id_lev_1);
+            
+            if (!existingGroup) {
+                // Creo nuovo gruppo parent - livello 1
+                treeTable.push({
+                    level: 1,
+                    id_lev_1: activity.id_lev_1 || "",
+                    macrofase: activity.lev_1 || "",
+                    children: [child]
+                });
+            } else {
+                // Aggiungo al gruppo esistente
+                existingGroup.children.push(child);
+            }
+        }
+
+        return treeTable;
+
+    } catch (error) {
+        console.error("Error in getActivitiesTestingData:", error);
+        return false;
+    }
+}
+
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData };

@@ -1,6 +1,6 @@
 const { updateStatusModifica, updateStatusModificaMA, getAllModificaMA } = require("../../postgres-db/services/modifiche/library");
 const { getOrderInfoByOrder } = require("../../../utility/CommonFunction");
-const { sendModificaToSAP } = require("./library");
+const { sendModificaToSAP, getModificheTestingData } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -63,6 +63,29 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per recuperare modifiche Testing in formato tree table
+    app.post("/api/getModificheTesting", async (req, res) => {
+        try {
+            const { plant, project } = req.body;
+            if (!plant || !project) {
+                return res.status(400).json({ error: "Missing required parameters: plant, project" });
+            }
+
+            const result = await getModificheTestingData(plant, project);
+            
+            if (result === false) {
+                return res.status(500).json({ error: "Error retrieving modifiche testing data" });
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in getModificheTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

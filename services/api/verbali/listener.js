@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche } = require("./library");
+const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -27,6 +27,40 @@ module.exports.listenerSetup = (app) => {
         try {
             const { plant } = req.body;
             const projects = await getProjectsVerbaliSupervisoreAssembly(plant);
+            if (projects === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(projects);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+
+    app.post("/api/getVerbaliTileSupervisoreTesting", async (req, res) => {
+        try {
+            const { plant, project, wbs, startDate, endDate } = req.body;
+            const verbali = await getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, endDate);
+            if (verbali === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(verbali);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+    
+    // Endpoint per ottenere i progetti per filtro su supervisore assembly
+    app.post("/api/getProjectsVerbaliTileSupervisoreTesting", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const projects = await getProjectsVerbaliTileSupervisoreTesting(plant);
             if (projects === false) {
                 res.status(500).json({ error: "Error while executing query" });
                 return;
@@ -77,6 +111,177 @@ module.exports.listenerSetup = (app) => {
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per ottenere i filtri per Verbal Management
+    app.post("/api/getFilterVerbalManagement", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterVerbalManagement(plant);
+            if (filters === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per popolare la tabella del Verbal Management con filtri opzionali
+    app.post("/api/getVerbalManagementTable", async (req, res) => {
+        try {
+            const { plant, project, co, order, customer, showAll } = req.body;
+            const tableData = await getVerbalManagementTable(plant, project, co, order, customer, showAll);
+            if (tableData === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(tableData);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per popolare la TreeTable del Verbal Management Detail
+    app.post("/api/getVerbalManagementTreeTable", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            const treeTableData = await getVerbalManagementTreeTable(plant, order);
+            if (treeTableData === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(treeTableData);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per salvare le modifiche alla TreeTable del Verbal Management
+    app.post("/api/saveVerbalManagementTreeTableChanges", async (req, res) => {
+        try {
+            const { plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1 } = req.body;
+            await saveVerbalManagementTreeTableChanges(plant, order, level1Changes, level2Changes, newLevel1, newLevel2, newLevel3, deletedLevel1);
+            res.status(200).json({ message: "Changes saved successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/releaseVerbalManagement", async (req, res) => {
+        try {
+            const { plant, order } = req.body;
+            await releaseVerbalManagement(plant, order);
+            res.status(200).json({ message: "Verbal released successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFilterSafetyApproval", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterSafetyApproval(plant);
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getSafetyApprovalData", async (req, res) => {
+        try {
+            const { plant, project, sfc, co, startDate, endDate, showAll } = req.body;
+            const data = await getSafetyApprovalData(plant, project, sfc, co, startDate, endDate, showAll);
+            res.status(200).json(data);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/doSafetyApproval", async (req, res) => {
+        try {
+            const { plant, sfc, idLev2, machineType, user } = req.body;
+            const result = await doSafetyApproval(plant, sfc, idLev2, machineType, user);
+            res.status(200).json({ success: result });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/doCancelSafety", async (req, res) => {
+        try {
+            const { plant, sfc, idLev2, user } = req.body;
+            const result = await doCancelSafety(plant, sfc, idLev2, user);
+            res.status(200).json({ success: result });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFilterFinalCollaudo", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const filters = await getFilterFinalCollaudo(plant);
+            res.status(200).json(filters);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getFinalCollaudoData", async (req, res) => {
+        try {
+            const { plant, project, sfc, co, customer, showAll, sentToInstallation } = req.body;
+            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation);
+            res.status(200).json(data);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per recuperare activities Testing in formato tree table
+    app.post("/api/getActivitiesTesting", async (req, res) => {
+        try {
+            const { plant, project } = req.body;
+            if (!plant || !project) {
+                return res.status(400).json({ error: "Missing required parameters: plant, project" });
+            }
+
+            const result = await getActivitiesTestingData(plant, project);
+            
+            if (result === false) {
+                return res.status(500).json({ error: "Error retrieving activities testing data" });
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in getActivitiesTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

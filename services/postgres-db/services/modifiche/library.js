@@ -166,4 +166,9 @@ async function updateModificheToTesting(plant, wbe, section, project){
     await postgresdbService.executeQuery(queryModifiche.updateModificheToTestingQuery, [plant, wbe, section, project]);
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting };
+async function getModificheTestingByOrders(plant, project){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheTestingByOrdersQuery, [plant, project]);
+    return data;
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders };

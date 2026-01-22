@@ -234,5 +234,102 @@ async function ordersChildrenRecursion(plant, order) {
     return ordersToCheck;
 }
 
+// Recupero livello 2 per ordine
+async function getVerbaleLev2ByOrder(order, plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByOrder, [order, plant]);
+    return data;
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion }
+// Recupero livello 3 per ordine
+async function getVerbaleLev3ByOrder(order, plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev3ByOrder, [order, plant]);
+    return data;
+}
+
+// Update level 2 fields (workcenter, safety, active)
+async function updateVerbaleLev2(plant, idLev2, workcenter, safety, active) {
+    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Fields, [plant, idLev2, workcenter, safety, active]);
+}
+
+// Duplicate level 2 by stepId
+async function duplicateVerbaleLev2(order, plant, newStepId, suffix, safety, workcenter, active, originalStepId) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev2ByStepId, [order, plant, newStepId, suffix, safety, workcenter, active, originalStepId]);
+}
+
+// Duplicate level 3 by lev2 id
+async function duplicateVerbaleLev3(order, plant, newStepId, suffix, originalLev2Id) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev3ByLev2Ids, [order, plant, newStepId, suffix, originalLev2Id]);
+}
+
+// Duplicate marking recap
+async function duplicateMarkingRecap(plant, order, newOperation, newOperationDescritption, originalOperation) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateMarkingRecap, [plant, order, newOperation, newOperationDescritption, originalOperation]);
+}
+
+// Delete level 2 by stepId
+async function deleteVerbaleLev2(order, plant, stepId) {
+    await postgresdbService.executeQuery(queryVerbali.deleteVerbaleLev2ByStepId, [order, plant, stepId]);
+}
+
+// Delete level 3 by stepId
+async function deleteVerbaleLev3(order, plant, stepId) {
+    await postgresdbService.executeQuery(queryVerbali.deleteVerbaleLev3ByStepId, [order, plant, stepId]);
+}
+
+// Delete marking recap by operation
+async function deleteMarkingRecap(plant, order, operation) {
+    await postgresdbService.executeQuery(queryVerbali.deleteMarkingRecapByOperation, [plant, order, operation]);
+}
+
+// Get SFC from comments for safety approval
+async function getSfcFromComments(plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getSfcFromCommentsSafetyApproval, [plant]);
+    return data;
+}
+
+// Get safety approval comments data
+async function getSafetyApprovalCommentsData(plant) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getSafetyApprovalComments, [plant]);
+    return data;
+}
+
+// Update comment approval
+async function updateCommentApprovalStatus(plant, sfc, idLev2, user) {
+    await postgresdbService.executeQuery(queryVerbali.updateCommentApproval, [plant, sfc, idLev2, user]);
+}
+
+// Update comment cancel
+async function updateCommentCancelStatus(plant, sfc, idLev2, user) {
+    await postgresdbService.executeQuery(queryVerbali.updateCommentCancel, [plant, sfc, idLev2, user]);
+}
+
+// Unblock verbale lev2
+async function unblockVerbaleLev2(plant, sfc, idLev2, machineType) {
+    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Unblock, [plant, sfc, idLev2, machineType]);
+}
+
+// Get verbale lev2 for unblocking
+async function getVerbaleLev2ToUnblock(plant, sfc, machineType) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ForUnblocking, [plant, sfc, machineType]);
+    return data;
+}
+
+// Get report weight sections
+async function getReportWeightSectionsData(report) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getReportWeightSections, [report]);
+    return data;
+}
+
+// Get report weight by ID and report
+async function getReportWeightData(report, id) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getReportWeightByIdAndReport, [report, id]);
+    return data;
+}
+
+async function getActivitiesTesting(plant, sfcs) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getActivitiesTestingQuery, [plant, sfcs]);
+    return data;
+}
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting };

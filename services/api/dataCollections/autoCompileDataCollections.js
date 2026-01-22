@@ -4,6 +4,7 @@ const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memo
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getTotalQuantityFromOrders } = require("../../postgres-db/services/mancanti/library");
 const { getModificheToDataCollections } = require("../../postgres-db/services/modifiche/library");
+const { getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder } = require("../../postgres-db/services/marking/library");
 const { ref } = require("pdfkit");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -62,6 +63,40 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     }
     return data;
 }
+
+async function autoCompileFieldsDataCollectionTestingdDispatcher(plant, data, parametriAuto, selected, refresh) {
+    for (var i = 0; i < parametriAuto.length; i++) {
+        var numParametro = parametriAuto[i].parametro;
+        var group = parametriAuto[i].group;
+        var parameterName = parametriAuto[i].parameterName;
+        // switch sulla funzione da chiamare
+        switch (numParametro) {
+            case "0":
+                data = await ruleParameter0Testing(data, group, parameterName, selected, refresh);
+                break;
+            case "1":
+                data = await ruleParameter1Testing(data, group, parameterName, selected, refresh);
+                break;
+            case "2":
+                data = await ruleParameter2Testing(data, group, parameterName, selected, refresh);
+                break;
+            case "3":
+                data = await ruleParameter3Testing(data, group, parameterName, selected, plant, refresh);
+                break;
+            case "4":
+                data = await ruleParameter4Testing(data, group, parameterName, selected, plant, refresh);
+                break;
+            case "5":
+                data = await ruleParameter5Testing(data, group, parameterName, selected, plant, refresh);
+                break;
+            default:
+                // Nessuna azione
+                break;
+        }
+    }
+    return data;
+}
+
 
 async function ruleParameter0(data, group, parameterName, dcData, refresh) {
     if (dcData.length > 0) {
@@ -273,6 +308,174 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
     return data;
 }
 
+
+async function ruleParameter0Testing(data, group, parameterName, selected, refresh) {
+    var co = selected.co;
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                    data[i].parameters[j].valueText = co;
+                }
+            }
+        }
+    }
+    return data;
+}
+async function ruleParameter1Testing(data, group, parameterName, selected, refresh) {
+    var project = selected.project;
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                    data[i].parameters[j].valueText = project;
+                }
+            }
+        }
+    }
+    return data;
+}
+async function ruleParameter2Testing(data, group, parameterName, selected, refresh) {
+    var customer = selected.customer;
+    for (var i = 0; i < data.length; i++) {
+        if (data[i].group === group) {
+            for (var j = 0; j < data[i].parameters.length; j++) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                    data[i].parameters[j].valueText = customer;
+                }
+            }
+        }
+    }
+    return data;
+}
+async function ruleParameter3Testing(data, group, parameterName, selected, plant, refresh) {
+    // Parametro 3 -> Campo Ore Base Line (somma planned_labor da z_marking_testing)
+    try {
+        const order = selected.order || '';
+        
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        
+        // Sommo planned_labor e converto da HCN a ore se necessario
+        let totalHours = 0;
+        for (const marking of markingData) {
+            const plannedLabor = parseFloat(marking.planned_labor || 0);
+            const uom = marking.uom_planned_labor || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += plannedLabor * 60 / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += plannedLabor;
+            }
+        }
+        
+        // Arrotondo a 2 decimali
+        totalHours = Math.round(totalHours * 100) / 100;
+        
+        // Aggiorno i parametri
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].group === group) {
+                for (var j = 0; j < data[i].parameters.length; j++) {
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                        data[i].parameters[j].valueText = totalHours.toString();
+                    }
+                }
+            }
+        }
+        
+        return data;
+    } catch (error) {
+        console.error("Error in ruleParameter3Testing:", error);
+        return data;
+    }
+}
+async function ruleParameter4Testing(data, group, parameterName, selected, plant, refresh) {
+    // Parametro 4 -> Campo Ore consuntivo (somma marked_labor da z_marking_testing)
+    try {
+        const order = selected.order || '';
+        
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        
+        // Sommo marked_labor e converto da HCN a ore se necessario
+        let totalHours = 0;
+        for (const marking of markingData) {
+            const markedLabor = parseFloat(marking.marked_labor || 0);
+            const uom = marking.uom_marked_labor || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += markedLabor * 60 / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += markedLabor;
+            }
+        }
+        
+        // Arrotondo a 2 decimali
+        totalHours = Math.round(totalHours * 100) / 100;
+        
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].group === group) {
+                for (var j = 0; j < data[i].parameters.length; j++) {
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                        data[i].parameters[j].valueText = totalHours.toString();
+                    }
+                }
+            }
+        }
+        
+        return data;
+    } catch (error) {
+        console.error("Error in ruleParameter4Testing:", error);
+        return data;
+    }
+}
+async function ruleParameter5Testing(data, group, parameterName, selected, plant, refresh) {
+    // Parametro 5 -> Campo Ore varianza (somma variance_labor da z_marking_testing)
+    try {
+        const order = selected.order || '';
+        
+        // Recupero dati da z_marking_testing con type="T"
+        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        
+        // Sommo variance_labor e converto da HCN a ore se necessario
+        let totalHours = 0;
+        for (const marking of markingData) {
+            const varianceLabor = parseFloat(marking.variance_labor || 0);
+            const uom = marking.uom_variance || '';
+            
+            if (uom === 'HCN') {
+                // Conversione HCN a ore: diviso per (100 * 60) = 6000
+                totalHours += (varianceLabor * 60) / 100;
+            } else {
+                // Assumo che sia già in ore
+                totalHours += varianceLabor;
+            }
+        }
+        
+        // Arrotondo a 2 decimali
+        totalHours = Math.round(totalHours * 100) / 100;
+        
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].group === group) {
+                for (var j = 0; j < data[i].parameters.length; j++) {
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                        data[i].parameters[j].valueText = totalHours.toString();
+                    }
+                }
+            }
+        }
+        
+        return data;
+    } catch (error) {
+        console.error("Error in ruleParameter5Testing:", error);
+        return data;
+    }
+}
+
 // utils
 // Funzione per estrarre operazioni non concluse
 async function getIncompleteOperations(plant, selected) {
@@ -300,4 +503,4 @@ async function getIncompleteOperations(plant, selected) {
 }
 
 // Esporta la funzione
-module.exports = { autoCompileFieldsDataCollectionDispatcher }
+module.exports = { autoCompileFieldsDataCollectionDispatcher, autoCompileFieldsDataCollectionTestingdDispatcher }

@@ -12,6 +12,11 @@ async function populateZTables(plantValue,orderValue){
     let routing = orderDetail?.routing?.routing;
     let routingType = orderDetail?.routing?.type;
     var customValues = orderDetail?.customValues;
+    let phaseField= customValues.find(obj => obj.attribute == "PHASE");
+    let phaseValue = phaseField ? phaseField.value : "";   
+    if(phaseValue=="TESTING"){
+        return;
+    }
     let projectField = customValues.find(obj => obj.attribute == "COMMESSA");
     let projectValue = projectField?.value || "";
     let wbsField = customValues.find(obj => obj.attribute == "WBE");
