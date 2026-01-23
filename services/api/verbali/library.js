@@ -1347,6 +1347,7 @@ function generateTreeTable(data) {
             material: data[i].material,
             status: data[i].status,
             reportStatus: data[i].reportStatus,
+            idReportWeight: data[i].idReportWeight,
             order: data[i].order,
             assemblyReportDate: data[i].assemblyReportDate || "",
             user: data[i].user || ""
