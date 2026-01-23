@@ -45,7 +45,7 @@ const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev_1, 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
 
 const getSafetyApprovalComments = `SELECT sfc, plant, id_lev_2, machine_type, id_lev_3, "user", comment, status, id_lev_1, wbe,
-    TO_CHAR((datetime AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime
+    TO_CHAR((datetime AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime, approval_comment
     FROM z_comments 
     WHERE plant = $1 AND comment_type = 'M'`;
 
@@ -147,8 +147,16 @@ const deleteVerbaleLev3ByStepId = `DELETE FROM z_verbale_lev_3
 const deleteMarkingRecapByOperation = `DELETE FROM z_marking_recap 
     WHERE plant = $1 AND mes_order = $2 AND operation = $3`;
 
+const duplicateMarkingTesting = `INSERT INTO z_marking_testing (plant, wbs, network, "order", activity_id, id_lev_1, confirmation_number, planned_labor, uom_planned_labor, remaining_labor, variance_labor, uom_variance, "type", uom_marked_labor, uom_remaining_labor, marked_labor)
+    SELECT plant, wbs, network, "order", activity_id, $3, confirmation_number, planned_labor, uom_planned_labor, remaining_labor, variance_labor, uom_variance, "type", uom_marked_labor, uom_remaining_labor, marked_labor
+    FROM z_marking_testing
+    WHERE plant = $1 AND "order" = $2 AND id_lev_1 = $4`;
+
+const deleteMarkingTestingByStepId = `DELETE FROM z_marking_testing 
+    WHERE plant = $1 AND "order" = $2 AND id_lev_1 = $3`;
+
 const updateCommentApproval = `UPDATE z_comments
-    SET status = 'Approved', approval_user = $4, approval_datetime = (current_timestamp AT TIME ZONE 'UTC')
+    SET status = 'Approved', approval_user = $4, approval_datetime = (current_timestamp AT TIME ZONE 'UTC'), approval_comment = $5
     WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3`;
 
 const updateCommentCancel = `UPDATE z_comments
@@ -212,5 +220,5 @@ const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_2
     WHERE plant = $1 AND "order" = $2`;
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, duplicateMarkingTesting, deleteMarkingTestingByStepId, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
     updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery };

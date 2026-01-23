@@ -281,6 +281,16 @@ async function deleteMarkingRecap(plant, order, operation) {
     await postgresdbService.executeQuery(queryVerbali.deleteMarkingRecapByOperation, [plant, order, operation]);
 }
 
+// Duplicate marking testing by stepId
+async function duplicateMarkingTesting(plant, order, newStepId, originalStepId) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateMarkingTesting, [plant, order, newStepId, originalStepId]);
+}
+
+// Delete marking testing by stepId
+async function deleteMarkingTesting(plant, order, stepId) {
+    await postgresdbService.executeQuery(queryVerbali.deleteMarkingTestingByStepId, [plant, order, stepId]);
+}
+
 // Get SFC from comments for safety approval
 async function getSfcFromComments(plant) {
     const data = await postgresdbService.executeQuery(queryVerbali.getSfcFromCommentsSafetyApproval, [plant]);
@@ -294,8 +304,8 @@ async function getSafetyApprovalCommentsData(plant) {
 }
 
 // Update comment approval
-async function updateCommentApprovalStatus(plant, sfc, idLev2, user) {
-    await postgresdbService.executeQuery(queryVerbali.updateCommentApproval, [plant, sfc, idLev2, user]);
+async function updateCommentApprovalStatus(plant, sfc, idLev2, user, comment) {
+    await postgresdbService.executeQuery(queryVerbali.updateCommentApproval, [plant, sfc, idLev2, user, comment]);
 }
 
 // Update comment cancel
@@ -365,4 +375,4 @@ async function updateZverbaleLev2TableWithSfc(plant, order, sfc) {
 
 
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc };
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc };

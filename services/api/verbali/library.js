@@ -1,6 +1,6 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting } = require("../../postgres-db/services/verbali/library");
+const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting } = require("../../postgres-db/services/verbali/library");
 const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
@@ -1992,7 +1992,8 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
                 user: comment.user || '',
                 datetime: comment.datetime || '',
                 comment: comment.comment || '',
-                status: comment.status || ''
+                status: comment.status || '',
+                approval_comment: comment.approval_comment || ''
             });
         }
         
@@ -2354,8 +2355,8 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     // Inserisco il nuovo step nella lista routingSteps
                     routingResponse[0].routingOperationGroups.push(newStepOpGrouup);
                 }
-                // Duplica anche il marking recap se esiste
-                await duplicateMarkingRecap(plant, order, operationActivity, description, originalOperationActivity);
+                // Duplica anche il marking testing se esiste
+                await duplicateMarkingTesting(plant, order, stepId, originalStepId);
             }
             // Salvo il routing aggiornato con i nuovi step
             const urlPutRouting = `${hostname}/routing/v1/routings`;
@@ -2432,7 +2433,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                 // Elimino le righe dal database
                 await deleteVerbaleLev3(order, plant, stepId); // Prima elimino lev3 per rispettare le foreign key
                 await deleteVerbaleLev2(order, plant, stepId);
-                await deleteMarkingRecap(plant, order, operationActivity);
+                await deleteMarkingTesting(plant, order, stepId);
             }
             
             // Salvo il routing aggiornato senza gli step eliminati
@@ -2477,10 +2478,10 @@ async function releaseVerbalManagement(plant, order) {
 }
 
 // Funzione per approvare la safety approval
-async function doSafetyApproval(plant, sfc, idLev2, machineType, user) {
+async function doSafetyApproval(plant, sfc, idLev2, machineType, user, comment) {
     try {
         // Step 1: Aggiorno Z_COMMENTS con status = 'Approved', approval_user e approval_datetime
-        await updateCommentApprovalStatus(plant, sfc, idLev2, user);
+        await updateCommentApprovalStatus(plant, sfc, idLev2, user, comment);
         
         // Step 2: Sblocco la riga corrente in Z_VERBALE_LEV2
         await unblockVerbaleLev2(plant, sfc, idLev2, machineType);
@@ -3115,5 +3116,26 @@ async function generatePdfFineCollaudo(data) {
         throw error;
     }
 }
+
+// Funzione generica per aggiornare un campo custom di un ordine
+async function updateCustomField(plant, order, customField, customValue) {
+    try {
+        const url = hostname + "/order/v1/orders/customValues";
+        const customValues = [
+            { "attribute": customField, "value": customValue }
+        ];
+        const body = {
+            "plant": plant,
+            "order": order,
+            "customValues": customValues
+        };
+        await callPatch(url, body);
+        return true;
+    } catch (error) {
+        console.error("Error in updateCustomField:", error.message);
+        throw error;
+    }
+}
+
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData,updateCustomTestingReportStatusOrderInWork,updateCustomAssemblyReportStatusIdReportWeight };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData,updateCustomTestingReportStatusOrderInWork,updateCustomAssemblyReportStatusIdReportWeight, updateCustomField };
