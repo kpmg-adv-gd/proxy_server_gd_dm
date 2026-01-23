@@ -1,6 +1,6 @@
 const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, elaborateDataCollectionstTesting, getCustomWeights } = require("./library");
-const { updateCustomAssemblyReportStatusOrderInWork } = require("../../api/verbali/library");
+const { updateCustomAssemblyReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight } = require("../../api/verbali/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -65,7 +65,7 @@ module.exports.listenerSetup = (app) => {
 
     // Endpoint per salvare le data collections
     app.post("/api/saveDataCollections", async (req, res) => {
-        const { plant, order, sfc, resource, dataCollections, passInWork } = req.body;
+        const { plant, order, sfc, resource, dataCollections, passInWork, idReportWeight } = req.body;
         var url = hostname + "/datacollection/v1/log";
         var listDcError = [];
         for (var i = 0; i < dataCollections.length; i++) {
@@ -96,13 +96,15 @@ module.exports.listenerSetup = (app) => {
             } catch (error) { 
                 listDcError.push({ dc: dc.group, message: error.message || "Error while saving Data Collection" });
             }
-            // Aggiorno il campo custom ASSEMBLY_REPORT_STATUS su IN_WORK
-            if (passInWork) await updateCustomAssemblyReportStatusOrderInWork(plant, order);
         }
         if (listDcError.length > 0) {
             res.status(500).json({ error: listDcError });
             return;
         }
+        // Aggiorno il campo custom ASSEMBLY_REPORT_STATUS su IN_WORK
+        if (passInWork) await updateCustomAssemblyReportStatusOrderInWork(plant, order);
+        // Aggiorno il campo custom ASSEMBLY_REPORT_WEIGHT con ID assegnato
+        await updateCustomAssemblyReportStatusIdReportWeight(plant, order, idReportWeight);
         res.status(200).json({ message: "Data Collections saved successfully" });
     });
 
