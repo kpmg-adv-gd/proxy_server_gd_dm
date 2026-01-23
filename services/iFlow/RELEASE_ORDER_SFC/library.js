@@ -9,9 +9,6 @@ async function manageRelease(plant,routing){
     let customValues = responseGetOrder?.customValues || [];
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
     let phaseValue = phaseField ? phaseField.value : "";
-    if(phaseValue=="TESTING"){
-        return;
-    }
     var quantityToReleaseValue = responseGetOrder?.orderedQuantity || 1;
     
     // await new Promise(resolve => setTimeout(resolve, 20000));

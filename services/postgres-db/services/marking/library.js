@@ -77,4 +77,9 @@ async function getMarkingTestingDataByOrder(plant, order, type) {
     return data || [];
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder };
+async function getAnalisiOreVarianza(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getAnalisiOreVarianzaQuery, [plant, order]);
+    return data || [];
+}
+
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder, getAnalisiOreVarianza };

@@ -8,10 +8,6 @@ const { callGet, callPost } = require("../../../../utility/CommonCallApi");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function getDefectsTesting(orders) {
-    const data = await postgresdbService.executeQuery(queryDefect.getDefectsTestingQuery, [orders]);
-    return data;
-}
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN,
     notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3) {
@@ -432,4 +428,12 @@ async function getDefectsTesting(orders) {
     return data;
 }
 
-module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting };
+// Funzione per aggiornare owner e due_date in z_defects
+async function updateDefectsOwnerAndDueDate(defect) {
+    const { id, owner, due_date } = defect;
+    const data = await postgresdbService.executeQuery(queryDefect.updateDefectsOwnerAndDueDateQuery, 
+        [owner, due_date, id]);
+    return data;
+}
+
+module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate };

@@ -73,4 +73,13 @@ function formatDate(date) {
     // Se la data è già nel formato corretto, la restituisco così com'è
     return date;
 }
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders }
+
+// Funzione per aggiornare owner e due_date in z_report_mancanti
+async function updateMancantiOwnerAndDueDate(mancante) {
+    const { plant, order, project, material, missing_component, owner, due_date } = mancante;
+    const data = await postgresdbService.executeQuery(queryLoipro.updateMancantiOwnerAndDueDateQuery, 
+        [owner, due_date, plant, order, project, material, missing_component]);
+    return data;
+}
+
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate }

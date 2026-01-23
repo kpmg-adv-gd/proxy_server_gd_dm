@@ -96,7 +96,7 @@ async function getDefectsTestingData(plant, project) {
                 material: defect.material || "",
                 priority: defect.priority || "",
                 user: defect.user || "",
-                department: "", // campo non presente in z_defects
+                phase: defect.phase || "",
                 status: defect.status || "",
                 qn: defect.qn_code || "",
                 owner: defect.owner || "", // nuova colonna

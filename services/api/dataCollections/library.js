@@ -2,7 +2,8 @@ const { callGet } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { getReportWeight } = require("../../postgres-db/services/report_weights/library");
-const { getReportWeightSectionsData, getReportWeightData } = require("../../postgres-db/services/verbali/library");
+const { getReportWeightSectionsData, getReportWeightData, getReportWeightWithValues } = require("../../postgres-db/services/verbali/library");
+const { getAnalisiOreVarianza } = require("../../postgres-db/services/marking/library");
 const { autoCompileFieldsDataCollectionDispatcher, autoCompileFieldsDataCollectionTestingdDispatcher  } = require("../dataCollections/autoCompileDataCollections");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -255,15 +256,15 @@ async function elaborateDataCollectionstTesting(plant, selected, resource, datac
                 }
             }
             // Aggiungo informazione sulla visibilità delle tabelle custom
-            var sharedResultCustomResults = await getZSharedMemoryData(plant, "CUSTOM_TABLE_RESULTS");
+            var sharedResultCustomResults = await getZSharedMemoryData(plant, "CUSTOM_TABLE_FINAL_COLLAUDO");
             if (sharedResultCustomResults.length > 0) {
                 try {
                     sharedResultCustomResults = JSON.parse(sharedResultCustomResults[0].value);
-                    if (sharedResultCustomResults.some(item => item.group === dc.group)) data.viewCustomTableResults = true;
-                    else data.viewCustomTableResults = false;
+                    if (sharedResultCustomResults.some(item => item.group === dc.group)) data.viewCustomTableFinalCollaudo = true;
+                    else data.viewCustomTableFinalCollaudo = false;
                 } catch (error) {
-                    console.log("Error parsing CUSTOM_TABLE_RESULTS from shared memory: " + error.message);
-                    data.viewCustomTableResults = false;
+                    console.log("Error parsing CUSTOM_TABLE_FINAL_COLLAUDO from shared memory: " + error.message);
+                    data.viewCustomTableFinalCollaudo = false;
                 }
             }
             results.push(data);
@@ -271,7 +272,29 @@ async function elaborateDataCollectionstTesting(plant, selected, resource, datac
         
         // Ordinare le data collection in base al nome del gruppo
         results = await autoCompileFieldsDataCollectionTesting(plant, results, selected, refresh);
-        results.sort((a, b) => a.group.localeCompare(b.group));
+        results.sort((a, b) => {
+            // Estraggo il numero iniziale dalla stringa (se presente)
+            const aMatch = a.group.match(/^(\d+)/);
+            const bMatch = b.group.match(/^(\d+)/);
+            
+            const aNum = aMatch ? parseInt(aMatch[1], 10) : null;
+            const bNum = bMatch ? parseInt(bMatch[1], 10) : null;
+            
+            // Se entrambi iniziano con un numero, confronto numerico
+            if (aNum !== null && bNum !== null) {
+                if (aNum !== bNum) return aNum - bNum;
+                // Se i numeri sono uguali, ordine alfabetico sul resto
+                return a.group.localeCompare(b.group);
+            }
+            
+            // Se solo a inizia con numero, a viene prima
+            if (aNum !== null && bNum === null) return -1;
+            // Se solo b inizia con numero, b viene prima
+            if (aNum === null && bNum !== null) return 1;
+            
+            // Altrimenti ordine alfabetico normale
+            return a.group.localeCompare(b.group);
+        });
         return results;
     } catch (error) {
         console.log("Error in elaborateDataCollectionsSupervisoreAssembly: " + error.message);
@@ -408,84 +431,83 @@ function moveDcVotoSezione(data, parameterName) {
     }
 }
 
-// Funzione per ottenere i custom weights per il report TESTING con i valori calcolati
-async function getCustomWeights(plant, sfc, id, resource, report) {
+// Funzione per ottenere i custom weights per il report TESTING con i valori dal database
+async function getCustomWeights(plant, project, order, report) {
     try {
-        // Default report = 'TESTING'
+        // Default report = 'Testing'
         const reportType = report || 'Testing';
 
-        // Recupero le sezioni dal database
-        const weightsData = await getReportWeightSectionsData(reportType);
+        // Recupero i dati con LEFT JOIN tra z_report_weight e z_weight_values
+        const weightsData = await getReportWeightWithValues(plant, project, order, reportType);
         
-        // Creo una mappa section -> weight
-        const sectionWeightMap = {};
-        weightsData.forEach(item => {
-            sectionWeightMap[item.section] = parseFloat(item.weight || 0);
-        });
+        // Raggruppo i dati per id
+        const groupedByIdMap = {};
         
-        // Costruisco l'array di risultati
-        const results = [];
-        let totalWeight = 0;
-        let totalWeightedValue = 0;
-        let validSections = 0;
-        
-        for (const sectionItem of weightsData) {
-            const section = sectionItem.section;
-            const weight = sectionWeightMap[section] || 0;
-            const id = sectionItem.id || 1;
+        for (const item of weightsData) {
+            const currentId = item.id || 1;
+            const weight = parseFloat(item.weight || 0);
+            const value = item.value || '';
             
-            let value = "";
-            let comment = "";
-            
-            // La section è il parametro stesso della data collection
-            // Recupero il valore salvato da SAP_MDO_DATA_COLLECTION_V usando section come DC_PARAMETER_NAME
-            const dataCollectionFilter = `(PLANT eq '${plant}' and SFC eq '${sfc}' AND RESOURCE eq '${resource}' and DC_PARAMETER_NAME eq '${section}' and IS_DELETED eq 'false')`;
-            const mockReqDC = {
-                path: "/mdo/DATA_COLLECTION",
-                query: { $apply: `filter(${dataCollectionFilter})` },
-                method: "GET"
-            };
-            const outMock = await dispatch(mockReqDC);
-            const dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-            
-            if (dcData.length > 0) {
-                // Ordino per data più recente
-                dcData.sort((a, b) => new Date(b.REPORTED_AT) - new Date(a.REPORTED_AT));
-                value = dcData[0].DC_PARAMETER_VALUE || "";
-                comment = dcData[0].COMMENT || "";
+            // Inizializzo il gruppo per questo id se non esiste
+            if (!groupedByIdMap[currentId]) {
+                groupedByIdMap[currentId] = {
+                    sections: [],
+                    totalWeight: 0,
+                    totalWeightedValue: 0,
+                    validSections: 0
+                };
             }
+            
+            // Aggiungo la sezione al gruppo
+            groupedByIdMap[currentId].sections.push({
+                id: currentId,
+                section: item.section,
+                weight: weight,
+                value: value
+            });
             
             // Converto value in numero per calcolare la media pesata
             const numericValue = parseFloat(value);
             
-            results.push({
-                id: id,
-                section: section,
-                weight: weight,
-                value: value,
-                comment: comment
-            });
-            
-            totalWeight += weight;
-            if (!isNaN(numericValue) && value !== "") {
-                totalWeightedValue += weight * numericValue;
-                validSections++;
+            // Aggiorno i totali per questo id
+            groupedByIdMap[currentId].totalWeight += weight;
+            if (!isNaN(numericValue) && value !== '') {
+                groupedByIdMap[currentId].totalWeightedValue += weight * numericValue;
+                groupedByIdMap[currentId].validSections++;
             }
         }
         
-        // Calcolo media pesata per l'ultima riga "Risultato dell'ispezione"
-        let finalValue = "";
-        if (totalWeight > 0 && validSections > 0) {
-            finalValue = parseFloat((totalWeightedValue / totalWeight).toFixed(2)).toString();
-        }
+        // Costruisco l'array di risultati
+        const results = [];
         
-        // Aggiungo la riga finale "Risultato dell'ispezione"
-        results.push({
-            section: "Risultato dell'ispezione",
-            weight: totalWeight,
-            value: finalValue,
-            comment: ""
-        });
+        // Per ogni id, aggiungo le sezioni e poi la riga "Risultato dell'ispezione"
+        for (const currentId in groupedByIdMap) {
+            const group = groupedByIdMap[currentId];
+            
+            // Aggiungo tutte le sezioni di questo id con peso formattato
+            for (const section of group.sections) {
+                results.push({
+                    id: section.id,
+                    section: section.section,
+                    weight: section.weight,
+                    value: section.value
+                });
+            }
+            
+            // Calcolo media pesata per questo id
+            let finalValue = '';
+            if (group.totalWeight > 0 && group.validSections > 0) {
+                finalValue = parseFloat((group.totalWeightedValue / group.totalWeight).toFixed(2)).toString();
+            }
+            
+            // Aggiungo la riga "Risultato dell'ispezione" per questo id
+            results.push({
+                id: parseInt(currentId),
+                section: "Risultato dell'ispezione",
+                weight: group.totalWeight,
+                value: finalValue
+            });
+        }
         
         return results;
     } catch (error) {
@@ -494,5 +516,56 @@ async function getCustomWeights(plant, sfc, id, resource, report) {
     }
 }
 
+// Funzione per elaborare l'analisi ore varianza
+async function elaborateAnalisiOreVarianza(plant, order) {
+    try {
+        // Step 1: Recupero i dati raggruppati da z_op_confirmations
+        const varianceData = await getAnalisiOreVarianza(plant, order);
+        
+        if (!varianceData || varianceData.length === 0) {
+            return [];
+        }
+        
+        // Step 2: Recupero la mappatura dei cluster da Z_SHARED_MEMORY
+        const sharedMemoryData = await getZSharedMemoryData(plant, "PARAMETRI_VARIANCE_CLUSTER");
+        let clusterMapping = {};
+        
+        if (sharedMemoryData && sharedMemoryData.length > 0) {
+            try {
+                const parsedData = JSON.parse(sharedMemoryData[0].value);
+                // Converto l'array in un oggetto chiave-valore per accesso rapido
+                if (Array.isArray(parsedData)) {
+                    parsedData.forEach(item => {
+                        if (item.key && item.value) {
+                            clusterMapping[item.key] = item.value;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Error parsing PARAMETRI_VARIANCE_CLUSTER:", error);
+            }
+        }
+        
+        // Step 3: Elaboro i risultati
+        const results = varianceData.map(item => {
+            const cluster = clusterMapping[item.variance_cluster] || item.variance_cluster;
+            const totalVarianceLabor = parseFloat(item.total_variance_labor || 0);
+            
+            // Conversione da HCN a ore: divido per 100
+            const hours = totalVarianceLabor / 100;
+            
+            return {
+                cluster: cluster,
+                hours: Math.round(hours * 100) / 100 // Arrotondo a 2 decimali
+            };
+        });
+        
+        return results;
+    } catch (error) {
+        console.error("Error in elaborateAnalisiOreVarianza:", error);
+        return false;
+    }
+}
+
 // Esporta la funzione
-module.exports = { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, autoCompileFieldsDataCollection, moveDcVotoSezione, elaborateDataCollectionstTesting, getCustomWeights }
+module.exports = { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, autoCompileFieldsDataCollection, moveDcVotoSezione, elaborateDataCollectionstTesting, getCustomWeights, elaborateAnalisiOreVarianza }

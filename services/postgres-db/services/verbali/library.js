@@ -331,5 +331,38 @@ async function getActivitiesTesting(plant, sfcs) {
     return data;
 }
 
+// Funzione per aggiornare owner e due_date in z_verbale_lev_2
+async function updateActivitiesOwnerAndDueDate(activity) {
+    const { id_lev_1, id_lev_2, order, owner, due_date } = activity;
+    const data = await postgresdbService.executeQuery(queryVerbali.updateActivitiesOwnerAndDueDateQuery, 
+        [owner, due_date, id_lev_1, id_lev_2, order]);
+    return data;
+}
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting };
+// Funzione per recuperare i report weight con i valori da z_weight_values
+async function getReportWeightWithValues(plant, project, order, report) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getReportWeightWithValuesQuery, 
+        [plant, project, order, report]);
+    return data;
+}
+
+// Funzione per inserire o aggiornare un valore in z_weight_values
+async function upsertWeightValue(plant, project, order, weightData) {
+    const { id, section, value } = weightData;
+    const report = 'Testing';
+    const data = await postgresdbService.executeQuery(queryVerbali.upsertWeightValueQuery, 
+        [id, section, plant, project, order, report, value]);
+    return data;
+}
+async function updateZverbaleLev1TableWithSfc(plant, order, sfc) {
+    const update = await postgresdbService.executeQuery(queryVerbali.updateZverbaleLev1TableWithSfcQuery, [plant, order, sfc]);
+    return update;
+}
+async function updateZverbaleLev2TableWithSfc(plant, order, sfc) {
+    const update = await postgresdbService.executeQuery(queryVerbali.updateZverbaleLev2TableWithSfcQuery, [plant, order, sfc]);
+    return update;
+}
+
+
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc };

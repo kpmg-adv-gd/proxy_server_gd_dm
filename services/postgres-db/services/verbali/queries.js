@@ -174,11 +174,43 @@ const getReportWeightByIdAndReport = `SELECT section, weight
     WHERE report = $1 AND id = $2 
     ORDER BY section`;
 
+const getReportWeightWithValuesQuery = `SELECT 
+    zrw.id, 
+    zrw.section, 
+    zrw.weight, 
+    COALESCE(zwv.value, '') as value
+    FROM z_report_weight zrw
+    LEFT JOIN z_weight_values zwv 
+        ON zrw.id = zwv.id 
+        AND zrw.section = zwv.section 
+        AND zwv.plant = $1 
+        AND zwv.project = $2 
+        AND zwv."order" = $3 
+        AND zwv.report = $4
+    WHERE zrw.report = $4
+    ORDER BY zrw.id, zrw.section`;
+
 const getActivitiesTestingQuery = `SELECT * 
                                     FROM z_verbale_lev_2 
                                     WHERE plant = $1 AND sfc = ANY($2) AND status_lev_2 != 'Done' AND active = true
                                     ORDER BY id_lev_1, id_lev_2`;
 
+const updateActivitiesOwnerAndDueDateQuery = `UPDATE z_verbale_lev_2 SET owner = $1, due_date = $2 WHERE id_lev_1 = $3 AND id_lev_2 = $4 AND "order" = $5`;
+
+const upsertWeightValueQuery = `INSERT INTO z_weight_values (id, section, plant, project, "order", report, value)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (id, section, plant, project, "order", report)
+    DO UPDATE SET value = EXCLUDED.value`;
+
+
+const updateZverbaleLev1TableWithSfcQuery = `UPDATE z_verbale_lev_1
+    SET sfc = $3
+    WHERE plant = $1 AND "order" = $2`;
+
+const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_2
+    SET sfc = $3
+    WHERE plant = $1 AND "order" = $2`;
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
-    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery };
+    startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
+    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery };

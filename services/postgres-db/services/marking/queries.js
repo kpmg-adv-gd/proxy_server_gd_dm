@@ -63,4 +63,14 @@ const getMarkingTestingDataByOrderQuery = `SELECT *
                                              FROM z_marking_testing 
                                              WHERE plant = $1 AND "order" = $2 AND type = $3`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery };
+const getAnalisiOreVarianzaQuery = `SELECT 
+                                        SUBSTRING(reason_for_variance, 1, 2) as variance_cluster,
+                                        SUM(variance_labor) as total_variance_labor
+                                    FROM z_op_confirmations
+                                    WHERE plant = $1 
+                                        AND mes_order = $2 
+                                        AND reason_for_variance IS NOT NULL 
+                                        AND cancellation_flag = false
+                                    GROUP BY SUBSTRING(reason_for_variance, 1, 2)`;
+
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery, getAnalisiOreVarianzaQuery };

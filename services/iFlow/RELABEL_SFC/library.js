@@ -7,11 +7,11 @@ async function manageRelabelSfc(plant,order,sfcs){
     var responseGetOrder = await getOrderResponse(plant,order);
     var customValues = responseGetOrder?.customValues;
     let wbsField = customValues.find(obj => obj.attribute == "WBE");
-    let wbsValue = wbsField.value || "";
+    let wbsValue = wbsField ? wbsField.value : "";
     let orderTypeField = customValues.find(obj => obj.attribute == "ORDER_TYPE");
-    let orderTypeValue = orderTypeField.value || "";
+    let orderTypeValue = orderTypeField ? orderTypeField.value : "";
     let parentAssemblyField = customValues.find(obj => obj.attribute == "PARENT_ASSEMBLY");
-    let parentAssemblyValueFromSAP = parentAssemblyField.value || "";
+    let parentAssemblyValueFromSAP = parentAssemblyField ? parentAssemblyField.value : "";
     let parentAssemblyValue = parentAssemblyValueFromSAP === "X";
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
     let phaseValue = phaseField ? phaseField.value : "";

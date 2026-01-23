@@ -111,7 +111,9 @@ const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT
                                     first_conf_date,
                                     mrp_date,
                                     date_from_workshop,
-                                    active
+                                    active,
+                                    owner,
+                                    due_date
                                 FROM z_report_mancanti
                                 WHERE active = true
                                 ) 
@@ -131,4 +133,6 @@ const getTotalQuantityFromOrders = `select sum(missing_quantity) as counter
                                     where plant = $1 and "order" = ANY($2) and active = true
                                 `;
 
-module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders };
+const updateMancantiOwnerAndDueDateQuery = `UPDATE z_report_mancanti SET owner = $1, due_date = $2 WHERE plant = $3 AND "order" = $4 AND project = $5 AND material = $6 AND missing_component = $7 AND active = true`;
+
+module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDateQuery };

@@ -3,6 +3,7 @@ const { insertZMarkingRecap, getMarkingByConfirmationNumber } = require("../../p
 const { insertZOrdersLink } = require("../../postgres-db/services/orders_link/library");
 const { insertZCertification } = require("../../postgres-db/services/loipro/library");
 const { insertZSpecialGroups } = require("../../postgres-db/services/loipro/library");
+const { updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc } = require("../../postgres-db/services/verbali/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -13,24 +14,26 @@ async function populateZTables(plantValue,orderValue){
     let routingType = orderDetail?.routing?.type;
     var customValues = orderDetail?.customValues;
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
-    let phaseValue = phaseField ? phaseField.value : "";   
+    let phaseValue = phaseField ? phaseField.value : "";
+    let sfc = orderDetail?.sfcs && orderDetail.sfcs.length>0 ? orderDetail.sfcs[0].sfc : "";
     if(phaseValue=="TESTING"){
+        await updateWithSfcZverbaleLevTables(plantValue,orderValue,sfc);
         return;
     }
     let projectField = customValues.find(obj => obj.attribute == "COMMESSA");
-    let projectValue = projectField?.value || "";
+    let projectValue =  projectField ? projectField.value : "";  
     let wbsField = customValues.find(obj => obj.attribute == "WBE");
-    let wbsValue = wbsField?.value || "";
+    let wbsValue = wbsField ? wbsField.value : "";
     let orderTypeField = customValues.find(obj => obj.attribute == "ORDER_TYPE");
-    let orderTypeValue = orderTypeField?.value || "";
+    let orderTypeValue = orderTypeField ? orderTypeField.value : "";
     let parentOrderField = customValues.find(obj => obj.attribute == "ORDINE PADRE");
-    let parentOrderValue = parentOrderField?.value || "";
+    let parentOrderValue = parentOrderField ? parentOrderField.value : "";
     let machineSectionField = customValues.find(obj => obj.attribute == "SEZIONE MACCHINA");
-    let machineSectionValue = machineSectionField?.value || "";
+    let machineSectionValue = machineSectionField ? machineSectionField.value : "";
     let parentMaterialField = customValues.find(obj => obj.attribute == "MATERIALE PADRE");
-    let parentMaterialValue = parentMaterialField?.value || "";
+    let parentMaterialValue = parentMaterialField ? parentMaterialField.value : "";
     let parentAssemblyField = customValues.find(obj => obj.attribute == "PARENT_ASSEMBLY");
-    let parentAssemblyValueFromSAP = parentAssemblyField?.value || "";
+    let parentAssemblyValueFromSAP = parentAssemblyField ? parentAssemblyField.value : "";
     let parentAssemblyValue = parentAssemblyValueFromSAP === "X";
     
     var operationNodes = [];
@@ -145,6 +148,13 @@ async function insertZSpecialGroupsTable(plantValue,projectValue,wbsValue,orderV
     if( ((orderTypeValue.includes("GRP") || orderTypeValue.includes("ZPA1")  || orderTypeValue.includes("ZPF1") ) && parentAssemblyValue) || (orderTypeValue=="ZMGF") ){
         await insertZSpecialGroups(plantValue,projectValue,wbsValue,orderValue,orderTypeValue,parentAssemblyValue,elaborated);
     }
+}
+
+async function updateWithSfcZverbaleLevTables(plant,order,sfc){
+    // Implementazione della logica per l'aggiornamento delle tabelle lev2 e lev 3 con SFC
+    await updateZverbaleLev1TableWithSfc(plant,order,sfc);
+    await updateZverbaleLev2TableWithSfc(plant,order,sfc);
+    return;
 }
 
 module.exports = { populateZTables }

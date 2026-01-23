@@ -104,4 +104,6 @@ const updateModificheToTestingQuery = `UPDATE z_modify
 
 const getModificheTestingByOrdersQuery = `SELECT * FROM z_modify WHERE plant = $1 AND project = $2 AND status != '1' ORDER BY prog_eco, process_id`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery };
+const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3`;
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery };

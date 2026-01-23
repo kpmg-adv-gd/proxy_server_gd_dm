@@ -9,6 +9,9 @@ const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/
 const { getMappingPhase } = require("../../postgres-db/services/mapping_phases/library");
 const { updateRoutingForReleaseUtility } = require("../../iFlow/UPDATE_ROUTING/library");
 const PDFDocument = require("pdfkit");
+const bodyParser = require("body-parser");
+const { PDFDocument: PDFLib, StandardFonts, rgb } = require("pdf-lib");
+const fetch = require("node-fetch");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -266,6 +269,19 @@ async function updateCustomAssemblyReportStatusOrderInWork(plant, order) {
     let url = hostname + "/order/v1/orders/customValues";
     let customValues = [
         { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "IN_WORK" },
+    ];
+    let body = {
+        "plant": plant,
+        "order": order,
+        "customValues": customValues
+    };
+    await callPatch(url, body);
+}
+
+async function updateCustomTestingReportStatusOrderInWork(plant, order) {
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValues = [
+        { "attribute": "TESTING_REPORT_STATUS", "value": "IN_WORK" },
     ];
     let body = {
         "plant": plant,
@@ -2438,14 +2454,6 @@ async function releaseVerbalManagement(plant, order) {
         // Step 2: Aggiorno il routing chiamando doUpdateNoMachRouting
         await updateRoutingForReleaseUtility(plant, routing);
         
-        // Step 3: Rilascio l'ordine
-        const urlRelease = `${hostname}/order/v2/orders/release`;
-        const releaseBody = {
-            order: order,
-            plant: plant
-        };
-        await callPost(urlRelease, releaseBody);
-        
         return true;
     } catch (error) {
         console.error("Error in releaseVerbalManagement:", error);
@@ -2593,6 +2601,504 @@ async function getActivitiesTestingData(plant, project) {
     }
 }
 
+async function generatePdfFineCollaudo(data) {
+    try {
+        // ============================================
+        // VALIDAZIONE E PREPARAZIONE DATI
+        // ============================================
+        if (!data) {
+            throw new Error("PDF data is required");
+        }
+        
+        const header = data.header || {};
+        const groupsData = Array.isArray(data.groupsData) ? data.groupsData : [];
+        const weights = Array.isArray(data.weights) ? data.weights : [];
+        const varianzaCollaudo = Array.isArray(data.varianzaCollaudo) ? data.varianzaCollaudo : [];
+        const treeData = Array.isArray(data.treeData) ? data.treeData : [];
+        const treeDataModifiche = Array.isArray(data.treeDataModifiche) ? data.treeDataModifiche : [];
+        const treeDataActivities = Array.isArray(data.treeDataActivities) ? data.treeDataActivities : [];
+        const mancanti = Array.isArray(data.mancanti) ? data.mancanti : [];
+        const parameteresData = Array.isArray(data.parameteresData) ? data.parameteresData : [];
+        const riepilogoText = data.riepilogoText || "";
+        const varianzaCollaudoChartPNG = data.varianzaCollaudoChartPNG || null;
+        const oreCollaudoChartPNG = data.oreCollaudoChartPNG || null;
 
+        // ============================================
+        // INIZIALIZZAZIONE PDF
+        // ============================================
+        const pdfDoc = await PDFLib.create();
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        
+        let page = pdfDoc.addPage();
+        const { width, height } = page.getSize();
+        const margin = 50;
+        const contentWidth = width - (margin * 2);
+        let y = height - margin;
+
+        // ============================================
+        // HELPER FUNCTIONS
+        // ============================================
+        
+        /**
+         * Controlla se serve una nuova pagina
+         */
+        const checkNewPage = (requiredSpace = 80) => {
+            if (y < requiredSpace) {
+                page = pdfDoc.addPage();
+                y = page.getSize().height - margin;
+                return true;
+            }
+            return false;
+        };
+
+        /**
+         * Disegna testo con formattazione
+         */
+        const drawText = (text, options = {}) => {
+            const {
+                size = 10,
+                bold = false,
+                color = rgb(0, 0, 0),
+                x = margin,
+                centered = false,
+                maxWidth = contentWidth
+            } = options;
+            
+            checkNewPage(size + 10);
+            
+            const textFont = bold ? fontBold : font;
+            const textStr = String(text || "");
+            let textX = x;
+            
+            if (centered) {
+                const textWidth = textFont.widthOfTextAtSize(textStr, size);
+                textX = (width - textWidth) / 2;
+            }
+            
+            page.drawText(textStr, {
+                x: textX,
+                y,
+                size,
+                font: textFont,
+                color,
+                maxWidth
+            });
+            
+            y -= size + 5;
+        };
+
+        /**
+         * Disegna linea divisoria
+         */
+        const drawLine = (thickness = 1, color = rgb(0, 0, 0)) => {
+            checkNewPage(20);
+            page.drawLine({
+                start: { x: margin, y },
+                end: { x: width - margin, y },
+                thickness,
+                color
+            });
+            y -= 10;
+        };
+
+        /**
+         * Disegna intestazione sezione
+         */
+        const drawSectionHeader = (title) => {
+            checkNewPage(40);
+            y -= 10;
+            drawText(title, {
+                size: 14,
+                bold: true,
+                color: rgb(0.1, 0.2, 0.6)
+            });
+            drawLine(1, rgb(0.1, 0.2, 0.6));
+        };
+
+        /**
+         * Disegna tabella professionale
+         */
+        const drawTable = (headers, rows, columnWidths) => {
+            checkNewPage(100);
+            
+            const rowHeight = 20;
+            const headerHeight = 25;
+            let currentX = margin;
+            
+            // Disegna header
+            page.drawRectangle({
+                x: margin,
+                y: y - headerHeight,
+                width: contentWidth,
+                height: headerHeight,
+                color: rgb(0.9, 0.9, 0.95),
+                borderColor: rgb(0.3, 0.3, 0.3),
+                borderWidth: 1
+            });
+            
+            headers.forEach((header, i) => {
+                const headerText = String(header);
+                page.drawText(headerText, {
+                    x: currentX + 5,
+                    y: y - 17,
+                    size: 9,
+                    font: fontBold,
+                    color: rgb(0, 0, 0),
+                    maxWidth: columnWidths[i] - 10
+                });
+                currentX += columnWidths[i];
+            });
+            
+            y -= headerHeight;
+            
+            // Disegna righe
+            rows.forEach((row, rowIndex) => {
+                checkNewPage(rowHeight + 10);
+                
+                const isEvenRow = rowIndex % 2 === 0;
+                page.drawRectangle({
+                    x: margin,
+                    y: y - rowHeight,
+                    width: contentWidth,
+                    height: rowHeight,
+                    color: isEvenRow ? rgb(1, 1, 1) : rgb(0.97, 0.97, 0.97),
+                    borderColor: rgb(0.7, 0.7, 0.7),
+                    borderWidth: 0.5
+                });
+                
+                currentX = margin;
+                row.forEach((cell, i) => {
+                    const cellText = String(cell || "");
+                    const maxChars = Math.floor(columnWidths[i] / 6);
+                    const displayText = cellText.length > maxChars 
+                        ? cellText.substring(0, maxChars - 3) + "..." 
+                        : cellText;
+                    
+                    page.drawText(displayText, {
+                        x: currentX + 5,
+                        y: y - 14,
+                        size: 8,
+                        font,
+                        color: rgb(0, 0, 0),
+                        maxWidth: columnWidths[i] - 10
+                    });
+                    currentX += columnWidths[i];
+                });
+                
+                y -= rowHeight;
+            });
+            
+            y -= 15;
+        };
+
+        /**
+         * Disegna immagine (grafico)
+         */
+        const drawImage = async (base64Data, maxWidth = 450, maxHeight = 300) => {
+            if (!base64Data) return;
+            
+            try {
+                const imageData = base64Data.includes(",") 
+                    ? base64Data.split(",")[1] 
+                    : base64Data;
+                const imageBytes = Buffer.from(imageData, "base64");
+                
+                let image;
+                try {
+                    image = await pdfDoc.embedPng(imageBytes);
+                } catch {
+                    image = await pdfDoc.embedJpg(imageBytes);
+                }
+                
+                const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+                const imgWidth = image.width * scale;
+                const imgHeight = image.height * scale;
+                
+                checkNewPage(imgHeight + 20);
+                
+                page.drawImage(image, {
+                    x: (width - imgWidth) / 2,
+                    y: y - imgHeight,
+                    width: imgWidth,
+                    height: imgHeight
+                });
+                
+                y -= imgHeight + 20;
+            } catch (error) {
+                console.error("Error embedding image:", error.message);
+                drawText("[Grafico non disponibile]", {
+                    size: 10,
+                    color: rgb(0.5, 0.5, 0.5),
+                    centered: true
+                });
+            }
+        };
+
+        // ============================================
+        // COSTRUZIONE PDF
+        // ============================================
+
+        // HEADER PRINCIPALE
+        drawText("REPORT FINALE DI COLLAUDO", {
+            size: 20,
+            bold: true,
+            centered: true
+        });
+        y -= 10;
+        drawLine(2);
+        y -= 10;
+        
+        // Informazioni header
+        drawText(`Progetto: ${header.project || "N/A"}`, { size: 12, bold: true });
+        drawText(`SFC: ${header.sfc || "N/A"}`, { size: 12 });
+        drawText(`Cliente: ${header.customer || "N/A"}`, { size: 12 });
+        
+        const now = new Date();
+        const formattedDate = now.toLocaleString('it-IT', {
+            timeZone: 'Europe/Rome',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        }).replace(',', '');
+        drawText(`Data generazione: ${formattedDate}`, { size: 10, color: rgb(0.4, 0.4, 0.4) });
+        
+        // SEZIONI COLLAUDATE
+        if (groupsData.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("SEZIONI COLLAUDATE");
+            groupsData.forEach(group => {
+                drawText(`• ${group.description || "N/A"}`, { size: 10 });
+            });
+        }
+
+        // VALUTAZIONE PESI
+        if (weights.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("VALUTAZIONE PESI");
+            
+            const weightRows = weights.map(w => [
+                w.section || "N/A",
+                (w.weight || "0") + (String(w.weight || "").includes("%") ? "" : "%"),
+                w.value || "N/A"
+            ]);
+            
+            const colWidths = [contentWidth * 0.5, contentWidth * 0.25, contentWidth * 0.25];
+            drawTable(["Sezione", "Peso", "Valore"], weightRows, colWidths);
+        }
+
+        // ANALISI VARIANZA COLLAUDO
+        if (varianzaCollaudo.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("ANALISI VARIANZA COLLAUDO");
+            
+            const varianzaRows = varianzaCollaudo.map(v => [
+                v.cluster || "N/A",
+                String(v.hours || "0") + " ore"
+            ]);
+            
+            const colWidths = [contentWidth * 0.6, contentWidth * 0.4];
+            drawTable(["Cluster", "Ore"], varianzaRows, colWidths);
+            
+            // Grafico varianza
+            if (varianzaCollaudoChartPNG) {
+                y -= 10;
+                await drawImage(varianzaCollaudoChartPNG);
+            }
+        }
+
+        // NON CONFORMITÀ
+        if (treeData.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("NON CONFORMITÀ");
+            
+            const ncRows = treeData.map(nc => [
+                nc.nc_description || "N/A",
+                nc.wbs_element || "N/A",
+                nc.material || "N/A",
+                nc.priority || "N/A",
+                nc.status || "N/A"
+            ]);
+            
+            const colWidths = [
+                contentWidth * 0.25,
+                contentWidth * 0.2,
+                contentWidth * 0.2,
+                contentWidth * 0.15,
+                contentWidth * 0.2
+            ];
+            drawTable(
+                ["Descrizione NC", "WBS", "Materiale", "Priorità", "Stato"],
+                ncRows,
+                colWidths
+            );
+        }
+
+        // MODIFICHE
+        if (treeDataModifiche.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("MODIFICHE");
+            
+            const modRows = treeDataModifiche.map(mod => [
+                mod.type || "N/A",
+                mod.prog_eco || "N/A",
+                mod.material || "N/A",
+                mod.status || "N/A",
+                mod.resolution || "N/A"
+            ]);
+            
+            const colWidths = [
+                contentWidth * 0.15,
+                contentWidth * 0.2,
+                contentWidth * 0.25,
+                contentWidth * 0.2,
+                contentWidth * 0.2
+            ];
+            drawTable(
+                ["Tipo", "Progr.Eco", "Materiale", "Stato", "Risoluzione"],
+                modRows,
+                colWidths
+            );
+        }
+
+        // ACTIVITIES
+        if (treeDataActivities.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("ATTIVITÀ");
+            
+            const actRows = treeDataActivities.map(act => [
+                act.id_lev_1 || "N/A",
+                act.macroattivita || "N/A",
+                act.machine_type || "N/A",
+                act.status || "N/A",
+                act.safety || "N/A"
+            ]);
+            
+            const colWidths = [
+                contentWidth * 0.15,
+                contentWidth * 0.3,
+                contentWidth * 0.2,
+                contentWidth * 0.2,
+                contentWidth * 0.15
+            ];
+            drawTable(
+                ["ID", "Macroattività", "Tipo Macchina", "Stato", "Sicurezza"],
+                actRows,
+                colWidths
+            );
+        }
+
+        // MANCANTI
+        if (mancanti.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("COMPONENTI MANCANTI");
+            
+            const manRows = mancanti.map(m => [
+                m.wbs_element || "N/A",
+                m.material || "N/A",
+                m.missing_component || "N/A",
+                m.component_description || "N/A",
+                m.type_mancante || "N/A"
+            ]);
+            
+            const colWidths = [
+                contentWidth * 0.15,
+                contentWidth * 0.2,
+                contentWidth * 0.2,
+                contentWidth * 0.3,
+                contentWidth * 0.15
+            ];
+            drawTable(
+                ["WBS", "Materiale", "Componente", "Descrizione", "Tipo"],
+                manRows,
+                colWidths
+            );
+        }
+
+        // PARAMETRI
+        if (parameteresData.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("PARAMETRI DI COLLAUDO");
+            
+            const paramRows = parameteresData.map(p => {
+                const value = p.valueText || p.valueNumber || p.valueData || 
+                             p.valueBoolean || p.valueList || "-";
+                return [
+                    p.description || "N/A",
+                    String(value),
+                    p.comment || ""
+                ];
+            });
+            
+            const colWidths = [contentWidth * 0.4, contentWidth * 0.3, contentWidth * 0.3];
+            drawTable(
+                ["Parametro", "Valore", "Commento"],
+                paramRows,
+                colWidths
+            );
+        }
+
+        // GRAFICO ORE COLLAUDO
+        if (oreCollaudoChartPNG) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("ANALISI ORE COLLAUDO");
+            await drawImage(oreCollaudoChartPNG);
+        }
+
+        // RIEPILOGO FINALE
+        if (riepilogoText) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("RIEPILOGO COLLAUDO");
+            
+            const lines = riepilogoText.split("\n");
+            lines.forEach(line => {
+                if (line.trim()) {
+                    drawText(line, { size: 10 });
+                } else {
+                    y -= 5;
+                }
+            });
+        }
+
+        // ============================================
+        // FINALIZZAZIONE E RESTITUZIONE
+        // ============================================
+        const pdfBytes = await pdfDoc.save();
+        
+        if (!pdfBytes || pdfBytes.length === 0) {
+            throw new Error("PDF generation failed: empty result");
+        }
+        
+        return pdfBytes;
+        
+    } catch (error) {
+        console.error("Error in generatePdfFineCollaudo:", error.message);
+        throw error;
+    }
+}
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, generatePdfFineCollaudo };

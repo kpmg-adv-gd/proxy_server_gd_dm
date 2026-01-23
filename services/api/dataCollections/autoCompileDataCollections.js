@@ -4,8 +4,7 @@ const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memo
 const { ordersChildrenRecursion } = require("../../postgres-db/services/verbali/library");
 const { getTotalQuantityFromOrders } = require("../../postgres-db/services/mancanti/library");
 const { getModificheToDataCollections } = require("../../postgres-db/services/modifiche/library");
-const { getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder } = require("../../postgres-db/services/marking/library");
-const { ref } = require("pdfkit");
+const { getMarkingTestingDataByOrder } = require("../../postgres-db/services/marking/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -358,13 +357,14 @@ async function ruleParameter3Testing(data, group, parameterName, selected, plant
         
         // Sommo planned_labor e converto da HCN a ore se necessario
         let totalHours = 0;
+        console.log("ore base line markingData:", JSON.stringify(markingData));
         for (const marking of markingData) {
             const plannedLabor = parseFloat(marking.planned_labor || 0);
             const uom = marking.uom_planned_labor || '';
             
             if (uom === 'HCN') {
                 // Conversione HCN a ore: diviso per (100 * 60) = 6000
-                totalHours += plannedLabor * 60 / 100;
+                totalHours += plannedLabor / 100;
             } else {
                 // Assumo che sia già in ore
                 totalHours += plannedLabor;
@@ -378,8 +378,8 @@ async function ruleParameter3Testing(data, group, parameterName, selected, plant
         for (var i = 0; i < data.length; i++) {
             if (data[i].group === group) {
                 for (var j = 0; j < data[i].parameters.length; j++) {
-                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                        data[i].parameters[j].valueText = totalHours.toString();
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || refresh)) {
+                        data[i].parameters[j].valueNumber = totalHours.toString();
                     }
                 }
             }
@@ -406,8 +406,7 @@ async function ruleParameter4Testing(data, group, parameterName, selected, plant
             const uom = marking.uom_marked_labor || '';
             
             if (uom === 'HCN') {
-                // Conversione HCN a ore: diviso per (100 * 60) = 6000
-                totalHours += markedLabor * 60 / 100;
+                totalHours += markedLabor / 100;
             } else {
                 // Assumo che sia già in ore
                 totalHours += markedLabor;
@@ -420,8 +419,8 @@ async function ruleParameter4Testing(data, group, parameterName, selected, plant
         for (var i = 0; i < data.length; i++) {
             if (data[i].group === group) {
                 for (var j = 0; j < data[i].parameters.length; j++) {
-                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                        data[i].parameters[j].valueText = totalHours.toString();
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || refresh)) {
+                        data[i].parameters[j].valueNumber = totalHours.toString();
                     }
                 }
             }
@@ -449,7 +448,7 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
             
             if (uom === 'HCN') {
                 // Conversione HCN a ore: diviso per (100 * 60) = 6000
-                totalHours += (varianceLabor * 60) / 100;
+                totalHours += varianceLabor / 100;
             } else {
                 // Assumo che sia già in ore
                 totalHours += varianceLabor;
@@ -462,8 +461,8 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
         for (var i = 0; i < data.length; i++) {
             if (data[i].group === group) {
                 for (var j = 0; j < data[i].parameters.length; j++) {
-                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
-                        data[i].parameters[j].valueText = totalHours.toString();
+                    if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || refresh)) {
+                        data[i].parameters[j].valueNumber = totalHours.toString();
                     }
                 }
             }

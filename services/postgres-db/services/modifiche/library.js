@@ -171,4 +171,59 @@ async function getModificheTestingByOrders(plant, project){
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders };
+// Funzione per aggiornare owner e due_date in z_modify
+// Costruisce dinamicamente la clausola WHERE basandosi sui campi non vuoti
+async function updateModifyOwnerAndDueDate(plant,modifica) {
+    const { process_id, prog_eco, wbs_element, child_order, child_material, sfc, order, owner, due_date } = modifica;
+    
+    // Costruisco la clausola WHERE dinamicamente
+    let whereConditions = [];
+    let params = [owner, due_date, plant];
+    let paramIndex = 4;
+    
+    if (process_id) {
+        whereConditions.push(`process_id = $${paramIndex}`);
+        params.push(process_id);
+        paramIndex++;
+    }
+    if (prog_eco) {
+        whereConditions.push(`prog_eco = $${paramIndex}`);
+        params.push(prog_eco);
+        paramIndex++;
+    }
+    if (wbs_element) {
+        whereConditions.push(`wbe = $${paramIndex}`);
+        params.push(wbs_element);
+        paramIndex++;
+    }
+    if (child_order) {
+        whereConditions.push(`child_order = $${paramIndex}`);
+        params.push(child_order);
+        paramIndex++;
+    }
+    if (child_material) {
+        whereConditions.push(`child_material = $${paramIndex}`);
+        params.push(child_material);
+        paramIndex++;
+    }
+    if (sfc) {
+        whereConditions.push(`sfc = $${paramIndex}`);
+        params.push(sfc);
+        paramIndex++;
+    }
+    if (order) {
+        whereConditions.push(`"order" = $${paramIndex}`);
+        params.push(order);
+        paramIndex++;
+    }
+    
+    // Costruisco la query completa
+    const whereClause = whereConditions.length > 0 ? ` AND ${whereConditions.join(' AND ')}` : '';
+    const fullQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3${whereClause}`;
+    
+    const data = await postgresdbService.executeQuery(fullQuery, params);
+    console.log(fullQuery, params);
+    return data;
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate };

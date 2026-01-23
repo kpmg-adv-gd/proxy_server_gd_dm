@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -282,6 +282,33 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error in getActivitiesTesting:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per generare pdf report di fine collaudo
+    app.post("/api/generate-pdf", async (req, res) => {
+        try {
+            const { pdfData } = req.body;
+            
+            // Validazione input
+            if (!pdfData) {
+                return res.status(400).json({ error: "Missing required parameter: pdfData" });
+            }
+
+            const pdfBytes = await generatePdfFineCollaudo(pdfData);
+            
+            if (!pdfBytes || pdfBytes.length === 0) {
+                return res.status(500).json({ error: "PDF generation failed: empty result" });
+            }
+            
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Content-Disposition", "attachment; filename=report_fine_collaudo.pdf");
+            res.send(Buffer.from(pdfBytes));
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in generate-pdf:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });
