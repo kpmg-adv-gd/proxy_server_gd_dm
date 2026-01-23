@@ -49,6 +49,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             data.material = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
+            data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
@@ -269,6 +270,19 @@ async function updateCustomAssemblyReportStatusOrderInWork(plant, order) {
     let url = hostname + "/order/v1/orders/customValues";
     let customValues = [
         { "attribute": "ASSEMBLY_REPORT_STATUS", "value": "IN_WORK" },
+    ];
+    let body = {
+        "plant": plant,
+        "order": order,
+        "customValues": customValues
+    };
+    await callPatch(url, body);
+}
+// Funzione per aggiornare lo stato del verbale di ispezione con ID report weight
+async function updateCustomAssemblyReportStatusIdReportWeight(plant, order, idReportWeight) {
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValues = [
+        { "attribute": "ASSEMBLY_REPORT_WEIGHT_ID", "value": idReportWeight },
     ];
     let body = {
         "plant": plant,
@@ -3101,4 +3115,4 @@ async function generatePdfFineCollaudo(data) {
     }
 }
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, generatePdfFineCollaudo };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData };

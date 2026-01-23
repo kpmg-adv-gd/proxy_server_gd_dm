@@ -429,7 +429,7 @@ async function saveZMarkingTesting(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             plannedLabor += level2.timeLevel2;
         }
-        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, level1.stepId, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
+        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
         if (!res) result = false;
     }
     return result;
