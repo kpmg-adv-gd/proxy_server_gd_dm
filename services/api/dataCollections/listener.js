@@ -1,6 +1,6 @@
 const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, elaborateDataCollectionstTesting, getCustomWeights, elaborateAnalisiOreVarianza } = require("./library");
-const { updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork } = require("../../api/verbali/library");
+const { updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight } = require("../../api/verbali/library");
 const { updateModifyOwnerAndDueDate } = require("../../postgres-db/services/modifiche/library");
 const { updateMancantiOwnerAndDueDate } = require("../../postgres-db/services/mancanti/library");
 const { updateActivitiesOwnerAndDueDate, upsertWeightValue } = require("../../postgres-db/services/verbali/library");
