@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -217,8 +217,8 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/doSafetyApproval", async (req, res) => {
         try {
-            const { plant, sfc, idLev2, machineType, user } = req.body;
-            const result = await doSafetyApproval(plant, sfc, idLev2, machineType, user);
+            const { plant, sfc, idLev2, machineType, user, comment } = req.body;
+            const result = await doSafetyApproval(plant, sfc, idLev2, machineType, user, comment);
             res.status(200).json({ success: result });
         } catch (error) {
             let status = error.status || 500;
@@ -309,6 +309,27 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error in generate-pdf:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per aggiornare un campo custom di un ordine
+    app.post("/api/updateCustomField", async (req, res) => {
+        try {
+            const { plant, order, customField, customValue } = req.body;
+            
+            // Validazione input
+            if (!plant || !order || !customField || customValue === undefined) {
+                return res.status(400).json({ error: "Missing required parameters: plant, order, customField, customValue" });
+            }
+
+            await updateCustomField(plant, order, customField, customValue);
+            
+            res.status(200).json({ message: "Custom field updated successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in updateCustomField:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });
