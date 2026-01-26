@@ -25,12 +25,12 @@ async function filteredWorkInstructionsTI(plant, response, idLev1, idLev2, idLev
     
 }
 
-async function saveWorkInstructionPDF(base64Data, wiName, plant) {
+async function saveWorkInstructionPDF(base64Data, wiName, plant, descriptionPdf) {
     try {
         // Decodifica il base64 in Buffer
         const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
         const pdfBuffer = Buffer.from(base64String, 'base64');
-        
+        var description = !!descriptionPdf ? descriptionPdf : "Verbale di ispezione"; 
         // Crea FormData per l'upload multipart
         const formData = new FormData();
         formData.append('file', pdfBuffer, {
@@ -48,7 +48,7 @@ async function saveWorkInstructionPDF(base64Data, wiName, plant) {
             plant: plant,
             workInstruction: wiName,
             version: "1",
-            description: `Verbale di ispezione`,
+            description: description,
             status: "RELEASABLE",
             currentVersion: true,
             trackViewing: false,

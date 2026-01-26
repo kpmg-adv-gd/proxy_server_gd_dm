@@ -1420,7 +1420,7 @@ async function getFilterVerbalManagement(plant) {
         const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
         
         // Step 4: Recupero i CO
-        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
+        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
         const mockReqCO = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCO})` },
@@ -1548,7 +1548,7 @@ async function getFilterSafetyApproval(plant) {
         const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
         
         // Step 4: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
         const mockReqCO = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCO})` },
@@ -1622,7 +1622,7 @@ async function getFilterFinalCollaudo(plant) {
         const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
         
         // Step 3: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
         const mockReqCO = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCO})` },
@@ -1716,7 +1716,7 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
         });
         
         // Step 4: Recupero i CO
-        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
         const mockReqCO = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCO})` },
@@ -1954,7 +1954,7 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
         });
         
         // Recupero CO
-        const filterCO = `(DATA_FIELD eq 'CO' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
+        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
         const mockReqCO = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCO})` },
@@ -2062,7 +2062,7 @@ async function getVerbalManagementTable(plant, project, co, order, customer, sho
         const filteredOrdersList = filteredOrders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
         
         // Recupero i dati custom (COMMESSA, CO, CUSTOMER) per tutti gli ordini
-        const filterCustomData = `(PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (DATA_FIELD eq 'COMMESSA' or DATA_FIELD eq 'CO' or DATA_FIELD eq 'CUSTOMER') AND (${filteredOrdersList}))`;
+        const filterCustomData = `(PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (DATA_FIELD eq 'COMMESSA' or DATA_FIELD eq 'CO_PREV' or DATA_FIELD eq 'CUSTOMER') AND (${filteredOrdersList}))`;
         const mockReqCustomData = {
             path: "/mdo/ORDER_CUSTOM_DATA",
             query: { $apply: `filter(${filterCustomData})` },
@@ -2617,6 +2617,268 @@ async function getActivitiesTestingData(plant, project) {
     }
 }
 
+/**
+ * Helper per convertire colore hex in RGB
+ * @param {string} hex - Colore in formato #RRGGBB
+ * @returns {Object} {r, g, b} valori normalizzati 0-1
+ */
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255
+    } : { r: 0, g: 0, b: 0 };
+}
+
+/**
+ * Disegna un pie chart direttamente sulla pagina PDF
+ * @param {PDFPage} page - Pagina PDF su cui disegnare
+ * @param {Array} data - Array di {cluster: string, hours: number}
+ * @param {number} centerX - Coordinata X del centro
+ * @param {number} centerY - Coordinata Y del centro
+ * @param {number} radius - Raggio del cerchio
+ * @param {PDFFont} font - Font per le etichette
+ */
+function drawPieChart(page, data, centerX, centerY, radius, font) {
+    const colors = ["#0A6ED1", "#A57225", "#F2C80F", "#2B9EB3", "#D0011B"];
+    
+    // Calcola totale per le percentuali
+    const total = data.reduce((sum, item) => sum + Number(item.hours || 0), 0);
+    if (total === 0) return;
+    
+    let startAngle = -Math.PI / 2; // Inizia da ore 12
+    
+    // Disegna ogni segmento
+    data.forEach((item, index) => {
+        const value = Number(item.hours || 0);
+        const percentage = value / total;
+        const sweepAngle = percentage * 2 * Math.PI;
+        const endAngle = startAngle + sweepAngle;
+        
+        // Disegna lo spicchio usando cerchi concentrici per riempimento solido
+        const colorRgb = hexToRgb(colors[index % colors.length]);
+        const pdfColor = rgb(colorRgb.r, colorRgb.g, colorRgb.b);
+        
+        // Disegna linee radiali ravvicinate per riempire lo spicchio
+        const radialLines = Math.max(30, Math.ceil(sweepAngle / (Math.PI / 180) * 3));
+        for (let r = 0; r < radialLines; r++) {
+            const angle = startAngle + (sweepAngle * r / radialLines);
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            
+            page.drawLine({
+                start: { x: centerX, y: centerY },
+                end: { x: x, y: y },
+                thickness: (radius * 2 * Math.PI * percentage) / radialLines + 0.5,
+                color: pdfColor,
+                opacity: 1
+            });
+        }
+        
+        // Disegna bordo dello spicchio
+        const borderSegments = Math.max(20, Math.ceil(sweepAngle / (Math.PI / 180) * 2));
+        for (let i = 0; i < borderSegments; i++) {
+            const angle1 = startAngle + (sweepAngle * i / borderSegments);
+            const angle2 = startAngle + (sweepAngle * (i + 1) / borderSegments);
+            
+            const x1 = centerX + radius * Math.cos(angle1);
+            const y1 = centerY + radius * Math.sin(angle1);
+            const x2 = centerX + radius * Math.cos(angle2);
+            const y2 = centerY + radius * Math.sin(angle2);
+            
+            page.drawLine({
+                start: { x: x1, y: y1 },
+                end: { x: x2, y: y2 },
+                thickness: 1.5,
+                color: pdfColor,
+                opacity: 1
+            });
+        }
+        
+        startAngle = endAngle;
+    });
+    
+    // Titolo
+    const title = 'Distribuzione Ore per Cluster';
+    const titleWidth = font.widthOfTextAtSize(title, 12);
+    page.drawText(title, {
+        x: centerX - titleWidth / 2,
+        y: centerY + radius + 25,
+        size: 12,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+    
+    // Legenda sotto il grafico
+    let legendY = centerY - radius - 15;
+    const legendX = centerX - 80;
+    
+    data.forEach((item, index) => {
+        const value = Number(item.hours || 0);
+        const percentage = ((value / total) * 100).toFixed(1);
+        const colorRgb = hexToRgb(colors[index % colors.length]);
+        const legendColor = rgb(colorRgb.r, colorRgb.g, colorRgb.b);
+        
+        // Quadratino colorato
+        page.drawRectangle({
+            x: legendX,
+            y: legendY,
+            width: 12,
+            height: 10,
+            color: legendColor
+        });
+        
+        // Testo legenda
+        const legendText = `${item.cluster}: ${value}h (${percentage}%)`;
+        page.drawText(legendText, {
+            x: legendX + 17,
+            y: legendY,
+            size: 9,
+            font: font,
+            color: rgb(0, 0, 0)
+        });
+        
+        legendY -= 15;
+    });
+}
+
+/**
+ * Disegna uno stacked column chart direttamente sulla pagina PDF
+ * @param {PDFPage} page - Pagina PDF su cui disegnare
+ * @param {Array} data - Array di {Type: string, OreBase: number, OreExtra: number}
+ * @param {number} startX - Coordinata X iniziale
+ * @param {number} startY - Coordinata Y della base
+ * @param {number} chartWidth - Larghezza totale del grafico
+ * @param {number} maxHeight - Altezza massima del grafico
+ * @param {PDFFont} font - Font per le etichette
+ */
+function drawStackedBarChart(page, data, startX, startY, chartWidth, maxHeight, font) {
+    if (!data || data.length === 0) return;
+    
+    const baseColorRgb = hexToRgb("#0A6ED1");
+    const extraColorRgb = hexToRgb("#A57225");
+    const baseColor = rgb(baseColorRgb.r, baseColorRgb.g, baseColorRgb.b);
+    const extraColor = rgb(extraColorRgb.r, extraColorRgb.g, extraColorRgb.b);
+    
+    // Trova il valore massimo per scalare
+    let maxValue = 0;
+    data.forEach(item => {
+        const total = Number(item.OreBase || 0) + Number(item.OreExtra || 0);
+        if (total > maxValue) maxValue = total;
+    });
+    
+    if (maxValue === 0) return;
+    
+    const barWidth = (chartWidth * 0.7) / data.length;
+    const spacing = (chartWidth * 0.3) / (data.length + 1);
+    
+    // Disegna assi
+    page.drawLine({
+        start: { x: startX, y: startY },
+        end: { x: startX + chartWidth, y: startY },
+        thickness: 1,
+        color: rgb(0, 0, 0)
+    });
+    
+    page.drawLine({
+        start: { x: startX, y: startY },
+        end: { x: startX, y: startY + maxHeight },
+        thickness: 1,
+        color: rgb(0, 0, 0)
+    });
+    
+    // Disegna barre
+    data.forEach((item, index) => {
+        const oreBase = Number(item.OreBase || 0);
+        const oreExtra = Number(item.OreExtra || 0);
+        
+        const x = startX + spacing + index * (barWidth + spacing);
+        
+        // Barra Ore Base
+        const baseHeight = (oreBase / maxValue) * maxHeight;
+        if (baseHeight > 0) {
+            page.drawRectangle({
+                x: x,
+                y: startY,
+                width: barWidth,
+                height: baseHeight,
+                color: baseColor,
+                opacity: 1
+            });
+        }
+        
+        // Barra Ore Extra (sopra base)
+        const extraHeight = (oreExtra / maxValue) * maxHeight;
+        if (extraHeight > 0) {
+            page.drawRectangle({
+                x: x,
+                y: startY + baseHeight,
+                width: barWidth,
+                height: extraHeight,
+                color: extraColor,
+                opacity: 1
+            });
+        }
+        
+        // Etichetta tipo sotto la barra
+        const labelWidth = font.widthOfTextAtSize(item.Type, 8);
+        page.drawText(item.Type, {
+            x: x + barWidth / 2 - labelWidth / 2,
+            y: startY - 15,
+            size: 8,
+            font: font,
+            color: rgb(0, 0, 0)
+        });
+    });
+    
+    // Legenda
+    const legendY = startY + maxHeight + 30;
+    
+    // Ore Base
+    page.drawRectangle({
+        x: startX + chartWidth / 2 - 100,
+        y: legendY,
+        width: 15,
+        height: 10,
+        color: baseColor
+    });
+    page.drawText('Ore Base', {
+        x: startX + chartWidth / 2 - 80,
+        y: legendY,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+    
+    // Ore Extra
+    page.drawRectangle({
+        x: startX + chartWidth / 2,
+        y: legendY,
+        width: 15,
+        height: 10,
+        color: extraColor
+    });
+    page.drawText('Ore Extra', {
+        x: startX + chartWidth / 2 + 20,
+        y: legendY,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+    
+    // Titolo
+    const title = 'Analisi Ore Collaudo';
+    const titleWidth = font.widthOfTextAtSize(title, 12);
+    page.drawText(title, {
+        x: startX + chartWidth / 2 - titleWidth / 2,
+        y: startY + maxHeight + 50,
+        size: 12,
+        font: font,
+        color: rgb(0, 0, 0)
+    });
+}
+
 async function generatePdfFineCollaudo(data) {
     try {
         // ============================================
@@ -2636,8 +2898,7 @@ async function generatePdfFineCollaudo(data) {
         const mancanti = Array.isArray(data.mancanti) ? data.mancanti : [];
         const parameteresData = Array.isArray(data.parameteresData) ? data.parameteresData : [];
         const riepilogoText = data.riepilogoText || "";
-        const varianzaCollaudoChartPNG = data.varianzaCollaudoChartPNG || null;
-        const oreCollaudoChartPNG = data.oreCollaudoChartPNG || null;
+        const resultsOreCollaudo = Array.isArray(data.oreCollaudo) ? data.oreCollaudo : [];
 
         // ============================================
         // INIZIALIZZAZIONE PDF
@@ -2894,24 +3155,129 @@ async function generatePdfFineCollaudo(data) {
             });
         }
 
+        // PARAMETRI - Sezioni multiple
+        if (parameteresData.length > 0) {
+            // Itero su ogni sezione di parametri
+            for (const section of parameteresData) {
+                // Verifica se la sezione ha parametri
+                const sectionParams = Array.isArray(section.parameters) ? section.parameters : [];
+                
+                if (sectionParams.length > 0) {
+                    page = pdfDoc.addPage();
+                    y = page.getSize().height - margin;
+                    
+                    // Intestazione della sezione con il nome
+                    const sectionTitle = section.description || section.group || "PARAMETRI DI COLLAUDO";
+                    drawSectionHeader(sectionTitle);
+                    
+                    // Creo le righe della tabella dai parametri di questa sezione
+                    const paramRows = sectionParams.map(p => {
+                        const value = p.valueText || p.valueNumber || p.valueData || 
+                                     p.valueBoolean || p.valueList || "-";
+                        return [
+                            p.description || "N/A",
+                            String(value),
+                            p.comment || ""
+                        ];
+                    });
+                    
+                    const colWidths = [contentWidth * 0.4, contentWidth * 0.3, contentWidth * 0.3];
+                    drawTable(
+                        ["Parametro", "Valore", "Commento"],
+                        paramRows,
+                        colWidths
+                    );
+                }
+            }
+        }
+
         // VALUTAZIONE PESI
         if (weights.length > 0) {
             page = pdfDoc.addPage();
             y = page.getSize().height - margin;
             
-            drawSectionHeader("VALUTAZIONE PESI");
+            drawSectionHeader("SEZIONI ISPEZIONE");
             
             const weightRows = weights.map(w => [
+                w.id || "N/A",
                 w.section || "N/A",
                 (w.weight || "0") + (String(w.weight || "").includes("%") ? "" : "%"),
                 w.value || "N/A"
             ]);
             
-            const colWidths = [contentWidth * 0.5, contentWidth * 0.25, contentWidth * 0.25];
-            drawTable(["Sezione", "Peso", "Valore"], weightRows, colWidths);
+            const colWidths = [contentWidth * 0.1, contentWidth * 0.4, contentWidth * 0.25, contentWidth * 0.25];
+            drawTable(["Id", "Sezione", "Peso", "Valore"], weightRows, colWidths);
         }
 
-        // ANALISI VARIANZA COLLAUDO
+        // ANALISI ORE COLLAUDO
+        if (resultsOreCollaudo.length > 0) {
+            page = pdfDoc.addPage();
+            y = page.getSize().height - margin;
+            
+            drawSectionHeader("ANALISI ORE COLLAUDO");
+            
+            // Tabella con tutti i parametri ore collaudo
+            const oreCollaudoRows = resultsOreCollaudo.map(item => [
+                item.description || item.parameterName || "N/A",
+                String(item.valueNumber || "0"),
+                item.comment || ""
+            ]);
+            
+            const colWidths = [contentWidth * 0.5, contentWidth * 0.25, contentWidth * 0.25];
+            drawTable(["Parametro", "Valore", "Commento"], oreCollaudoRows, colWidths);
+            
+            // Prepara dati per il grafico stacked bar
+            // Estrai valori specifici dai parametri
+            const oreBaseLine = resultsOreCollaudo.find(p => p.parameterName === "Ore Base Line" || p.description === "Ore Base Line");
+            const oreVarianza = resultsOreCollaudo.find(p => p.parameterName === "Ore Varianza" || p.description === "Ore Varianza");
+            const oreConsuntivo = resultsOreCollaudo.find(p => p.parameterName === "Ore Consuntivo" || p.description === "Ore Consuntivo");
+            
+            // Se abbiamo i dati necessari, disegna il grafico
+            if (oreBaseLine || oreVarianza || oreConsuntivo) {
+                const chartData = [];
+                
+                const baseLineValue = Number(oreBaseLine?.valueNumber || 0);
+                const varianzaValue = Number(oreVarianza?.valueNumber || 0);
+                const consuntivoValue = Number(oreConsuntivo?.valueNumber || 0);
+                
+                // Baseline: solo ore base line (senza extra)
+                chartData.push({
+                    Type: "Baseline",
+                    OreBase: baseLineValue,
+                    OreExtra: 0
+                });
+                
+                // Consuntivo: ore consuntivo come base + ore varianza (extra) sopra
+                chartData.push({
+                    Type: "Consuntivo",
+                    OreBase: consuntivoValue,
+                    OreExtra: varianzaValue
+                });
+                
+                // Disegna grafico stacked column
+                if (chartData.length > 0) {
+                    try {
+                        y -= 20;
+                        checkNewPage(280);
+                        const chartStartX = margin + 30;
+                        const chartStartY = y - 220;
+                        const chartWidth = contentWidth - 60;
+                        const chartHeight = 180;
+                        drawStackedBarChart(page, chartData, chartStartX, chartStartY, chartWidth, chartHeight, font);
+                        y -= 280;
+                    } catch (error) {
+                        console.error("Error generating stacked column chart:", error.message);
+                        drawText("[Grafico non disponibile]", {
+                            size: 10,
+                            color: rgb(0.5, 0.5, 0.5),
+                            centered: true
+                        });
+                    }
+                }
+            }
+        }
+
+        // ANALISI ORE VARIANZA
         if (varianzaCollaudo.length > 0) {
             page = pdfDoc.addPage();
             y = page.getSize().height - margin;
@@ -2926,10 +3292,23 @@ async function generatePdfFineCollaudo(data) {
             const colWidths = [contentWidth * 0.6, contentWidth * 0.4];
             drawTable(["Cluster", "Ore"], varianzaRows, colWidths);
             
-            // Grafico varianza
-            if (varianzaCollaudoChartPNG) {
-                y -= 10;
-                await drawImage(varianzaCollaudoChartPNG);
+            // Disegna grafico pie chart direttamente
+            try {
+                y -= 20;
+                // Spazio necessario: raggio*2 + titolo + legenda (numero elementi * 15)
+                const chartSpace = 180 + 40 + (varianzaCollaudo.length * 15);
+                checkNewPage(chartSpace);
+                const centerX = width / 2;
+                const centerY = y - 110;
+                drawPieChart(page, varianzaCollaudo, centerX, centerY, 90, font);
+                y -= chartSpace;
+            } catch (error) {
+                console.error("Error generating pie chart:", error.message);
+                drawText("[Grafico non disponibile]", {
+                    size: 10,
+                    color: rgb(0.5, 0.5, 0.5),
+                    centered: true
+                });
             }
         }
 
@@ -2941,22 +3320,32 @@ async function generatePdfFineCollaudo(data) {
             drawSectionHeader("NON CONFORMITÀ");
             
             const ncRows = treeData.map(nc => [
-                nc.nc_description || "N/A",
-                nc.wbs_element || "N/A",
+                nc.groupDesc || "N/A",
+                nc.codeDesc || "N/A",
                 nc.material || "N/A",
-                nc.priority || "N/A",
-                nc.status || "N/A"
+                nc.priority_description || "N/A",
+                nc.user || "N/A",
+                nc.phase || "N/A",
+                nc.status || "N/A",
+                nc.qn_code || "N/A",
+                nc.owner || "N/A",
+                nc.due_date || "N/A"
             ]);
             
             const colWidths = [
-                contentWidth * 0.25,
-                contentWidth * 0.2,
-                contentWidth * 0.2,
-                contentWidth * 0.15,
-                contentWidth * 0.2
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1,
+                contentWidth * 0.1
             ];
             drawTable(
-                ["Descrizione NC", "WBS", "Materiale", "Priorità", "Stato"],
+                ["NC Group", "NC Code", "Material", "Priority", "User", "Phase", "Status", "QN Code", "Owner", "Due Date"],
                 ncRows,
                 colWidths
             );
@@ -2972,20 +3361,36 @@ async function generatePdfFineCollaudo(data) {
             const modRows = treeDataModifiche.map(mod => [
                 mod.type || "N/A",
                 mod.prog_eco || "N/A",
+                mod.process_id || "N/A",
                 mod.material || "N/A",
+                mod.material_description || "N/A",
+                mod.child_material || "N/A",
+                mod.quantity || "N/A",
+                mod.flux_type || "N/A",
                 mod.status || "N/A",
-                mod.resolution || "N/A"
+                mod.resolution || "N/A",
+                mod.note || "N/A",
+                mod.owner || "N/A",
+                mod.due_date || "N/A"
             ]);
             
             const colWidths = [
-                contentWidth * 0.15,
-                contentWidth * 0.2,
-                contentWidth * 0.25,
-                contentWidth * 0.2,
-                contentWidth * 0.2
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769,
+                contentWidth * 0.0769
             ];
             drawTable(
-                ["Tipo", "Progr.Eco", "Materiale", "Stato", "Risoluzione"],
+                ["Type", "Progr.Eco", "Proc.Id", "Material", "Material Desc.", "Child Mat.", "Qty", "Flux Type", "Status", "Resolution", "Note", "Owner", "Due Date"],
                 modRows,
                 colWidths
             );
@@ -3002,19 +3407,27 @@ async function generatePdfFineCollaudo(data) {
                 act.id_lev_1 || "N/A",
                 act.macroattivita || "N/A",
                 act.machine_type || "N/A",
+                act.progressivo || "N/A",
+                act.workcenter || "N/A",
                 act.status || "N/A",
-                act.safety || "N/A"
+                act.safety || "N/A",
+                act.owner || "N/A",
+                act.due_date || "N/A"
             ]);
             
             const colWidths = [
-                contentWidth * 0.15,
-                contentWidth * 0.3,
                 contentWidth * 0.2,
                 contentWidth * 0.2,
-                contentWidth * 0.15
+                contentWidth * 0.08,
+                contentWidth * 0.08,
+                contentWidth * 0.08,
+                contentWidth * 0.08,
+                contentWidth * 0.08,
+                contentWidth * 0.08,
+                contentWidth * 0.08
             ];
             drawTable(
-                ["ID", "Macroattività", "Tipo Macchina", "Stato", "Sicurezza"],
+                ["Macro-Phase", "Macro-Activity", "Mach.Type", "Progr.", "WorkCenter", "Status", "Safety", "Owner", "Due Date"],
                 actRows,
                 colWidths
             );
@@ -3032,55 +3445,29 @@ async function generatePdfFineCollaudo(data) {
                 m.material || "N/A",
                 m.missing_component || "N/A",
                 m.component_description || "N/A",
-                m.type_mancante || "N/A"
+                m.type_mancante || "N/A",
+                m.type_cover_element || "N/A",
+                m.receipt_expected_date || "N/A",
+                m.owner || "N/A",
+                m.due_date || "N/A"
             ]);
             
             const colWidths = [
-                contentWidth * 0.15,
-                contentWidth * 0.2,
-                contentWidth * 0.2,
+                contentWidth * 0.1,
+                contentWidth * 0.12,
+                contentWidth * 0.12,
                 contentWidth * 0.3,
-                contentWidth * 0.15
+                contentWidth * 0.07,
+                contentWidth * 0.07,
+                contentWidth * 0.07,
+                contentWidth * 0.1,
+                contentWidth * 0.1
             ];
             drawTable(
-                ["WBS", "Materiale", "Componente", "Descrizione", "Tipo"],
+                ["WBS", "Material", "Miss.Comp.", "Miss.Comp.Desc.", "Type", "Cover Elem.Type", "Receipt Date", "Owner", "Due Date"],
                 manRows,
                 colWidths
             );
-        }
-
-        // PARAMETRI
-        if (parameteresData.length > 0) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("PARAMETRI DI COLLAUDO");
-            
-            const paramRows = parameteresData.map(p => {
-                const value = p.valueText || p.valueNumber || p.valueData || 
-                             p.valueBoolean || p.valueList || "-";
-                return [
-                    p.description || "N/A",
-                    String(value),
-                    p.comment || ""
-                ];
-            });
-            
-            const colWidths = [contentWidth * 0.4, contentWidth * 0.3, contentWidth * 0.3];
-            drawTable(
-                ["Parametro", "Valore", "Commento"],
-                paramRows,
-                colWidths
-            );
-        }
-
-        // GRAFICO ORE COLLAUDO
-        if (oreCollaudoChartPNG) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("ANALISI ORE COLLAUDO");
-            await drawImage(oreCollaudoChartPNG);
         }
 
         // RIEPILOGO FINALE
@@ -3117,13 +3504,19 @@ async function generatePdfFineCollaudo(data) {
     }
 }
 
-// Funzione generica per aggiornare un campo custom di un ordine
-async function updateCustomField(plant, order, customField, customValue) {
+// Funzione generica per aggiornare uno o più campi custom di un ordine
+async function updateCustomField(plant, order, customFieldsUpdate) {
     try {
+        // Verifica se customFieldsUpdate è un array, altrimenti lo trasforma in array
+        const fieldsArray = Array.isArray(customFieldsUpdate) ? customFieldsUpdate : [customFieldsUpdate];
+        
+        // Trasforma l'array di {customField, customValue} nel formato richiesto dall'API
+        const customValues = fieldsArray.map(field => ({
+            "attribute": field.customField,
+            "value": field.customValue
+        }));
+        
         const url = hostname + "/order/v1/orders/customValues";
-        const customValues = [
-            { "attribute": customField, "value": customValue }
-        ];
         const body = {
             "plant": plant,
             "order": order,
@@ -3138,4 +3531,4 @@ async function updateCustomField(plant, order, customField, customValue) {
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData,updateCustomTestingReportStatusOrderInWork,updateCustomAssemblyReportStatusIdReportWeight, updateCustomField };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField };

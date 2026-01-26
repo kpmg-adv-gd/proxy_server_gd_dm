@@ -105,8 +105,10 @@ module.exports.listenerSetup = (app) => {
     // Questo endpoint deve restituire il file PDF generato (application/pdf)
     app.post("/api/downloadVerbalePDF", async (req, res) => {
         try {
-            const { plant, sfc } = req.body;
-            var base64 = await getWorkInstructionPDF(plant, "Verbale_Ispezione_" + sfc);
+            const { plant, sfc, isTesting } = req.body;
+            let nameWi = "Verbale_Ispezione_" + sfc;
+            if(isTesting) nameWi = "Collaudo_Finale_Testing_" + sfc;
+            var base64 = await getWorkInstructionPDF(plant, nameWi);
             res.status(200).json({ base64: base64 });
         } catch (error) {
             let status = error.status || 500;
@@ -286,25 +288,60 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
-    // Endpoint per generare pdf report di fine collaudo
-    app.post("/api/generate-pdf", async (req, res) => {
+    // Endpoint unificato per generare pdf report di fine collaudo + aggiornare custom fields + salvare come WI
+    app.post("/api/generateFinalCollaudoRelation", async (req, res) => {
         try {
-            const { pdfData } = req.body;
+            const { plant, order, sfc, customFieldsUpdate, pdfData } = req.body;
             
             // Validazione input
             if (!pdfData) {
                 return res.status(400).json({ error: "Missing required parameter: pdfData" });
             }
+            
+            if (!plant || !order || !sfc) {
+                return res.status(400).json({ error: "Missing required parameters: plant, order, sfc" });
+            }
 
+            // Step 1: Aggiorna i custom fields (se presenti)
+            if (customFieldsUpdate && Array.isArray(customFieldsUpdate) && customFieldsUpdate.length > 0) {
+                // Verifica che ogni elemento dell'array abbia customField e customValue
+                for (const field of customFieldsUpdate) {
+                    if (!field.customField || field.customValue === undefined) {
+                        return res.status(400).json({ error: "Each element in customFieldsUpdate must have customField and customValue properties" });
+                    }
+                }
+                
+                console.log(`Updating custom fields for order ${order}...`);
+                await updateCustomField(plant, order, customFieldsUpdate);
+                console.log("Custom fields updated successfully");
+            }
+
+            // Step 2: Genera il PDF
+            console.log("Generating PDF...");
             const pdfBytes = await generatePdfFineCollaudo(pdfData);
             
             if (!pdfBytes || pdfBytes.length === 0) {
                 return res.status(500).json({ error: "PDF generation failed: empty result" });
             }
             
-            res.setHeader("Content-Type", "application/pdf");
-            res.setHeader("Content-Disposition", "attachment; filename=report_fine_collaudo.pdf");
-            res.send(Buffer.from(pdfBytes));
+            // Converti pdfBytes in base64
+            const base64PDF = Buffer.from(pdfBytes).toString('base64');
+            
+            // Step 3: Salva come Work Instruction
+            const wiName = `Collaudo_Finale_Testing_${sfc}`;
+            
+            console.log(`Saving PDF as Work Instruction: ${wiName}...`);
+            const wiResult = await saveWorkInstructionPDF(base64PDF, wiName, plant, "Collaudo Finale Testing");
+            
+            if (!wiResult.success) {
+                console.error("Work Instruction save failed:", wiResult.error);
+                return res.status(500).json({ error: `PDF generated but failed to save as Work Instruction: ${wiResult.error}` });
+            }
+            
+            console.log("Work Instruction saved successfully");
+            
+            // Restituisci il PDF al client
+            res.status(200).json({ info: "Work Instruction saved successfully" });
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
@@ -312,26 +349,4 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
-
-    // Endpoint per aggiornare un campo custom di un ordine
-    app.post("/api/updateCustomField", async (req, res) => {
-        try {
-            const { plant, order, customField, customValue } = req.body;
-            
-            // Validazione input
-            if (!plant || !order || !customField || customValue === undefined) {
-                return res.status(400).json({ error: "Missing required parameters: plant, order, customField, customValue" });
-            }
-
-            await updateCustomField(plant, order, customField, customValue);
-            
-            res.status(200).json({ message: "Custom field updated successfully" });
-        } catch (error) {
-            let status = error.status || 500;
-            let errMessage = error.message || "Internal Server Error";
-            console.error("Error in updateCustomField:", errMessage);
-            res.status(status).json({ error: errMessage });
-        }
-    });
-
 }

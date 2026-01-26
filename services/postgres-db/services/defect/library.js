@@ -293,7 +293,9 @@ async function getDefectsTI(plant, project) {
             fileIds: defects[i].defectStandard.fileIds || [],
             numDefect: defects[i].defectStandard.quantity || 1,
             sfc: defects[i].sfc,
-            dm_order: defects[i].dm_order
+            dm_order: defects[i].dm_order,
+            owner: defects[i].owner,
+            due_date: defects[i].due_date
         };
         if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
             treeTable.push({
