@@ -64,7 +64,7 @@ async function completeAdditionalOperation(plant, sfc, operation, project, phase
             // mostro lista operazioni con difetti bloccanti aperti
             var defectList = defects.map(defect => defect.operation).join(", ");
             if (defects.length > 0) {
-                return { result: false, message: "The operation cannot be completed because there are open blocking defects in the following operations: " + defectList };
+                return { result: false, message: "The operation cannot be completed because there are open blocking defects for the same order (" + order + ") in the following operations: " + defectList };
             }
         }
         // complete standard operation (prima recupero risorsa su cui è stato fatto start)
