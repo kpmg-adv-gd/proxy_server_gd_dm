@@ -36,7 +36,7 @@ function getWorkListDataFiltered(response,body){
             // Restituisci true (ritorno l'oggetto) solo se tutte le condizioni sono rispettate
             return sfcCondition && materialCondition && projectCondition && wbsCondition && machineSectionCondition && parentMaterialCondition;
         });
-
+        //Arricchisco tutti gli ordini (sfc) con i campi custom per gestirli da front-end
         var managedResponse = filteredResponse.map(function(obj) {
             //aggiungo il workcenter
             obj.WORKCENTER= workcenter;
@@ -54,7 +54,12 @@ function getWorkListDataFiltered(response,body){
             return obj; // Restituisci l'oggetto modificato
         });
 
-        return managedResponse;
+        //Resituisco solo gli ordini di assembly non inviati al testing
+        var filteredResponse = managedResponse.filter(function(obj) {
+            return obj["PHASE"] === "ASSEMBLY" && ( obj["SENT_TO_TESTING"] === "false" || obj["SENT_TO_TESTING"] === false );
+        });
+
+        return filteredResponse;
 
     } catch(error){
         console.log("Internal Server Error:"+error);
