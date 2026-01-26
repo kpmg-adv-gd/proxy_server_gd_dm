@@ -21,11 +21,14 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
 
     const orderDetail = await getOrderDetail(plant, childOrder);
     const sfc = orderDetail?.sfcs[0] || "";
+    const routing = orderDetail?.routing?.routing || "";
+    const routingVersion = orderDetail?.routing?.version || "";
+    const routingType = orderDetail?.routing?.type || "";
 
     // parallelizzo getProgressStatusOrder e getChildrenOrder
     const [ children, progressStatus] = await Promise.all([
         getChildrenOrder(plant, project, childOrder, order),
-        getProgressStatusOrder(plant,childOrder)
+        getProgressStatusMachineOrder(plant,childOrder,routing,routingVersion,routingType);
     ]);
 
     const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
@@ -294,6 +297,102 @@ async function getProgressStatusOrder(plant, order, isParentAssembly) {
     console.error("Errore nel calcolo dello stato avanzamento ordine:", error);
     throw error;
   }
+}
+
+async function getProgressStatusMachineOrder(plant, order, routing, routingVersion, routingType) {
+    try {
+        // Step 1: Recupera il routing e filtra le operazioni con MACROFASE diversa da MF6
+        const routingUrl = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+        const routingResponse = await callGet(routingUrl);
+        
+        if (!routingResponse || routingResponse.length === 0 || !routingResponse[0].routingSteps) {
+            return {
+                totalPlannedTime: 0,
+                totalCompletedTime: 0
+            };
+        }
+        
+        // Filtra le operazioni che NON hanno MACROFASE = MF6
+        const filteredOperations = routingResponse[0].routingSteps
+            .filter(step => {
+                const macrofaseCustomValue = (step.customValues || []).find(cv => cv.attribute === "MF");
+                const macrofaseValue = macrofaseCustomValue?.value || "";
+                return macrofaseValue !== "MF6";
+            })
+            .map(step => step.routingOperation?.operationActivity?.operationActivity)
+            .filter(op => op); // Rimuovi eventuali undefined/null
+        
+        if (filteredOperations.length === 0) {
+            return {
+                totalPlannedTime: 0,
+                totalCompletedTime: 0
+            };
+        }
+        
+        // Step 2: Recupera gli SFC completati per l'ordine
+        const sfcStatusFilter = `PLANT eq '${plant}' and MFG_ORDER eq '${order}' and COMPLETED_AT ne null`;
+        const sfcStatusRequest = {
+            path: "/mdo/SFC_STEP_STATUS",
+            query: {
+                $apply: `filter(${sfcStatusFilter})`
+            },
+            method: "GET"
+        };
+        
+        const resultSfcStatus = await dispatch(sfcStatusRequest);
+        const completedOps = resultSfcStatus?.data?.value ? resultSfcStatus.data.value.map(row => row.OPERATION_ACTIVITY) : [];
+        
+        // Step 3: Interseca le operazioni completate con quelle filtrate (non MF6)
+        const filteredCompletedOps = completedOps.filter(op => filteredOperations.includes(op));
+        
+        // Step 4: Calcola il tempo pianificato totale solo per le operazioni filtrate
+        const filteredOpsFilter = filteredOperations.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(" or ");
+        const totalPlannedFilter = `PLANT eq '${plant}' and MFG_ORDER eq '${order}' and (${filteredOpsFilter})`;
+        const totalPlannedRequest = {
+            path: "/mdo/ORDER_SCHEDULE",
+            query: {
+                $apply: `filter(${totalPlannedFilter})/aggregate(PLAN_PROCESSING_TIME with sum as TotalPlannedTime)`
+            },
+            method: "GET"
+        };
+        
+        // Step 5: Calcola il tempo completato solo per le operazioni filtrate E completate
+        let completedTimeRequest;
+        if (filteredCompletedOps.length > 0) {
+            const completedOpsFilter = filteredCompletedOps.map(op => `OPERATION_ACTIVITY eq '${op}'`).join(" or ");
+            const completedFilter = `PLANT eq '${plant}' and MFG_ORDER eq '${order}' and (${completedOpsFilter})`;
+            completedTimeRequest = {
+                path: "/mdo/ORDER_SCHEDULE",
+                query: {
+                    $apply: `filter(${completedFilter})/aggregate(PLAN_PROCESSING_TIME with sum as CompletedTime)`
+                },
+                method: "GET"
+            };
+        }
+        
+        // Esegui le chiamate in parallelo
+        const [totalPlannedRes, completedTimeRes] = await Promise.all([
+            dispatch(totalPlannedRequest),
+            filteredCompletedOps.length > 0 ? dispatch(completedTimeRequest) : Promise.resolve({ data: { value: [{ CompletedTime: 0 }] } })
+        ]);
+        
+        const totalPlannedTime = totalPlannedRes.data?.value?.[0]?.TotalPlannedTime || 0;
+        const totalCompletedTime = completedTimeRes.data?.value?.[0]?.CompletedTime || 0;
+        
+        console.log("Machine Order - totalPlannedTime (excluding MF6) =", totalPlannedTime);
+        console.log("Machine Order - totalCompletedTime (excluding MF6) =", totalCompletedTime);
+        
+        return {
+            totalPlannedTime,
+            totalCompletedTime
+        };
+    } catch (error) {
+        console.error("Errore nel calcolo dello stato avanzamento machine order:", error);
+        return {
+            totalPlannedTime: 0,
+            totalCompletedTime: 0
+        };
+    }
 }
 
 module.exports = { getSinotticoBomMultilivelloReportData, getFilterSinotticoBom, getProgressStatusOrder };

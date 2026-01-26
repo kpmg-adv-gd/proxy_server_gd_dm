@@ -44,7 +44,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
             return obj; // Restituisci l'oggetto modificato
         })
 
-        //Nel caso degli ordini macchina ordino per Macrofase le operazioni
+        //Nel caso degli ordini macchina ordino per Macrofase le operazioni ed escludo quelle con macrofase 6
         if(orderType=="MACH"){
             enrichedResponseData.sort((objA, objB) => {
                 let customValuesA = objA?.routingOperation?.customValues;
@@ -55,6 +55,14 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 let macrofaseB = macrofaseBField?.value || "MF0";
                 return macrofaseA.localeCompare(macrofaseB);
             });
+
+            enrichedResponseData = enrichedResponseData.filter(function(obj) {
+                let customValues = obj?.routingOperation?.customValues;
+                let macrofaseField = customValues.find(obj => obj.attribute == "MF");
+                let macrofase = macrofaseField?.value;
+                return macrofase !== "MF6";
+            }
+
         }
         //Nel caso degli ordini gruppo ordino per campo custom sequence
         const orderGrouplist = ordersGroup.split(";"); 
