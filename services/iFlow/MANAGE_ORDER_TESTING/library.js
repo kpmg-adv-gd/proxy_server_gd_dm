@@ -8,7 +8,6 @@ const { insertMarkingTesting } = require("../../postgres-db/services/marking_tes
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 const plantMappingCache = new Map();
-var operazioniWithID = [];
 
 async function manageNewOrderTesting(jsonOrderTesting) {
     // 1. Controllo esistenza, ed eventualmente creazione, per ogni operazione di livello 1
@@ -106,6 +105,7 @@ async function createMaterial(plant, jsonOrderTesting) {
     var materials = [];
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         for (var j = 0; j < level1.level2.length; j++) {
             const level2 = level1.level2[j];
             if (!materials.includes(level2.machineType)) materials.push(level2.machineType);
@@ -160,6 +160,7 @@ async function createComponentBOM(plant, jsonOrderTesting) {
     var materials = [];
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const level1 = jsonOrderTesting.level1[i];
+        if (level1.areaRelevance == "M") continue;
         for (var j = 0; j < level1.level2.length; j++) {
             const level2 = level1.level2[j];
             if (!materials.includes(level2.machineType)) materials.push(level2.machineType);
@@ -219,18 +220,16 @@ async function getWorkCenterDmValueByErp(oldWorkCenterErpValue, plantValue){
 async function createOrder(plant, jsonOrderTesting) {
     // Il materiale è dato dalla concatenazione dei machineType di ogni livello 1
     var materials = [], componentBoms = [], routingOperationGroups = [], routingSteps = [];
-    var sequenceOperation = 20;
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const level1 = jsonOrderTesting.level1[i];
         if (level1.areaRelevance == "M") continue;
-        operazioniWithID.push({ operationActivity: level1.operationActivity, stepId: String(sequenceOperation) });
         routingOperationGroups.push({
             "routingOperationGroup": level1.operationActivity,
-            "operationNumber": sequenceOperation,
-            "routingStepIds": [String(sequenceOperation)]
+            "operationNumber": level1.idActivity,
+            "routingStepIds": [level1.idActivity]
         });
         routingSteps.push({
-            "stepId": String(sequenceOperation),
+            "stepId": level1.idActivity,
             "description": level1.operationActivityDescription,
             "workCenter": await getWorkCenterDmValueByErp(level1.workCenterERP, plant),
             "erpSequence": 1,
@@ -249,7 +248,6 @@ async function createOrder(plant, jsonOrderTesting) {
                 { "attribute": "DATE", "value": level1.date }
             ]
         });
-        sequenceOperation += 10;
         var sequenceMachineType = 10;
         for (var j = 0; j < level1.level2.length; j++) {
             var level2 = level1.level2[j];
@@ -393,7 +391,7 @@ async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
         if (level1.areaRelevance == "M") continue;
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
-            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
+            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, level1.idActivity, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
             if (!res) result = false;
         }
     }
@@ -410,7 +408,7 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             for (var k=0; k<level2.level3.length; k++) {
                 var level3 = level2.level3[k];
-                var res = await insertZVerbaleLev3(jsonOrderTesting.idOrdine, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level2.idLevel2, level3.idLevel3, level3.level3Description, level2.machineType, plant);    
+                var res = await insertZVerbaleLev3(jsonOrderTesting.idOrdine, level1.idActivity, level2.idLevel2, level3.idLevel3, level3.level3Description, level2.machineType, plant);    
                 if (!res) result = false;
             }
         }
@@ -429,7 +427,7 @@ async function saveZMarkingTesting(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             plannedLabor += level2.timeLevel2;
         }
-        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, operazioniWithID.filter(op => op.operationActivity === level1.operationActivity)[0].stepId, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
+        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, level1.idActivity, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
         if (!res) result = false;
     }
     return result;
