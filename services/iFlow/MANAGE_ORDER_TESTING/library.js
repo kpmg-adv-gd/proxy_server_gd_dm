@@ -233,7 +233,7 @@ async function createOrder(plant, jsonOrderTesting) {
             "description": level1.operationActivityDescription,
             "workCenter": await getWorkCenterDmValueByErp(level1.workCenterERP, plant),
             "erpSequence": 1,
-            "entry": true,
+            "entry": i == 0, // solo il primo è entry
             "lastReportingStep": false,
             "routingOperation": {
                 "operationActivity": {
