@@ -100,6 +100,27 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    app.post("/db/autoApproveDefectQN", async (req, res) => {
+        const { dataForSap, defectId, userId, plant } = req.body;
+        try {
+            let sapCode = await postgresdbService.getOrderCustomDataDefectType(dataForSap.code, plant);
+            if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
+                sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
+            }else{
+                sapCode = null;
+            }
+            dataForSap.code = sapCode;
+            const result = await postgresdbService.sendApproveDefectQN(dataForSap, defectId, userId, plant);
+            if (result.OUTPUT.esito == "OK")
+                res.status(200).json(result);
+            else
+                res.status(400).json({error: result.OUTPUT.message || result.OUTPUT.error || "Error while approving defect"});
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    });
+
     app.post("/db/selectDefectForReport", async (req, res) => {
         const { plant, wbe, sfc, order, qnCode, priority, startDate, endDate, status } = req.body;
         try {
