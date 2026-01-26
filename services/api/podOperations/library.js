@@ -61,7 +61,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 let macrofaseField = customValues.find(obj => obj.attribute == "MF");
                 let macrofase = macrofaseField?.value;
                 return macrofase !== "MF6";
-            }
+            });
 
         }
         //Nel caso degli ordini gruppo ordino per campo custom sequence
