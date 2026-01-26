@@ -56,7 +56,7 @@ function getWorkListDataFiltered(response,body){
 
         //Resituisco solo gli ordini di assembly non inviati al testing
         var filteredResponse = managedResponse.filter(function(obj) {
-            return obj["PHASE"] === "ASSEMBLY" && ( obj["SENT_TO_TESTING"] === "false" || obj["SENT_TO_TESTING"] === false );
+            return obj["PHASE"] !== "TESTING" && obj["SENT_TO_TESTING"] !== "true" && obj["SENT_TO_TESTING"] !== true;
         });
 
         return filteredResponse;

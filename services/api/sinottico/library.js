@@ -28,7 +28,7 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
     // parallelizzo getProgressStatusOrder e getChildrenOrder
     const [ children, progressStatus] = await Promise.all([
         getChildrenOrder(plant, project, childOrder, order),
-        getProgressStatusMachineOrder(plant,childOrder,routing,routingVersion,routingType);
+        getProgressStatusMachineOrder(plant,childOrder,routing,routingVersion,routingType)
     ]);
 
     const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
@@ -59,7 +59,6 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
         Children: children
     };
 }
-
 
 async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
     const orderRow = await getZOrdersLinkByPlantProjectAndParentOrder(plant, project, parentOrder);
@@ -110,6 +109,9 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                 if(progressStatus && progressStatus.totalPlannedTime && progressStatus.totalPlannedTime > 0){
                     progressStatusOrder = Math.round((progressStatus.totalCompletedTime / progressStatus.totalPlannedTime) * 100);
                 }
+                
+                //Ordine rotto in prod per routing - mettiamo completamento a 100
+                if(sfc ==="C005.02285.MKM01_21MK44_192") progressStatusOrder = 100;
                 
                 return {
                     Material: comp.child_material || "",
@@ -315,7 +317,7 @@ async function getProgressStatusMachineOrder(plant, order, routing, routingVersi
         // Filtra le operazioni che NON hanno MACROFASE = MF6
         const filteredOperations = routingResponse[0].routingSteps
             .filter(step => {
-                const macrofaseCustomValue = (step.customValues || []).find(cv => cv.attribute === "MF");
+                const macrofaseCustomValue = (step?.routingOperation?.customValues || []).find(cv => cv.attribute === "MF");
                 const macrofaseValue = macrofaseCustomValue?.value || "";
                 return macrofaseValue !== "MF6";
             })
