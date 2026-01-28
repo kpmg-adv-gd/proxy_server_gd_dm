@@ -23,8 +23,12 @@ async function getZOrderLinkChildOrdersMultipleMaterial(plant,order,material,chi
 }
 
 async function getMaterialsTI(plant, project) {
-    const data = await postgresdbService.executeQuery(queryBom.getMaterialsTIQuery, [plant, project]);
     var results = [];
+    const dataMaterialFake = await postgresdbService.executeQuery(queryBom.getMaterialsTIFakeQuery, [plant]);
+    dataMaterialFake.forEach(element => {
+        results.push({ material: element.material, orders: [ ] });
+    });
+    const data = await postgresdbService.executeQuery(queryBom.getMaterialsTIQuery, [plant, project]);
     for (var i = 0; i < data.length; i++) {
         var infoOrder = await getOrderInfoByOrder(plant,data[i].child_order);
         let orderTypeField = infoOrder?.customValues.find(obj => obj.attribute == "ORDER_TYPE");

@@ -219,21 +219,22 @@ async function getWorkCenterDmValueByErp(oldWorkCenterErpValue, plantValue){
 // Fase 5: Creazione ordine di testing
 async function createOrder(plant, jsonOrderTesting) {
     // Il materiale è dato dalla concatenazione dei machineType di ogni livello 1
-    var materials = [], componentBoms = [], routingOperationGroups = [], routingSteps = [];
+    var materials = [], componentBoms = [], routingOperationGroups = [], routingSteps = [], entryTrue = true;
+    var numberStep = 20;
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const level1 = jsonOrderTesting.level1[i];
         if (level1.areaRelevance == "M") continue;
         routingOperationGroups.push({
             "routingOperationGroup": level1.operationActivity,
-            "operationNumber": level1.idActivity,
-            "routingStepIds": [level1.idActivity]
+            "operationNumber": "00" + numberStep,
+            "routingStepIds": ["00" + numberStep]
         });
         routingSteps.push({
-            "stepId": level1.idActivity,
+            "stepId": "00" + numberStep,
             "description": level1.operationActivityDescription,
             "workCenter": await getWorkCenterDmValueByErp(level1.workCenterERP, plant),
             "erpSequence": 1,
-            "entry": i == 0, // solo il primo è entry
+            "entry": entryTrue, // solo il primo è entry
             "lastReportingStep": false,
             "routingOperation": {
                 "operationActivity": {
@@ -264,6 +265,8 @@ async function createOrder(plant, jsonOrderTesting) {
                 sequenceMachineType += 10;
             }
         }
+        entryTrue = false; // solo il primo è entry
+        numberStep += 10;
     }
     var materialName = materials.join("_");
     var url = hostname+"/order/v1/orders"; 
@@ -386,14 +389,16 @@ async function updateRouting(plant, jsonOrderTesting) {
 // Fase 7: Salvataggio z_verbale_lev_2
 async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
     var result = true;
+    var numberStep = 20;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
         if (level1.areaRelevance == "M") continue;
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
-            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, level1.idActivity, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
+            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, "00" + numberStep, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
             if (!res) result = false;
         }
+        numberStep += 10;
     }
     return result;
 }
@@ -401,6 +406,7 @@ async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
 // Fase 8: Salvataggio z_verbale_lev_3
 async function saveZVerbale3(plant, jsonOrderTesting) {
     var result = true;
+    var numberStep = 20;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
         if (level1.areaRelevance == "M") continue;
@@ -408,10 +414,11 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             for (var k=0; k<level2.level3.length; k++) {
                 var level3 = level2.level3[k];
-                var res = await insertZVerbaleLev3(jsonOrderTesting.idOrdine, level1.idActivity, level2.idLevel2, level3.idLevel3, level3.level3Description, level2.machineType, plant);    
+                var res = await insertZVerbaleLev3(jsonOrderTesting.idOrdine, "00" + numberStep, level2.idLevel2, level3.idLevel3, level3.level3Description, level2.machineType, plant);    
                 if (!res) result = false;
             }
         }
+        numberStep += 10;
     }
     return result;
 }
@@ -419,6 +426,7 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
 // Fase 9: Salvataggio z_marking_testing
 async function saveZMarkingTesting(plant, jsonOrderTesting) {
     var result = true;
+    var numberStep = 20;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
         // sommo timeLevel2
@@ -427,8 +435,9 @@ async function saveZMarkingTesting(plant, jsonOrderTesting) {
             var level2 = level1.level2[j];
             plannedLabor += level2.timeLevel2;
         }
-        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, level1.idActivity, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
+        var res = await insertMarkingTesting(plant, jsonOrderTesting.wbs, level1.network, jsonOrderTesting.idOrdine, level1.idActivity, "00" + numberStep, level1.confirmationNumber, plannedLabor, "HCN", level1.varianceLabor, level1.uomVariance, level1.areaRelevance);
         if (!res) result = false;
+        numberStep += 10;
     }
     return result;
 }

@@ -78,29 +78,41 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
 async function getProjectsVerbaliSupervisoreAssembly(plant) {
     var projects = [];
     try {
-        const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
-        const mockReq = {
+        var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqProject = {
             path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filter})` },
+            query: { $apply: `filter(${projectFilter})` },
             method: "GET"
         };
-        var outMock = await dispatch(mockReq);
-        var orders = outMock?.data?.value.length > 0 ? outMock.data.value : [];
-        for (var i = 0; i < orders.length; i++) {
-            var mfg_order = orders[i].MFG_ORDER;
-            // Recupero progetto
-            var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqProject = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${projectFilter})` },
-                method: "GET"
-            };
-            var outMockProject = await dispatch(mockReqProject);
-            var projectData = outMockProject?.data?.value.length > 0 ? outMockProject.data.value : [];
-            if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE))
-                projects.push({ project: projectData[0].DATA_FIELD_VALUE });
+        var outMockProject = await dispatch(mockReqProject);
+        for (var i=0; i<outMockProject.data.value.length; i++) {
+            var projectData = outMockProject.data.value[i];
+            if (!projects.some(p => p.project === projectData.DATA_FIELD_VALUE))
+                projects.push({ project: projectData.DATA_FIELD_VALUE });
         }
         return projects;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Funzione per ottenere i WBE per filtro su supervisore assembly
+async function getWBEVerbaliSupervisoreAssembly(plant) {
+    var wbe = [];
+    try {
+        var wbeFilter = `(DATA_FIELD eq 'WBE' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqWBE = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${wbeFilter})` },
+            method: "GET"
+        };
+        var outMockWBE = await dispatch(mockReqWBE);
+        for (var i=0; i<outMockWBE.data.value.length; i++) {
+            var wbeData = outMockWBE.data.value[i];
+            if (!wbe.some(p => p.wbe === wbeData.DATA_FIELD_VALUE))
+                wbe.push({ wbe: wbeData.DATA_FIELD_VALUE });
+        }
+        return wbe;
     } catch (error) {
         return false;
     }
@@ -3531,4 +3543,4 @@ async function updateCustomField(plant, order, customFieldsUpdate) {
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField };
