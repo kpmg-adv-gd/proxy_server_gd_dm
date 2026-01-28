@@ -106,12 +106,12 @@ const getGroupByPriorityDefects = `with PRIO as (
 
 const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;
 
-const getVerbaleLev2ByOrder = `SELECT "order", id_lev_1, lev_2, id_lev_2, machine_type, workcenter_lev_2, safety, active 
+const getVerbaleLev2ByOrder = `SELECT "order", id_lev_1, lev_2, id_lev_2, machine_type, workcenter_lev_2, safety, active, status_lev_2, time_lev_2, uom, plant, priority, wbe, sfc 
     FROM z_verbale_lev_2 
     WHERE "order" = $1 AND plant = $2
     ORDER BY id_lev_1, id_lev_2`;
 
-const getVerbaleLev3ByOrder = `SELECT "order", id_lev_2, id_lev_3, lev_3 
+const getVerbaleLev3ByOrder = `SELECT "order", id_lev_1, id_lev_2, id_lev_3, lev_3, nonconformances, status_lev_3, start_date, complete_date, start_user, complete_user, machine_type, plant, sfc
     FROM z_verbale_lev_3 
     WHERE "order" = $1 AND plant = $2
     ORDER BY id_lev_2, id_lev_3`;

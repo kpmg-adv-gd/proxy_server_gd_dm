@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -183,6 +183,23 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    // Endpoint per popolare la TreeTable deLL'Avanzamento Collaudo
+    app.post("/api/getCollaudoProgressTreeTable", async (req, res) => {
+    try {
+        const { plant, order } = req.body;
+        const treeTableData = await getCollaudoProgressTreeTable(plant, order);
+        if (treeTableData === false) {
+            res.status(500).json({ error: "Error while executing query" });
+            return;
+        }
+        res.status(200).json(treeTableData);
+    } catch (error) {
+        let status = error.status || 500;
+        let errMessage = error.message || "Internal Server Error";
+        res.status(status).json({ error: errMessage });
+    }
+});
+
     // Endpoint per salvare le modifiche alla TreeTable del Verbal Management
     app.post("/api/saveVerbalManagementTreeTableChanges", async (req, res) => {
         try {
@@ -270,8 +287,8 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/getFinalCollaudoData", async (req, res) => {
         try {
-            const { plant, project, sfc, co, customer, showAll, sentToInstallation } = req.body;
-            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation);
+            const { plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus } = req.body;
+            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus);
             res.status(200).json(data);
         } catch (error) {
             let status = error.status || 500;
