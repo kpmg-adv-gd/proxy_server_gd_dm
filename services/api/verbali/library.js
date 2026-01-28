@@ -1673,7 +1673,7 @@ async function getFilterFinalCollaudo(plant) {
 }
 
 // Funzione per popolare la tabella Final Collaudo con filtri opzionali
-async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation) {
+async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus) {
     try {
         // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
         const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
@@ -1822,6 +1822,11 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             // Filtro per showAll (TESTING_REPORT_STATUS)
             if (showAll === false || showAll === 'false') {
                 if (reportStatusValue === 'DONE') continue;
+            }
+            
+            // Filtro per showAllSfcStatus (se false, esclude SFC con status DONE)
+            if (showAllSfcStatus === false || showAllSfcStatus === 'false') {
+                if (sfcStatus === 'DONE') continue;
             }
             
             // Aggiungo la riga al risultato
@@ -2223,6 +2228,220 @@ async function getVerbalManagementTreeTable(plant, order) {
         return treeTable;
     } catch (error) {
         console.error("Error in getVerbalManagementTreeTable:", error);
+        return false;
+    }
+}
+
+// Funzione per popolare la TreeTable di Progress Collaudo (più semplice, senza campi _original)
+async function getCollaudoProgressTreeTable(plant, order) {
+    try {
+        // Step 1: Recupero i dati dell'ordine per ottenere ROUTING, ROUTING_VERSION e ROUTING_TYPE
+        const filterOrder = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: `filter(${filterOrder})` },
+            method: "GET"
+        };
+        const outMockOrder = await dispatch(mockReqOrder);
+        const orderData = outMockOrder?.data?.value?.length > 0 ? outMockOrder.data.value[0] : null;
+        
+        if (!orderData) {
+            return [];
+        }
+        
+        const routing = orderData.ROUTING;
+        const routingVersion = orderData.ROUTING_VERSION;
+        const routingType = orderData.ROUTING_TYPE;
+        
+        // Step 2: Chiamata API per recuperare i Routing Steps
+        const urlRouting = `${hostname}/routing/v1/routings?plant=${plant}&routing=${routing}&type=${routingType}&version=${routingVersion}`;
+        const routingResponse = await callGet(urlRouting);
+        const routingSteps = routingResponse[0]?.routingSteps || [];
+        
+        // Step 3: Recupero i dati di livello 2 dalla tabella Z_VERBALE_LEV2
+        const lev2Data = await getVerbaleLev2ByOrder(order, plant);
+        
+        // Step 4: Recupero i dati di livello 3 dalla tabella Z_VERBALE_LEV3
+        const lev3Data = await getVerbaleLev3ByOrder(order, plant);
+        
+        // Step 5: Recupero SFC per calcolare lo status del livello 1
+        const filterSFC = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const mockReqSFC = {
+            path: "/mdo/SFC",
+            query: { $apply: `filter(${filterSFC})` },
+            method: "GET"
+        };
+        const outMockSFC = await dispatch(mockReqSFC);
+        const sfcValue = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value[0]?.SFC : '';
+        
+        // Recupero SFC details per status dei livelli 1
+        let sfcSteps = [];
+        if (sfcValue) {
+            const urlSfcDetails = `${hostname}/sfc/v1/sfcdetail?plant=${plant}&sfc=${sfcValue}`;
+            const sfcDetails = await callGet(urlSfcDetails);
+            sfcSteps = sfcDetails?.steps || [];
+        }
+        
+        // Step 6: Costruisco la TreeTable
+        const treeTable = [];
+        
+        for (const step of routingSteps) {
+            const stepId = step.stepId;
+            const description = step.description || '';
+            const workCenter = step.workCenter?.workCenter || '';
+            
+            // Filtra i dati di livello 2 che corrispondono a questo stepId
+            const matchingLev2 = lev2Data.filter(l2 => l2.id_lev_1 === stepId && l2.active === true);
+            
+            // Calcolo Status livello 1 (simile a POD Operations)
+            let level1Status = '';
+            const sfcStep = sfcSteps.find(s => s.stepId === stepId);
+            if (sfcStep) {
+                if (sfcStep.quantityInQueue === 1) {
+                    level1Status = 'New';
+                } else if (sfcStep.quantityInWork === 1) {
+                    level1Status = 'In Work';
+                } else if (sfcStep.quantityDone === 1) {
+                    level1Status = 'Done';
+                }
+            }
+            
+            // Calcolo percentuale: (somma time_lev_2 con status_lev_2='Done' e Active=true) / (somma time_lev_2 con Active=true)
+            let totalTimeDone = 0;
+            let totalTime = 0;
+            matchingLev2.forEach(l2 => {
+                const time = parseFloat(l2.time_lev_2) || 0;
+                totalTime += time;
+                if (l2.status_lev_2 === 'Done') {
+                    totalTimeDone += time;
+                }
+            });
+            const percentage = totalTime === 0 ? 0 : Math.round((totalTimeDone / totalTime) * 100 * 100) / 100;
+            
+            // Calcolo NC livello 1: se almeno un figlio ha NC, il padre è valorizzato
+            let hasNC = false;
+            
+            // Arrays per Start e Complete
+            let allStarts = [];
+            let allCompletes = [];
+            
+            // Livello 1
+            const level1Node = {
+                level: 1,
+                description: description,
+                workcenter: workCenter,
+                nc: false, // Verrà aggiornato dopo aver controllato i figli
+                status: level1Status,
+                percentage: percentage,
+                start: '',
+                complete: '',
+                children: []
+            };
+            
+            // Processa i livelli 2
+            for (const lev2 of matchingLev2) {
+                // Filtra i dati di livello 3 che corrispondono a questo ID_Lev2
+                const matchingLev3 = lev3Data.filter(l3 => l3.id_lev_2 === lev2.id_lev_2 && l3.id_lev_1 === stepId);
+                
+                // Calcolo NC livello 2: se almeno un figlio ha NC
+                let hasNCLev2 = matchingLev3.some(l3 => l3.nonconformances === true);
+                if (hasNCLev2) {
+                    hasNC = true; // Propaga al livello 1
+                }
+                
+                // Livello 2
+                const level2Node = {
+                    level: 2,
+                    description: lev2.lev_2 || '',
+                    machineType: lev2.machine_type || '',
+                    workcenter: lev2.workcenter_lev_2 || '',
+                    nc: hasNCLev2,
+                    status: lev2.status_lev_2 || '',
+                    start: '',
+                    complete: '',
+                    children: []
+                };
+                
+                // Arrays temporanei per livello 2
+                let lev2Starts = [];
+                let lev2Completes = [];
+                
+                // Processa i livelli 3
+                for (const lev3 of matchingLev3) {
+                    // Costruisco Start e Complete
+                    const startText = lev3.start_user && lev3.start_date 
+                        ? `${lev3.start_user}\n${lev3.start_date}` 
+                        : '';
+                    const completeText = lev3.complete_user && lev3.complete_date 
+                        ? `${lev3.complete_user}\n${lev3.complete_date}` 
+                        : '';
+                    
+                    if (startText) {
+                        // Parsing data italiana DD/MM/YYYY HH:mm
+                        const [datePart, timePart] = lev3.start_date.split(' ');
+                        const [day, month, year] = datePart.split('/');
+                        const [hours, minutes] = timePart.split(':');
+                        const startDate = new Date(year, month - 1, day, hours, minutes);
+                        
+                        lev2Starts.push({ date: startDate, text: startText });
+                        allStarts.push({ date: startDate, text: startText });
+                    }
+                    if (completeText) {
+                        // Parsing data italiana DD/MM/YYYY HH:mm
+                        const [datePart, timePart] = lev3.complete_date.split(' ');
+                        const [day, month, year] = datePart.split('/');
+                        const [hours, minutes] = timePart.split(':');
+                        const completeDate = new Date(year, month - 1, day, hours, minutes);
+                        
+                        lev2Completes.push({ date: completeDate, text: completeText });
+                        allCompletes.push({ date: completeDate, text: completeText });
+                    }
+                    
+                    // Livello 3
+                    const level3Node = {
+                        level: 3,
+                        description: lev3.lev_3 || '',
+                        nc: lev3.nonconformances === true,
+                        status: lev3.status_lev_3 || '',
+                        start: startText,
+                        complete: completeText
+                    };
+                    
+                    level2Node.children.push(level3Node);
+                }
+                
+                // Calcolo Start e Complete per livello 2: primo start e ultimo complete
+                if (lev2Starts.length > 0) {
+                    lev2Starts.sort((a, b) => a.date - b.date);
+                    level2Node.start = lev2Starts[0].text;
+                }
+                if (lev2Completes.length > 0) {
+                    lev2Completes.sort((a, b) => b.date - a.date);
+                    level2Node.complete = lev2Completes[0].text;
+                }
+                
+                level1Node.children.push(level2Node);
+            }
+            
+            // Aggiorna NC livello 1
+            level1Node.nc = hasNC;
+            
+            // Calcolo Start e Complete per livello 1: primo start e ultimo complete tra tutti i figli
+            if (allStarts.length > 0) {
+                allStarts.sort((a, b) => a.date - b.date);
+                level1Node.start = allStarts[0].text;
+            }
+            if (allCompletes.length > 0) {
+                allCompletes.sort((a, b) => b.date - a.date);
+                level1Node.complete = allCompletes[0].text;
+            }
+            
+            treeTable.push(level1Node);
+        }
+        
+        return treeTable;
+    } catch (error) {
+        console.error("Error in getCollaudoProgressTreeTable:", error);
         return false;
     }
 }
@@ -3531,4 +3750,4 @@ async function updateCustomField(plant, order, customFieldsUpdate) {
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable };
