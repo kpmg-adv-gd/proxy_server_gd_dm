@@ -3,7 +3,7 @@ const insertMarkingTestingQuery = ` INSERT INTO z_marking_testing (plant, wbs, n
 
 const getMarkingTestingQuery = ` SELECT * FROM z_marking_testing WHERE plant = $1 AND wbs = $2 and "type" = $3`;
 
-const getMarkingDataTestingQuery = ` SELECT DISTINCT * FROM z_marking_testing where plant = $1 AND wbs = $2 and id_lev_1 = $3 and "type" = 'T'`;
+const getMarkingDataTestingQuery = ` SELECT DISTINCT * FROM z_marking_testing where plant = $1 AND wbs = $2 and id_lev_1 = $3 and "type" = 'T' and "order" = $4`;
 
 const getMarkingTestingByConfirmationNumberQuery = ` SELECT * FROM z_marking_testing WHERE plant = $1 AND confirmation_number = $2`;
 

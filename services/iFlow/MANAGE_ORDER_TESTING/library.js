@@ -426,7 +426,7 @@ async function saveZVerbale3(plant, jsonOrderTesting) {
 // Fase 9: Salvataggio z_marking_testing
 async function saveZMarkingTesting(plant, jsonOrderTesting) {
     var result = true;
-    var numberStep = 20;
+    var numberStep = 10;
     for (var i=0; i<jsonOrderTesting.level1.length; i++) {
         var level1 = jsonOrderTesting.level1[i];
         // sommo timeLevel2

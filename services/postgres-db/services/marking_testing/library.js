@@ -11,8 +11,8 @@ async function getMarkingTesting(plant, project, type) {
     return data;
 }
 
-async function getMarkingDataTesting(plant, wbs, id_lev_1) {
-    const data = await postgresdbService.executeQuery(queryMarking.getMarkingDataTestingQuery, [plant, wbs, id_lev_1]);
+async function getMarkingDataTesting(plant, wbs, id_lev_1, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getMarkingDataTestingQuery, [plant, wbs, id_lev_1, order ]);
     return data;
 }
 

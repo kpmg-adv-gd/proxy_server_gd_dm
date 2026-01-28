@@ -392,57 +392,63 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
         }
         // Check sullo stato degli ordini sul valore "executionStatus"
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
-        var selectedOrder = await callGet(url); console
+        var selectedOrder = await callGet(url); 
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
-            // Check superato
-            var sfcOrder = {
-                plant: childOrders[index].plant,
-                project: childOrders[index].project,
-                section: childOrders[index].machine_section,
-                order: childOrders[index].child_order,
-                material: childOrders[index].child_material,
-                sfc: selectedOrder.sfcs[0],
-                routing: selectedOrder.routing.routing,
-                routingType: selectedOrder.routing.routingType,
-                routingVersion: selectedOrder.routing.version,
-                operations: []
-            };
-            // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
-            var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
-            var response = await callGet(url);
-            var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
-            for (var j = 0; j < stepNotDone.length; j++) {
-                var item = stepNotDone[j];
-                var opt = {
-                    stepId: item.stepId,
-                    operation: item.operation.operation,
-                    operationDescription: item.operation.description,
-                    operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
-                    workCenter: item.plannedWorkCenter
+            var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
+            var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
+            if (ecoType == "MA" && (orderType == "ZPA1" || orderType == "ZPA2" || orderType == "ZPF1" || orderType == "ZPF2" || orderType == "GRPF" || orderType == "ZMGF")) {
+                // escludo l'ordine
+            }else {
+                // Check superato
+                var sfcOrder = {
+                    plant: childOrders[index].plant,
+                    project: childOrders[index].project,
+                    section: childOrders[index].machine_section,
+                    order: childOrders[index].child_order,
+                    material: childOrders[index].child_material,
+                    sfc: selectedOrder.sfcs[0],
+                    routing: selectedOrder.routing.routing,
+                    routingType: selectedOrder.routing.routingType,
+                    routingVersion: selectedOrder.routing.version,
+                    operations: []
+                };
+                // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
+                var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
+                var response = await callGet(url);
+                var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
+                for (var j = 0; j < stepNotDone.length; j++) {
+                    var item = stepNotDone[j];
+                    var opt = {
+                        stepId: item.stepId,
+                        operation: item.operation.operation,
+                        operationDescription: item.operation.description,
+                        operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
+                        workCenter: item.plannedWorkCenter
+                    }
+                    // Recupero campi custom
+                    var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
+                    var responseRouting = await callGet(url);
+                    var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
+                        ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
+                    if (selectedOpt != null) {
+                        opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
+                        opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                    }
+                    // Recupero ulteriori dettagli, dai campi custom
+                    if (opt.MES_ORDER != null) {
+                        var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
+                        var mesOrder = await callGet(urlMesOrder);
+                        opt.groupCode = mesOrder?.material?.material;
+                        opt.groupDescription = mesOrder?.material?.description;
+                    }
+                    if (opt.MF != null) {
+                        var productionPhase = await getMappingPhase(plant, opt.MF);
+                        opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
+                    }
+                    sfcOrder.operations.push(opt);
                 }
-                // Recupero campi custom
-                var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
-                var responseRouting = await callGet(url);
-                var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
-                    ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
-                if (selectedOpt != null) {
-                    opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
-                    opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                }
-                // Recupero ulteriori dettagli, dai campi custom
-                if (opt.MES_ORDER != null) {
-                    var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
-                    var mesOrder = await callGet(urlMesOrder);
-                    opt.groupCode = mesOrder?.material?.material;
-                    opt.groupDescription = mesOrder?.material?.description;
-                }
-                if (opt.MF != null) {
-                    var productionPhase = await getMappingPhase(plant, opt.MF);
-                    opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
-                }
-                sfcOrder.operations.push(opt);
+                resultOrders.push(sfcOrder);
             }
-            resultOrders.push(sfcOrder);
         }
         // Aggiungo i figli/nipoti
         var moreOrders = await getZOrdersLinkByPlantProjectAndParentOrder(plant, commessa, childOrders[index].child_order);
