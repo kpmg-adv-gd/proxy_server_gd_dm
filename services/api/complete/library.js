@@ -14,7 +14,6 @@ async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operatio
 }
 
 async function modificheHasDone(plant,project,sfc,order,valueModifica){
-    console.log("MARCO PROJECT: "+project+" SFC: "+sfc+" ORDER: "+order +" VALUE MODIFICA: "+valueModifica);
     let responseHasModificheToDo = await getModificheToDo(plant,sfc);
     if(responseHasModificheToDo.length > 0 ){
         await addModificheToParent(plant,project,order,valueModifica,sfc,order);
