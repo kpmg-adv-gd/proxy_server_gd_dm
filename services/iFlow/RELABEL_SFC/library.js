@@ -35,7 +35,7 @@ async function manageSfc(sfcs,wbsValue,plant,wbeTesting,phaseValue,material){
         let sfcOld = sfc.sfc;
         let sfcNew = wbsValue + "_" + sfcOld;
         if(phaseValue=="TESTING"){
-            sfcNew = wbeTesting + "_" + material;
+            sfcNew = wbeTesting + "_" +  material + "_" + sfcOld;
         }
         let url = hostname + "/sfc/v1/sfcs/relabel";
         let body = {
