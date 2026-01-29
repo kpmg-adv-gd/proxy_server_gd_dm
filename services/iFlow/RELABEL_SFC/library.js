@@ -15,17 +15,19 @@ async function manageRelabelSfc(plant,order,sfcs){
     let parentAssemblyValue = parentAssemblyValueFromSAP === "X";
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
     let phaseValue = phaseField ? phaseField.value : "";
+    let wbeTestingField = customValues.find(obj => obj.attribute == "COMMESSA");
+    let wbeTesting = wbeTestingField ? wbeTestingField.value : "";
     let material = responseGetOrder?.material?.material || "";
-
-    let newSfcs = await manageSfc(sfcs,wbsValue,plant,phaseValue,material);
+    
+    let newSfcs = await manageSfc(sfcs,wbsValue,plant,wbeTesting,phaseValue,material);
     if(parentAssemblyValue || orderTypeValue=="ZMGF"){
         await manageParentAssemblyMGFOrder(newSfcs,plant);
     }
 
 }
 
-async function manageSfc(sfcs,wbsValue,plant,phaseValue,material){
-    if(!wbsValue || sfcs.length==0){
+async function manageSfc(sfcs,wbsValue,plant,wbeTesting,phaseValue,material){
+    if( (!wbsValue && !wbeTesting) || sfcs.length==0){
         return;
     }
     var sfcArray = [];
@@ -33,7 +35,7 @@ async function manageSfc(sfcs,wbsValue,plant,phaseValue,material){
         let sfcOld = sfc.sfc;
         let sfcNew = wbsValue + "_" + sfcOld;
         if(phaseValue=="TESTING"){
-            sfcNew = wbsValue + "_" + material;
+            sfcNew = wbeTesting + "_" + material;
         }
         let url = hostname + "/sfc/v1/sfcs/relabel";
         let body = {

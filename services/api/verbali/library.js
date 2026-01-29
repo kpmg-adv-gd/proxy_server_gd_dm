@@ -2225,6 +2225,13 @@ async function getVerbalManagementTreeTable(plant, order) {
             treeTable.push(level1Node);
         }
         
+        // Ordina i livelli 1 per stepId
+        treeTable.sort((a, b) => {
+            const stepIdA = parseInt(a.stepId) || 0;
+            const stepIdB = parseInt(b.stepId) || 0;
+            return stepIdA - stepIdB;
+        });
+        
         return treeTable;
     } catch (error) {
         console.error("Error in getVerbalManagementTreeTable:", error);
