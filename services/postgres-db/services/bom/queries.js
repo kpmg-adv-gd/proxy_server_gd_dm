@@ -14,9 +14,12 @@ const getZOrderLinkChildOrdersMultipleMaterialQuery = `SELECT *
                                 FROM z_orders_link
                                 WHERE plant = $1 AND parent_order = $2 AND child_material = $3 AND child_order != $4`;
 
-const getMaterialsTIQuery = `SELECT DISTINCT child_material, child_order FROM z_orders_link
-                            WHERE plant = $1 AND project = $2 AND child_order_type IN ('GRPF', 'ZMGF', 'ZPA1')`;
+const getMaterialsTIQuery = `SELECT DISTINCT child_material as material FROM z_orders_link
+                            WHERE plant = $1 AND project = $2 AND child_order_type IN ('GRPF', 'ZMGF', 'ZPA1', 'ZPA2', 'ZPF1', 'ZPF2')`;
 
 const getMaterialsTIFakeQuery = `SELECT DISTINCT material FROM z_dummy_material WHERE plant = $1`;
 
-module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterialQuery, getZOrdersLinkByPlantProjectChildOrderChildMaterialQuery, getZOrderLinkChildOrdersMultipleMaterialQuery, getMaterialsTIQuery, getMaterialsTIFakeQuery };
+const getOrderByMaterialQuery = `SELECT DISTINCT child_order FROM z_orders_link
+                                WHERE plant = $1 AND child_material = $2`;
+
+module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterialQuery, getZOrdersLinkByPlantProjectChildOrderChildMaterialQuery, getZOrderLinkChildOrdersMultipleMaterialQuery, getMaterialsTIQuery, getMaterialsTIFakeQuery, getOrderByMaterialQuery };
