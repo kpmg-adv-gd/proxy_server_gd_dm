@@ -78,29 +78,41 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
 async function getProjectsVerbaliSupervisoreAssembly(plant) {
     var projects = [];
     try {
-        const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
-        const mockReq = {
+        var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqProject = {
             path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filter})` },
+            query: { $apply: `filter(${projectFilter})` },
             method: "GET"
         };
-        var outMock = await dispatch(mockReq);
-        var orders = outMock?.data?.value.length > 0 ? outMock.data.value : [];
-        for (var i = 0; i < orders.length; i++) {
-            var mfg_order = orders[i].MFG_ORDER;
-            // Recupero progetto
-            var projectFilter = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqProject = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${projectFilter})` },
-                method: "GET"
-            };
-            var outMockProject = await dispatch(mockReqProject);
-            var projectData = outMockProject?.data?.value.length > 0 ? outMockProject.data.value : [];
-            if (projectData.length > 0 && !projects.some(p => p.project === projectData[0].DATA_FIELD_VALUE))
-                projects.push({ project: projectData[0].DATA_FIELD_VALUE });
+        var outMockProject = await dispatch(mockReqProject);
+        for (var i=0; i<outMockProject.data.value.length; i++) {
+            var projectData = outMockProject.data.value[i];
+            if (!projects.some(p => p.project === projectData.DATA_FIELD_VALUE))
+                projects.push({ project: projectData.DATA_FIELD_VALUE });
         }
         return projects;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Funzione per ottenere i WBE per filtro su supervisore assembly
+async function getWBEVerbaliSupervisoreAssembly(plant) {
+    var wbe = [];
+    try {
+        var wbeFilter = `(DATA_FIELD eq 'WBE' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqWBE = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${wbeFilter})` },
+            method: "GET"
+        };
+        var outMockWBE = await dispatch(mockReqWBE);
+        for (var i=0; i<outMockWBE.data.value.length; i++) {
+            var wbeData = outMockWBE.data.value[i];
+            if (!wbe.some(p => p.wbe === wbeData.DATA_FIELD_VALUE))
+                wbe.push({ wbe: wbeData.DATA_FIELD_VALUE });
+        }
+        return wbe;
     } catch (error) {
         return false;
     }
@@ -380,57 +392,63 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
         }
         // Check sullo stato degli ordini sul valore "executionStatus"
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
-        var selectedOrder = await callGet(url); console
+        var selectedOrder = await callGet(url); 
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
-            // Check superato
-            var sfcOrder = {
-                plant: childOrders[index].plant,
-                project: childOrders[index].project,
-                section: childOrders[index].machine_section,
-                order: childOrders[index].child_order,
-                material: childOrders[index].child_material,
-                sfc: selectedOrder.sfcs[0],
-                routing: selectedOrder.routing.routing,
-                routingType: selectedOrder.routing.routingType,
-                routingVersion: selectedOrder.routing.version,
-                operations: []
-            };
-            // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
-            var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
-            var response = await callGet(url);
-            var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
-            for (var j = 0; j < stepNotDone.length; j++) {
-                var item = stepNotDone[j];
-                var opt = {
-                    stepId: item.stepId,
-                    operation: item.operation.operation,
-                    operationDescription: item.operation.description,
-                    operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
-                    workCenter: item.plannedWorkCenter
+            var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
+            var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
+            if (ecoType == "MA" && (orderType == "ZPA1" || orderType == "ZPA2" || orderType == "ZPF1" || orderType == "ZPF2" || orderType == "GRPF" || orderType == "ZMGF")) {
+                // escludo l'ordine
+            }else {
+                // Check superato
+                var sfcOrder = {
+                    plant: childOrders[index].plant,
+                    project: childOrders[index].project,
+                    section: childOrders[index].machine_section,
+                    order: childOrders[index].child_order,
+                    material: childOrders[index].child_material,
+                    sfc: selectedOrder.sfcs[0],
+                    routing: selectedOrder.routing.routing,
+                    routingType: selectedOrder.routing.routingType,
+                    routingVersion: selectedOrder.routing.version,
+                    operations: []
+                };
+                // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
+                var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
+                var response = await callGet(url);
+                var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
+                for (var j = 0; j < stepNotDone.length; j++) {
+                    var item = stepNotDone[j];
+                    var opt = {
+                        stepId: item.stepId,
+                        operation: item.operation.operation,
+                        operationDescription: item.operation.description,
+                        operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
+                        workCenter: item.plannedWorkCenter
+                    }
+                    // Recupero campi custom
+                    var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
+                    var responseRouting = await callGet(url);
+                    var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
+                        ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
+                    if (selectedOpt != null) {
+                        opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
+                        opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                    }
+                    // Recupero ulteriori dettagli, dai campi custom
+                    if (opt.MES_ORDER != null) {
+                        var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
+                        var mesOrder = await callGet(urlMesOrder);
+                        opt.groupCode = mesOrder?.material?.material;
+                        opt.groupDescription = mesOrder?.material?.description;
+                    }
+                    if (opt.MF != null) {
+                        var productionPhase = await getMappingPhase(plant, opt.MF);
+                        opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
+                    }
+                    sfcOrder.operations.push(opt);
                 }
-                // Recupero campi custom
-                var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
-                var responseRouting = await callGet(url);
-                var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
-                    ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
-                if (selectedOpt != null) {
-                    opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
-                    opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                }
-                // Recupero ulteriori dettagli, dai campi custom
-                if (opt.MES_ORDER != null) {
-                    var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
-                    var mesOrder = await callGet(urlMesOrder);
-                    opt.groupCode = mesOrder?.material?.material;
-                    opt.groupDescription = mesOrder?.material?.description;
-                }
-                if (opt.MF != null) {
-                    var productionPhase = await getMappingPhase(plant, opt.MF);
-                    opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
-                }
-                sfcOrder.operations.push(opt);
+                resultOrders.push(sfcOrder);
             }
-            resultOrders.push(sfcOrder);
         }
         // Aggiungo i figli/nipoti
         var moreOrders = await getZOrdersLinkByPlantProjectAndParentOrder(plant, commessa, childOrders[index].child_order);
@@ -3757,4 +3775,4 @@ async function updateCustomField(plant, order, customFieldsUpdate) {
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable };

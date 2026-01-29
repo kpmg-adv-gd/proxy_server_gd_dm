@@ -120,8 +120,12 @@ async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machi
 
         // terzo livello passa da New a In Work
         await postgresdbService.executeQuery(queryVerbali.startTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user]);
+        // Gli altri terzo livello dello stesso secondo livello che sono in New passano In Queue
+        await postgresdbService.executeQuery(queryVerbali.startOtherTerzoLivelloInQueue, [plant, sfc, id_lev_1, id_lev_3, machine_type]);
         // secondo livello passa da New a In Work (se lo era già non accade nulla)
         await postgresdbService.executeQuery(queryVerbali.startSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
+        // Gli altri secondo livello dello stesso primo livello che sono in New passano In Queue
+        await postgresdbService.executeQuery(queryVerbali.startOtherSecondoLivelloInQueue, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
         // primo livello passa da New a In Work (se lo era già non accade nulla)
         if (infoSecondoLivello.filter(item => item.status_lev_3 == 'New').length == infoSecondoLivello.length) {
             var url = hostname+"/sfc/v1/sfcs/start";
@@ -144,7 +148,7 @@ async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machi
 async function completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user) {
     try {
         var data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type]);
-        if (data.length == 0 || data[0].status_lev_3 == 'New') {
+        if (data.length == 0 || data[0].status_lev_3 == 'New' || data[0].status_lev_3 == 'In Queue') {
             return { result: false, message: "Operation is not started yet." };
         } else if (data[0].status_lev_3 == 'Done') {
             return { result: false, message: "Operation already done." };

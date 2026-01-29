@@ -14,14 +14,14 @@ module.exports.listenerSetup = (app) => {
     })
 
     app.post("/db/getMarkingDataTesting", async (req, res) => {
-        const { plant, wbs, id_lev_1 } = req.body;
+        const { plant, wbs, id_lev_1 , order} = req.body;
 
-        if (!plant || !wbs || !id_lev_1) {
-            return res.status(400).json({ error: "Missing required query parameter: plant, wbs or id_lev_1" });
+        if (!plant || !wbs || !id_lev_1 || !order) {
+            return res.status(400).json({ error: "Missing required query parameter: plant, wbs, id_lev_1 or order" });
         }
 
         try {
-            const markingData = await postgresdbService.getMarkingDataTesting(plant, wbs, id_lev_1);
+            const markingData = await postgresdbService.getMarkingDataTesting(plant, wbs, id_lev_1, order);
             res.status(200).json(markingData);
         } catch (error) {
             console.log("Error executing query: " + error);

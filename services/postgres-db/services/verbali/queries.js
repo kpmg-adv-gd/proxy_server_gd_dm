@@ -12,16 +12,16 @@ const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_t
 const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and sfc = $2 ORDER BY wbe, machine_type`;
 
 const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, machine_type, status_lev_3, 
-    TO_CHAR((start_date  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as start_date,
-    TO_CHAR((complete_date  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as complete_date,
+    TO_CHAR((start_date::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as start_date,
+    TO_CHAR((complete_date::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as complete_date,
     start_user, complete_user, plant, nonconformances
     FROM z_verbale_lev_3 
     WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
     AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
 
 const getCommentsVerbale = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
-    TO_CHAR((datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
-    TO_CHAR((approval_datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
+    TO_CHAR((datetime::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
+    TO_CHAR((approval_datetime::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
     FROM z_comments
     WHERE plant = $1 AND sfc = $2 AND id_lev_1 = $3
     AND id_lev_2 = $4
@@ -30,8 +30,8 @@ const getCommentsVerbale = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type,
     ORDER BY datetime DESC`;
 
 const getCommentsVerbaleForApproval = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
-    TO_CHAR((datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
-    TO_CHAR((approval_datetime  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
+    TO_CHAR((datetime::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
+    TO_CHAR((approval_datetime::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as approval_datetime
     FROM z_comments
     WHERE plant = $1 AND sfc = $2 
     AND id_lev_2 = $3
@@ -45,7 +45,7 @@ const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev_1, 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
 
 const getSafetyApprovalComments = `SELECT sfc, plant, id_lev_2, machine_type, id_lev_3, "user", comment, status, id_lev_1, wbe,
-    TO_CHAR((datetime AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime, approval_comment
+    TO_CHAR((datetime::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime, approval_comment
     FROM z_comments 
     WHERE plant = $1 AND comment_type = 'M'`;
 
@@ -54,11 +54,21 @@ const startTerzoLivello = `UPDATE z_verbale_lev_3
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
     AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
 
+const startOtherTerzoLivelloInQueue = `UPDATE z_verbale_lev_3
+    SET status_lev_3 = CASE WHEN status_lev_3 = 'New' THEN 'In Queue' ELSE status_lev_3 END
+    WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
+    AND id_lev_3 != $4 AND machine_type = $5`;
+
 const startSecondoLivello = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Work' ELSE status_lev_2 END, 
     start_lev_2 = CASE WHEN status_lev_2 = 'New' THEN (current_timestamp AT TIME ZONE 'UTC') ELSE start_lev_2 END
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
     AND id_lev_2 = $4 AND machine_type = $5`;
+
+const startOtherSecondoLivelloInQueue = `UPDATE z_verbale_lev_2
+    SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Queue' ELSE status_lev_2 END
+    WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
+    AND id_lev_2 != $4 AND machine_type = $5`;
 
 const completeTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'Done', complete_date = (current_timestamp AT TIME ZONE 'UTC'), complete_user = $7
@@ -221,4 +231,4 @@ const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_2
 
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
     startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, duplicateMarkingTesting, deleteMarkingTestingByStepId, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
-    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery };
+    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue };

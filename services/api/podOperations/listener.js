@@ -51,8 +51,12 @@ module.exports.listenerSetup = (app) => {
             for (var i=0; i<primoLivello.length; i++){
                 var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1(plant, order, sfc, primoLivello[i].id);
                 var status = responseSfcDetails.steps.filter(step => step.stepId == primoLivello[i].id)[0];
-                if (status.quantityInQueue == 1) {
-                    primoLivello[i].status = 'New';
+                if (status.quantityInQueue == 1) { 
+                    if (responseSfcDetails.status.code == "401") {
+                        primoLivello[i].status = 'New';
+                    }else{
+                        primoLivello[i].status = 'In Queue';
+                    }
                 } else if (status.quantityInWork == 1) {
                     primoLivello[i].status = 'In Work';
                 } else if (status.quantityDone == 1) {
