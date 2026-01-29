@@ -10,7 +10,7 @@ const hostname = credentials.DM_API_URL;
 
 
 async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh) {
-    var filter = `(DATA_FIELD_VALUE eq '${selected.project_parent}' and DATA_FIELD eq 'COMMESSA')`;
+    var filter = `(DATA_FIELD_VALUE eq '${selected.project_parent}' and DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}')`;
     var mockReq = {
         path: "/mdo/ORDER_CUSTOM_DATA",
         query: { $apply: `filter(${filter})` },
@@ -106,8 +106,11 @@ async function ruleParameter0(data, group, parameterName, dcData, refresh) {
             query: { $apply: `filter(${filter2})` },
             method: "GET"
         };
+        console.log("filter2: ", filter2);
         var outMock2 = await dispatch(mockReq2);
         var dcData2 = (outMock2?.data?.value && outMock2.data.value.length > 0) ? outMock2.data.value : [];
+        // escludiamo valori vuoti
+        dcData2 = dcData2.filter(item => item.DATA_FIELD_VALUE && item.DATA_FIELD_VALUE.trim() !== '');
         if (dcData2.length > 0) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].group === group) {
