@@ -3153,8 +3153,8 @@ async function generatePdfFineCollaudo(data) {
         
         let page = pdfDoc.addPage();
         const { width, height } = page.getSize();
-        const margin = 50;
-        const contentWidth = width - (margin * 2);
+        let margin = 50;
+        let contentWidth = width - (margin * 2);
         let y = height - margin;
 
         // ============================================
@@ -3238,14 +3238,67 @@ async function generatePdfFineCollaudo(data) {
         };
 
         /**
-         * Disegna tabella professionale
+         * Disegna tabella professionale con word wrapping
          */
-        const drawTable = (headers, rows, columnWidths) => {
+        const drawTable = (headers, rows, columnWidths, options = {}) => {
+            const { fontSize = 8, headerFontSize = 9, minRowHeight = 20 } = options;
+            
             checkNewPage(100);
             
-            const rowHeight = 20;
             const headerHeight = 25;
             let currentX = margin;
+            
+            // Helper per calcolare righe di testo necessarie (con gestione parole lunghe)
+            const calculateTextLines = (text, maxWidth, size) => {
+                const textStr = String(text || "");
+                if (!textStr) return [""];
+                
+                const words = textStr.split(" ");
+                const lines = [];
+                let currentLine = "";
+                
+                for (const word of words) {
+                    // Controlla se la parola singola è troppo lunga
+                    const wordWidth = font.widthOfTextAtSize(word, size);
+                    
+                    if (wordWidth > maxWidth - 10) {
+                        // Parola troppo lunga: la spezza carattere per carattere
+                        if (currentLine) {
+                            lines.push(currentLine);
+                            currentLine = "";
+                        }
+                        
+                        let charLine = "";
+                        for (let i = 0; i < word.length; i++) {
+                            const testChar = charLine + word[i];
+                            const testWidth = font.widthOfTextAtSize(testChar, size);
+                            
+                            if (testWidth <= maxWidth - 10) {
+                                charLine = testChar;
+                            } else {
+                                if (charLine) lines.push(charLine);
+                                charLine = word[i];
+                            }
+                        }
+                        if (charLine) {
+                            currentLine = charLine;
+                        }
+                    } else {
+                        // Parola di lunghezza normale
+                        const testLine = currentLine ? currentLine + " " + word : word;
+                        const testWidth = font.widthOfTextAtSize(testLine, size);
+                        
+                        if (testWidth <= maxWidth - 10) {
+                            currentLine = testLine;
+                        } else {
+                            if (currentLine) lines.push(currentLine);
+                            currentLine = word;
+                        }
+                    }
+                }
+                if (currentLine) lines.push(currentLine);
+                return lines.length > 0 ? lines : [""];
+            };
             
             // Disegna header
             page.drawRectangle({
@@ -3259,22 +3312,38 @@ async function generatePdfFineCollaudo(data) {
             });
             
             headers.forEach((header, i) => {
-                const headerText = String(header);
-                page.drawText(headerText, {
-                    x: currentX + 5,
-                    y: y - 17,
-                    size: 9,
-                    font: fontBold,
-                    color: rgb(0, 0, 0),
-                    maxWidth: columnWidths[i] - 10
+                const headerLines = calculateTextLines(header, columnWidths[i], headerFontSize);
+                headerLines.forEach((line, lineIdx) => {
+                    page.drawText(line, {
+                        x: currentX + 5,
+                        y: y - 12 - (lineIdx * 10),
+                        size: headerFontSize,
+                        font: fontBold,
+                        color: rgb(0, 0, 0),
+                        maxWidth: columnWidths[i] - 10
+                    });
                 });
                 currentX += columnWidths[i];
             });
             
             y -= headerHeight;
             
-            // Disegna righe
+            // Disegna righe con altezza dinamica
             rows.forEach((row, rowIndex) => {
+                // Calcola altezza necessaria per questa riga
+                let maxLines = 1;
+                const cellLinesArray = [];
+                
+                row.forEach((cell, i) => {
+                    const lines = calculateTextLines(cell, columnWidths[i], fontSize);
+                    cellLinesArray.push(lines);
+                    maxLines = Math.max(maxLines, lines.length);
+                });
+                
+                // Calcola altezza riga basata sul numero di linee effettive
+                const lineHeight = fontSize + 4; // Spazio tra linee
+                const rowHeight = Math.max(minRowHeight, maxLines * lineHeight + 8);
+                
                 checkNewPage(rowHeight + 10);
                 
                 const isEvenRow = rowIndex % 2 === 0;
@@ -3289,20 +3358,18 @@ async function generatePdfFineCollaudo(data) {
                 });
                 
                 currentX = margin;
-                row.forEach((cell, i) => {
-                    const cellText = String(cell || "");
-                    const maxChars = Math.floor(columnWidths[i] / 6);
-                    const displayText = cellText.length > maxChars 
-                        ? cellText.substring(0, maxChars - 3) + "..." 
-                        : cellText;
-                    
-                    page.drawText(displayText, {
-                        x: currentX + 5,
-                        y: y - 14,
-                        size: 8,
-                        font,
-                        color: rgb(0, 0, 0),
-                        maxWidth: columnWidths[i] - 10
+                cellLinesArray.forEach((lines, i) => {
+                    lines.forEach((line, lineIdx) => {
+                        // Calcola posizione Y per ogni riga di testo
+                        const textY = y - 12 - (lineIdx * lineHeight);
+                        
+                        page.drawText(line, {
+                            x: currentX + 5,
+                            y: textY,
+                            size: fontSize,
+                            font,
+                            color: rgb(0, 0, 0)
+                        });
                     });
                     currentX += columnWidths[i];
                 });
@@ -3311,6 +3378,125 @@ async function generatePdfFineCollaudo(data) {
             });
             
             y -= 15;
+        };
+
+        /**
+         * Crea una pagina in orientamento landscape
+         */
+        const createLandscapePage = () => {
+            const landscapePage = pdfDoc.addPage([height, width]); // Inverte dimensioni
+            return landscapePage;
+        };
+
+        /**
+         * Adattamento intelligente della tabella
+         * Analizza il contenuto e decide automaticamente:
+         * - Orientamento (portrait vs landscape)
+         * - Dimensione font ottimale
+         * - Larghezza colonne proporzionale al contenuto
+         */
+        const drawSmartTable = (headers, rows, options = {}) => {
+            const { forceOrientation = null, maxFontSize = 9, minFontSize = 6 } = options;
+            
+            // 1. Analizza la complessità della tabella
+            const numColumns = headers.length;
+            const avgContentLength = [];
+            
+            // Calcola lunghezza media per ogni colonna
+            headers.forEach((header, colIndex) => {
+                let totalLength = String(header).length;
+                let count = 1;
+                
+                rows.forEach(row => {
+                    const cellContent = String(row[colIndex] || "");
+                    totalLength += cellContent.length;
+                    count++;
+                });
+                
+                avgContentLength.push(totalLength / count);
+            });
+            
+            // 2. Decide orientamento
+            const currentWidth = page.getSize().width;
+            const currentHeight = page.getSize().height;
+            const currentMargin = margin;
+            const availableWidth = currentWidth - (currentMargin * 2);
+            
+            // Stima larghezza necessaria (carattere medio ~6 punti a font 8)
+            const estimatedWidthNeeded = avgContentLength.reduce((sum, len) => sum + (len * 4), 0);
+            
+            let useOrientationLandscape = forceOrientation === 'landscape' || 
+                                          (forceOrientation !== 'portrait' && 
+                                           (numColumns > 8 || estimatedWidthNeeded > availableWidth * 1.2));
+            
+            // 3. Crea nuova pagina con orientamento ottimale
+            let targetPage, targetWidth, targetHeight, targetMargin, targetContentWidth;
+            
+            if (useOrientationLandscape) {
+                targetPage = createLandscapePage();
+                targetWidth = targetPage.getSize().width;
+                targetHeight = targetPage.getSize().height;
+                targetMargin = 40;
+                targetContentWidth = targetWidth - (targetMargin * 2);
+                page = targetPage;
+                y = targetHeight - targetMargin;
+            } else {
+                targetPage = pdfDoc.addPage();
+                targetWidth = targetPage.getSize().width;
+                targetHeight = targetPage.getSize().height;
+                targetMargin = margin;
+                targetContentWidth = availableWidth;
+                page = targetPage;
+                y = targetHeight - targetMargin;
+            }
+            
+            // 4. Calcola larghezze colonne proporzionali al contenuto
+            const totalAvgLength = avgContentLength.reduce((sum, len) => sum + len, 0);
+            const columnWidths = avgContentLength.map(len => {
+                const proportion = len / totalAvgLength;
+                const width = targetContentWidth * proportion;
+                // Larghezza minima 40, massima 30% del totale
+                return Math.max(40, Math.min(width, targetContentWidth * 0.3));
+            });
+            
+            // Normalizza per riempire esattamente la larghezza disponibile
+            const totalCalculatedWidth = columnWidths.reduce((sum, w) => sum + w, 0);
+            const normalizedWidths = columnWidths.map(w => (w / totalCalculatedWidth) * targetContentWidth);
+            
+            // 5. Determina font size ottimale
+            let fontSize = maxFontSize;
+            
+            // Riduce font se troppo contenuto
+            if (numColumns > 10) {
+                fontSize = Math.max(minFontSize, maxFontSize - 2);
+            } else if (numColumns > 7) {
+                fontSize = Math.max(minFontSize, maxFontSize - 1);
+            }
+            
+            const headerFontSize = fontSize + 1;
+            
+            // 6. Salva e ripristina contesto
+            const originalMargin = margin;
+            const originalContentWidth = contentWidth;
+            margin = targetMargin;
+            contentWidth = targetContentWidth;
+            
+            // 7. Disegna tabella con parametri ottimizzati
+            drawTable(headers, rows, normalizedWidths, {
+                fontSize: fontSize,
+                headerFontSize: headerFontSize,
+                minRowHeight: fontSize * 2 + 4
+            });
+            
+            // 8. Ripristina contesto
+            margin = originalMargin;
+            contentWidth = originalContentWidth;
+            
+            return {
+                orientation: useOrientationLandscape ? 'landscape' : 'portrait',
+                fontSize: fontSize,
+                columnWidths: normalizedWidths
+            };
         };
 
         /**
@@ -3556,13 +3742,8 @@ async function generatePdfFineCollaudo(data) {
             }
         }
 
-        // NON CONFORMITÀ
+        // NON CONFORMITÀ (Adattamento Intelligente)
         if (treeData.length > 0) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("NON CONFORMITÀ");
-            
             const ncRows = treeData.map(nc => [
                 nc.groupDesc || "N/A",
                 nc.codeDesc || "N/A",
@@ -3576,32 +3757,16 @@ async function generatePdfFineCollaudo(data) {
                 nc.due_date || "N/A"
             ]);
             
-            const colWidths = [
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1,
-                contentWidth * 0.1
-            ];
-            drawTable(
-                ["NC Group", "NC Code", "Material", "Priority", "User", "Phase", "Status", "QN Code", "Owner", "Due Date"],
-                ncRows,
-                colWidths
-            );
+            const ncHeaders = ["NC Group", "NC Code", "Material", "Priority", "User", "Phase", "Status", "QN Code", "Owner", "Due Date"];
+            
+            // Adattamento intelligente con analisi automatica
+            const tableInfo = drawSmartTable(ncHeaders, ncRows);
+            
+            console.log(`NON CONFORMITÀ: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
 
-        // MODIFICHE
+        // MODIFICHE (Adattamento Intelligente)
         if (treeDataModifiche.length > 0) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("MODIFICHE");
-            
             const modRows = treeDataModifiche.map(mod => [
                 mod.type || "N/A",
                 mod.prog_eco || "N/A",
@@ -3618,35 +3783,16 @@ async function generatePdfFineCollaudo(data) {
                 mod.due_date || "N/A"
             ]);
             
-            const colWidths = [
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769,
-                contentWidth * 0.0769
-            ];
-            drawTable(
-                ["Type", "Progr.Eco", "Proc.Id", "Material", "Material Desc.", "Child Mat.", "Qty", "Flux Type", "Status", "Resolution", "Note", "Owner", "Due Date"],
-                modRows,
-                colWidths
-            );
+            const modHeaders = ["Type", "Progr.Eco", "Proc.Id", "Material", "Material Desc.", "Child Mat.", "Qty", "Flux Type", "Status", "Resolution", "Note", "Owner", "Due Date"];
+            
+            // Adattamento intelligente con analisi automatica
+            const tableInfo = drawSmartTable(modHeaders, modRows);
+            
+            console.log(`MODIFICHE: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
 
-        // ACTIVITIES
+        // ACTIVITIES (Adattamento Intelligente)
         if (treeDataActivities.length > 0) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("ATTIVITÀ");
-            
             const actRows = treeDataActivities.map(act => [
                 act.id_lev_1 || "N/A",
                 act.macroattivita || "N/A",
@@ -3659,31 +3805,16 @@ async function generatePdfFineCollaudo(data) {
                 act.due_date || "N/A"
             ]);
             
-            const colWidths = [
-                contentWidth * 0.2,
-                contentWidth * 0.2,
-                contentWidth * 0.08,
-                contentWidth * 0.08,
-                contentWidth * 0.08,
-                contentWidth * 0.08,
-                contentWidth * 0.08,
-                contentWidth * 0.08,
-                contentWidth * 0.08
-            ];
-            drawTable(
-                ["Macro-Phase", "Macro-Activity", "Mach.Type", "Progr.", "WorkCenter", "Status", "Safety", "Owner", "Due Date"],
-                actRows,
-                colWidths
-            );
+            const actHeaders = ["Macro-Phase", "Macro-Activity", "Mach.Type", "Progr.", "WorkCenter", "Status", "Safety", "Owner", "Due Date"];
+            
+            // Adattamento intelligente con analisi automatica
+            const tableInfo = drawSmartTable(actHeaders, actRows);
+            
+            console.log(`ATTIVITÀ: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
 
-        // MANCANTI
+        // MANCANTI (Adattamento Intelligente)
         if (mancanti.length > 0) {
-            page = pdfDoc.addPage();
-            y = page.getSize().height - margin;
-            
-            drawSectionHeader("COMPONENTI MANCANTI");
-            
             const manRows = mancanti.map(m => [
                 m.wbs_element || "N/A",
                 m.material || "N/A",
@@ -3696,22 +3827,12 @@ async function generatePdfFineCollaudo(data) {
                 m.due_date || "N/A"
             ]);
             
-            const colWidths = [
-                contentWidth * 0.1,
-                contentWidth * 0.12,
-                contentWidth * 0.12,
-                contentWidth * 0.3,
-                contentWidth * 0.07,
-                contentWidth * 0.07,
-                contentWidth * 0.07,
-                contentWidth * 0.1,
-                contentWidth * 0.1
-            ];
-            drawTable(
-                ["WBS", "Material", "Miss.Comp.", "Miss.Comp.Desc.", "Type", "Cover Elem.Type", "Receipt Date", "Owner", "Due Date"],
-                manRows,
-                colWidths
-            );
+            const manHeaders = ["WBS", "Material", "Miss.Comp.", "Miss.Comp.Desc.", "Type", "Cover Elem.Type", "Receipt Date", "Owner", "Due Date"];
+            
+            // Adattamento intelligente con analisi automatica
+            const tableInfo = drawSmartTable(manHeaders, manRows);
+            
+            console.log(`COMPONENTI MANCANTI: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
 
         // RIEPILOGO FINALE
