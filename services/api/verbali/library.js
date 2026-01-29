@@ -5,7 +5,7 @@ const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/serv
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
-const { getZMancantiReportData } = require("../../postgres-db/services/mancanti/library");
+const { getZMancantiReportDataToVerbale } = require("../../postgres-db/services/mancanti/library");
 const { getMappingPhase } = require("../../postgres-db/services/mapping_phases/library");
 const { updateRoutingForReleaseUtility } = require("../../iFlow/UPDATE_ROUTING/library");
 const PDFDocument = require("pdfkit");
@@ -464,11 +464,12 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
 // Funzione per generare e scaricare il file del verbale di ispezione
 async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resultCustomTable, selectedData, user) {
 
+    var ordersToCheck = await ordersChildrenRecursion(plant, selectedData.order);
     /* Recupero le sezioni aggiuntive da mostrare dopo la lista delle dc (con i parametri) */
     var defects = await getDefectsTI(plant, selectedData.project_parent);
     var modifiche = await getModificheToVerbaleTesting(plant, selectedData.project_parent, selectedData.wbs, selectedData.material);
     var additionalOperations = await getAdditionalOperationsToVerbale(plant, selectedData.project_parent, selectedData.material);
-    var mancanti = await getZMancantiReportData(plant, selectedData.project_parent, selectedData.wbs, null, null, null);
+    var mancanti = await getZMancantiReportDataToVerbale(plant, selectedData.project_parent, ordersToCheck);
 
     return new Promise((resolve, reject) => {
         try {

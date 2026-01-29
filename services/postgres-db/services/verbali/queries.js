@@ -104,7 +104,7 @@ const getGroupByPriorityDefects = `with PRIO as (
 	SELECT DISTINCT z_priority.priority, z_priority.description, z_priority.weight,
 	count(*) as quantity, 
 	z_priority.weight * count(*) AS value FROM z_priority
-    INNER JOIN z_defects ON z_defects.priority = z_priority.priority 
+    INNER JOIN z_defects ON z_defects.priority = z_priority.priority and z_defects.status = 'OPEN'
     WHERE z_defects.plant = $1 AND z_defects.dm_order = ANY($2)
     GROUP BY z_priority.priority, z_priority.description, z_priority.weight
     ORDER BY z_priority.priority)

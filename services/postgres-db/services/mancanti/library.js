@@ -42,6 +42,13 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     return data;
 }
 
+async function getZMancantiReportDataToVerbale(plant,project,ordersList){
+    var inOrders = "'" + ordersList.join("','") + "'";
+    var fullQuery = 'select * from z_report_mancanti where plant = $1 and project = $2 and "order" in ('+inOrders+') and active = true';
+    var data = await postgresdbService.executeQuery(fullQuery, [plant, project]);
+    return data;
+}
+
 async function getMancantiInfoData(plant,project,orderGroup){
     const responseQuery = await postgresdbService.executeQuery(queryLoipro.getMancantiInfoDataQuery, [plant,project,orderGroup]);
     let responseBom = await getBomInfoByOrder(plant,orderGroup);
@@ -82,4 +89,4 @@ async function updateMancantiOwnerAndDueDate(mancante) {
     return data;
 }
 
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate }
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, getZMancantiReportDataToVerbale, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate }
