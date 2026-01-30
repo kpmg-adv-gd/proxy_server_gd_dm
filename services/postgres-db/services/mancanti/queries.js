@@ -128,7 +128,7 @@ const getMancantiInfoDataQuery = `select plant,project,"order",count(*) as tot_m
                                     group by plant,project,"order"
                                 `;
                 
-const getTotalQuantityFromOrders = `select sum(missing_quantity) as counter
+const getTotalQuantityFromOrders = `select count(*) as counter
                                     from z_report_mancanti
                                     where plant = $1 and "order" = ANY($2) and active = true
                                 `;

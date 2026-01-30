@@ -74,6 +74,9 @@ async function getModificheToTesting(plant, project){
     // Creazione TreeTable
     var treeTable = [], childId = 0;
     for (var i=0;i<data.length;i++) {
+        var progEcoFormatted = data[i].prog_eco && data[i].prog_eco != null ? String(parseInt(data[i].prog_eco, 10)) : null;
+        var processIdFormatted = data[i].process_id && data[i].process_id != null ? String(parseInt(data[i].process_id, 10)) : null;
+        
         var child = {
             level: 2,
             wbe: data[i].wbe,
@@ -88,12 +91,12 @@ async function getModificheToTesting(plant, project){
             order: data[i].order,
             childId: childId++
         }
-        if (treeTable.filter(item => item.progEco ==  parseInt(data[i].prog_eco, 10) && item.processId == parseInt(data[i].process_id, 10) && item.material == data[i].material).length == 0) {
+        if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
             treeTable.push({
                 level: 1,
                 type: data[i].type,
-                progEco: parseInt(data[i].prog_eco, 10),
-                processId: parseInt(data[i].process_id, 10),  
+                progEco: progEcoFormatted,
+                processId: processIdFormatted,  
                 material: data[i].material,
                 mark: data[i].type == "MT" || data[i].type == "MK",
                 project: data[i].project,
@@ -102,7 +105,7 @@ async function getModificheToTesting(plant, project){
                 Children: [child]
             });
         }else{
-            treeTable.filter(item => item.progEco == data[i].prog_eco && item.processId == data[i].process_id && item.material == data[i].material)[0]
+            treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material)[0]
                 .Children.push(child);
         }
     }
