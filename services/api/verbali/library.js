@@ -1,7 +1,7 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting } = require("../../postgres-db/services/verbali/library");
-const { getDefectsTI, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
+const { getDefectsToVerbale, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
@@ -466,7 +466,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
     var ordersToCheck = await ordersChildrenRecursion(plant, selectedData.order);
     /* Recupero le sezioni aggiuntive da mostrare dopo la lista delle dc (con i parametri) */
-    var defects = await getDefectsTI(plant, selectedData.project_parent);
+    var defects = await getDefectsToVerbale(plant, ordersToCheck);
     var modifiche = await getModificheToVerbaleTesting(plant, selectedData.project_parent, selectedData.wbs, selectedData.material);
     var additionalOperations = await getAdditionalOperationsToVerbale(plant, selectedData.project_parent, selectedData.material);
     var mancanti = await getZMancantiReportDataToVerbale(plant, selectedData.project_parent, ordersToCheck);
@@ -1103,7 +1103,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.y = 50;
 
                 doc.fontSize(18).font('Helvetica-Bold')
-                    .text('OPERAZIONI MANCANTI', { align: 'center' });
+                    .text('SEZIONE OPERAZIONI NON COMPLETATE', { align: 'center' });
                 doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1142,7 +1142,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                 const headerYOp = doc.y + 6;
                 doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
-                doc.text('Material', colPositionsOp.material + 2, headerYOp, { width: colWidthsOp.material - 4, align: 'left' });
+                doc.text('Order Material', colPositionsOp.material + 2, headerYOp, { width: colWidthsOp.material - 4, align: 'left' });
                 doc.text('Order', colPositionsOp.order + 2, headerYOp, { width: colWidthsOp.order - 4, align: 'left' });
                 doc.text('Group Code', colPositionsOp.group_code + 2, headerYOp, { width: colWidthsOp.group_code - 4, align: 'left' });
                 doc.text('Group Description', colPositionsOp.group_description + 2, headerYOp, { width: colWidthsOp.group_description - 4, align: 'left' });

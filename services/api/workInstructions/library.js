@@ -3,7 +3,7 @@ const FormData = require('form-data');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function filteredWorkInstructionsTI(plant, response, idLev1, idLev2, idLev3) {
+async function filteredWorkInstructionsTI(plant, response, responseSFC, idLev1, idLev2, idLev3) {
 
     var consolidatedData = [];
     try{
@@ -17,7 +17,7 @@ async function filteredWorkInstructionsTI(plant, response, idLev1, idLev2, idLev
                 }
             }
         }
-        return consolidatedData;
+        return [...consolidatedData, ...responseSFC];
     } catch(e){
         console.error("Errore in getFilterPOD: "+ e);
         throw new Error("Errore in getFilterPOD:"+e);
