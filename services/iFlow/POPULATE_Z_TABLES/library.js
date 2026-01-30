@@ -15,7 +15,7 @@ async function populateZTables(plantValue,orderValue){
     var customValues = orderDetail?.customValues;
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
     let phaseValue = phaseField ? phaseField.value : "";
-    let sfc = orderDetail?.sfcs && orderDetail.sfcs.length>0 ? orderDetail.sfcs[0].sfc : "";
+    let sfc = orderDetail?.sfcs && orderDetail.sfcs.length>0 ? orderDetail.sfcs[0] : "";
     if(phaseValue=="TESTING"){
         await updateWithSfcZverbaleLevTables(plantValue,orderValue,sfc);
         return;

@@ -221,11 +221,11 @@ const upsertWeightValueQuery = `INSERT INTO z_weight_values (id, section, plant,
     DO UPDATE SET value = EXCLUDED.value`;
 
 
-const updateZverbaleLev1TableWithSfcQuery = `UPDATE z_verbale_lev_1
+const updateZverbaleLev1TableWithSfcQuery = `UPDATE z_verbale_lev_2
     SET sfc = $3
     WHERE plant = $1 AND "order" = $2`;
 
-const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_2
+const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_3
     SET sfc = $3
     WHERE plant = $1 AND "order" = $2`;
 
