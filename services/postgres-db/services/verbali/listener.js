@@ -31,7 +31,7 @@ module.exports.listenerSetup = (app) => {
             var infoTerzoLivello = await postgresdbService.getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type);
             var history = [];
             if (infoTerzoLivello.length > 0) {
-                if (infoTerzoLivello[0].status_lev_3 != 'New') {
+                if (infoTerzoLivello[0].status_lev_3 != 'New' && infoTerzoLivello[0].status_lev_3 != 'In Queue') {
                     history.push({
                         action: "START",
                         datetime: infoTerzoLivello[0].start_date,

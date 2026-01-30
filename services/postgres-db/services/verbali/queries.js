@@ -56,8 +56,8 @@ const startTerzoLivello = `UPDATE z_verbale_lev_3
 
 const startOtherTerzoLivelloInQueue = `UPDATE z_verbale_lev_3
     SET status_lev_3 = CASE WHEN status_lev_3 = 'New' THEN 'In Queue' ELSE status_lev_3 END
-    WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-    AND id_lev_3 != $4 AND machine_type = $5`;
+    WHERE plant = $1 AND sfc = $2
+    AND id_lev_3 != $3`;
 
 const startSecondoLivello = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Work' ELSE status_lev_2 END, 
@@ -67,8 +67,8 @@ const startSecondoLivello = `UPDATE z_verbale_lev_2
 
 const startOtherSecondoLivelloInQueue = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Queue' ELSE status_lev_2 END
-    WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-    AND id_lev_2 != $4 AND machine_type = $5`;
+    WHERE plant = $1 AND sfc = $2
+    AND id_lev_2 != $3`;
 
 const completeTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'Done', complete_date = (current_timestamp AT TIME ZONE 'UTC'), complete_user = $7
