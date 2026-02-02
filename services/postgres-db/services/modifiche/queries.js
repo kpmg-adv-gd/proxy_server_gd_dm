@@ -102,7 +102,12 @@ const updateModificheToTestingQuery = `UPDATE z_modify
                                         SET sent_to_testing = true
                                         WHERE plant = $1 AND wbe_machine = $2 AND machine_section = $3 AND project = $4 and status != '1'`;
 
-const getModificheTestingByOrdersQuery = `SELECT * FROM z_modify WHERE plant = $1 AND project = $2 AND status != '1' ORDER BY prog_eco, process_id`;
+const getModificheTestingByOrdersQuery = `SELECT zm.*, 
+                                        COALESCE((zsm.value::json->>zm.status), zm.status) as status_description
+                                        FROM z_modify zm
+                                        LEFT JOIN z_shared_memory zsm ON zsm.plant = zm.plant AND zsm.key = 'STATUS_MODIFICHE'
+                                        WHERE zm.plant = $1 AND zm.project = $2 AND zm.status != '1' 
+                                        ORDER BY zm.prog_eco, zm.process_id`;
 
 const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3`;
 

@@ -196,7 +196,8 @@ const getReportWeightWithValuesQuery = `SELECT
     zrw.id, 
     zrw.section, 
     zrw.weight, 
-    COALESCE(zwv.value, '') as value
+    COALESCE(zwv.value, '') as value,
+    zwv.datetime
     FROM z_report_weight zrw
     LEFT JOIN z_weight_values zwv 
         ON zrw.id = zwv.id 

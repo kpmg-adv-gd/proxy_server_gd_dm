@@ -3270,9 +3270,24 @@ async function generatePdfFineCollaudo(data) {
          * Disegna tabella professionale con word wrapping
          */
         const drawTable = (headers, rows, columnWidths, options = {}) => {
-            const { fontSize = 8, headerFontSize = 9, minRowHeight = 20 } = options;
+            const { fontSize = 8, headerFontSize = 9, minRowHeight = 20, isLandscape = false } = options;
             
-            checkNewPage(100);
+            // Modified checkNewPage to maintain landscape orientation
+            const checkNewPageTable = (requiredSpace = 80) => {
+                if (y < requiredSpace) {
+                    if (isLandscape) {
+                        page = createLandscapePage();
+                        y = page.getSize().height - margin;
+                    } else {
+                        page = pdfDoc.addPage();
+                        y = page.getSize().height - margin;
+                    }
+                    return true;
+                }
+                return false;
+            };
+            
+            checkNewPageTable(100);
             
             const headerHeight = 25;
             let currentX = margin;
@@ -3373,7 +3388,7 @@ async function generatePdfFineCollaudo(data) {
                 const lineHeight = fontSize + 4; // Spazio tra linee
                 const rowHeight = Math.max(minRowHeight, maxLines * lineHeight + 8);
                 
-                checkNewPage(rowHeight + 10);
+                checkNewPageTable(rowHeight + 10);
                 
                 const isEvenRow = rowIndex % 2 === 0;
                 page.drawRectangle({
@@ -3425,7 +3440,7 @@ async function generatePdfFineCollaudo(data) {
          * - Larghezza colonne proporzionale al contenuto
          */
         const drawSmartTable = (headers, rows, options = {}) => {
-            const { forceOrientation = null, maxFontSize = 9, minFontSize = 6 } = options;
+            const { forceOrientation = null, maxFontSize = 9, minFontSize = 6, sectionTitle = null } = options;
             
             // 1. Analizza la complessità della tabella
             const numColumns = headers.length;
@@ -3510,11 +3525,32 @@ async function generatePdfFineCollaudo(data) {
             margin = targetMargin;
             contentWidth = targetContentWidth;
             
+            // 6.5. Disegna intestazione sezione se fornita
+            if (sectionTitle) {
+                y -= 10;
+                page.drawText(sectionTitle, {
+                    x: targetMargin,
+                    y,
+                    size: 14,
+                    font: fontBold,
+                    color: rgb(0.1, 0.2, 0.6)
+                });
+                y -= 20;
+                page.drawLine({
+                    start: { x: targetMargin, y },
+                    end: { x: targetWidth - targetMargin, y },
+                    thickness: 1,
+                    color: rgb(0.1, 0.2, 0.6)
+                });
+                y -= 20;
+            }
+            
             // 7. Disegna tabella con parametri ottimizzati
             drawTable(headers, rows, normalizedWidths, {
                 fontSize: fontSize,
                 headerFontSize: headerFontSize,
-                minRowHeight: fontSize * 2 + 4
+                minRowHeight: fontSize * 2 + 4,
+                isLandscape: useOrientationLandscape
             });
             
             // 8. Ripristina contesto
@@ -3603,12 +3639,12 @@ async function generatePdfFineCollaudo(data) {
         }).replace(',', '');
         drawText(`Data generazione: ${formattedDate}`, { size: 10, color: rgb(0.4, 0.4, 0.4) });
         
-        // SEZIONI COLLAUDATE
+        // Sezioni del verbale di collaudo
         if (groupsData.length > 0) {
             page = pdfDoc.addPage();
             y = page.getSize().height - margin;
             
-            drawSectionHeader("SEZIONI COLLAUDATE");
+            drawSectionHeader("Sezioni del verbale di collaudo");
             groupsData.forEach(group => {
                 drawText(`• ${group.description || "N/A"}`, { size: 10 });
             });
@@ -3789,7 +3825,9 @@ async function generatePdfFineCollaudo(data) {
             const ncHeaders = ["NC Group", "NC Code", "Material", "Priority", "User", "Phase", "Status", "QN Code", "Owner", "Due Date"];
             
             // Adattamento intelligente con analisi automatica
-            const tableInfo = drawSmartTable(ncHeaders, ncRows);
+            const tableInfo = drawSmartTable(ncHeaders, ncRows, {
+                sectionTitle: "SEZIONE NON CONFORMITÀ"
+            });
             
             console.log(`NON CONFORMITÀ: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
@@ -3815,7 +3853,9 @@ async function generatePdfFineCollaudo(data) {
             const modHeaders = ["Type", "Progr.Eco", "Proc.Id", "Material", "Material Desc.", "Child Mat.", "Qty", "Flux Type", "Status", "Resolution", "Note", "Owner", "Due Date"];
             
             // Adattamento intelligente con analisi automatica
-            const tableInfo = drawSmartTable(modHeaders, modRows);
+            const tableInfo = drawSmartTable(modHeaders, modRows, {
+                sectionTitle: "SEZIONE MODIFICHE"
+            });
             
             console.log(`MODIFICHE: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
@@ -3837,7 +3877,9 @@ async function generatePdfFineCollaudo(data) {
             const actHeaders = ["Macro-Phase", "Macro-Activity", "Mach.Type", "Progr.", "WorkCenter", "Status", "Safety", "Owner", "Due Date"];
             
             // Adattamento intelligente con analisi automatica
-            const tableInfo = drawSmartTable(actHeaders, actRows);
+            const tableInfo = drawSmartTable(actHeaders, actRows, {
+                sectionTitle: "SEZIONE ATTIVITÀ"
+            });
             
             console.log(`ATTIVITÀ: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
@@ -3859,7 +3901,9 @@ async function generatePdfFineCollaudo(data) {
             const manHeaders = ["WBS", "Material", "Miss.Comp.", "Miss.Comp.Desc.", "Type", "Cover Elem.Type", "Receipt Date", "Owner", "Due Date"];
             
             // Adattamento intelligente con analisi automatica
-            const tableInfo = drawSmartTable(manHeaders, manRows);
+            const tableInfo = drawSmartTable(manHeaders, manRows, {
+                sectionTitle: "SEZIONE COMPONENTI MANCANTI"
+            });
             
             console.log(`COMPONENTI MANCANTI: ${tableInfo.orientation}, font: ${tableInfo.fontSize}`);
         }
