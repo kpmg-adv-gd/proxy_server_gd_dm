@@ -184,9 +184,9 @@ async function updateNonConformanceLevel3(plant, sfc, id_lev_1, id_lev_2, id_lev
     }
 }
 
-async function insertZVerbaleLev2(order, id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, plant, active, priority, wbe) {
+async function insertZVerbaleLev2(order, id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, plant, active, priority, wbe, date, operationActivityDescription) {
     try {
-        await postgresdbService.executeQuery(queryVerbali.insertZVerbaleLev2, [order, id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, plant, active, priority, wbe]);
+        await postgresdbService.executeQuery(queryVerbali.insertZVerbaleLev2, [order, id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, plant, active, priority, wbe, date, operationActivityDescription]);
         return true;
     } catch (error) {
         return false;

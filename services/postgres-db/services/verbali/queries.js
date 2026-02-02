@@ -92,8 +92,8 @@ const updateNonConformanceLevel3 = `UPDATE z_verbale_lev_3
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
     AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
 
-const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'New', $10, $11, $12, $13)`;
+const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe, date_lev_1, lev_1)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'New', $10, $11, $12, $13, $14, $15)`;
     
 const insertZVerbaleLev3 = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'New', false)`;

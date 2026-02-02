@@ -331,6 +331,9 @@ async function getDefectsToVerbale(plant, orders) {
     var groupResponse = await callGet(url);
     for (var i = 0; i < defects.length; i++) {
         try {
+            // Altri dati custom
+            defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
+            console.log("okClose for defect ID " + defects[i].id + ": " + defects[i].okClose);
             // Recupero difetto standard
             if (difettiStandard.filter(dif => dif.id == defects[i].id).length == 0) {
                 url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
@@ -359,8 +362,6 @@ async function getDefectsToVerbale(plant, orders) {
                     });
                 });
             }
-            // Altri dati custom
-            defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
         } catch (error) {
             console.error("Error processing defect ID " + defects[i].id + ": " + error);
         }
