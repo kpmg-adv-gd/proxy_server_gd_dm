@@ -9,9 +9,7 @@ async function manageRelease(plant,routing){
     let customValues = responseGetOrder?.customValues || [];
     let phaseField= customValues.find(obj => obj.attribute == "PHASE");
     let phaseValue = phaseField ? phaseField.value : "";
-    let tesstinVerbaleStatusField = customValues.find(obj => obj.attribute == "TESTING_VERBALE_STATUS");
-    let tesstinVerbaleStatusValue = tesstinVerbaleStatusField ? tesstinVerbaleStatusField.value : "";
-    if(phaseValue=="TESTING" && tesstinVerbaleStatusValue!=="DONE"){
+    if(phaseValue=="TESTING"){
         return;
     }
     var quantityToReleaseValue = responseGetOrder?.orderedQuantity || 1;

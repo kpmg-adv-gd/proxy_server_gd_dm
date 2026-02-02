@@ -1834,10 +1834,8 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             if (customer && customer !== '' && customerValue !== customer) continue;
             
             // Filtro per sentToInstallation (se specificato)
-            if (sentToInstallation !== undefined && sentToInstallation !== null) {
-                const isSentToInstallation = sentToInstallationValue === 'true' || sentToInstallationValue === true;
-                if (sentToInstallation && !isSentToInstallation) continue;
-                if (!sentToInstallation && isSentToInstallation) continue;
+            if (sentToInstallation === true) {
+                if (sentToInstallationValue === false) continue;
             }
             
             // Filtro per showAll (TESTING_REPORT_STATUS)
@@ -2578,6 +2576,17 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                         // Inserisco il nuovo step nella lista routingSteps
                         routingResponse[0].routingOperationGroups.push(newStepOpGrouup);
                     }
+                    //Inserisco il routing Step nel routing routingStepGroupStepList del simultaenous se esiste
+                    if (routingResponse[0].routingSteps[0].routingStepGroup) {
+                        let lengthOpSimultaneous = routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList.length;
+                        let lastSequence = lengthOpSimultaneous > 0 ? routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList[lengthOpSimultaneous - 1].sequence : 0;
+                        routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList.push({
+                            routingStep: {
+                                stepId: stepId
+                            },
+                            sequence: lastSequence + 1
+                        });
+                    }
                     // Duplica anche il marking testing se esiste
                     await duplicateMarkingTesting(plant, order, stepId, originalStepId);
                 }
@@ -2694,11 +2703,13 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
 // Funzione per rilasciare il verbale
 async function releaseVerbalManagement(plant, order) {
     try {
-        var routing = order;
-        //Aggiorno il campo custom RELEASE_STATUS in ORDER a 'DONE' per permettere il riladcio dell'ordine in seguito all'aggiornamento del routing
-        let customFieldToUpdate = [{"customField":"TESTING_VERBALE_STATUS", "customValue": "DONE"}];
-        await updateCustomField(plant, order, customFieldToUpdate);
-        await manageRelease(plant, routing);
+        var url = hostname + "/order/v2/orders/release";
+        var body = {
+            order: order,
+            plant: plant,
+            quantityToRelease: 1
+        };
+        let responseReleaseOrder = await callPost(url,body);
         return true;
     } catch (error) {
         console.error("Error in releaseVerbalManagement:", error);
