@@ -131,7 +131,7 @@ SET
     workcenter_lev_2 = CASE WHEN $3::text IS NOT NULL THEN $3 ELSE workcenter_lev_2 END,
     safety = CASE WHEN $4::boolean IS NOT NULL THEN $4 ELSE safety END,
     active = CASE WHEN $5::boolean IS NOT NULL THEN $5 ELSE active END
-WHERE plant = $1 AND id_lev_2 = $2`;
+WHERE plant = $1 AND id_lev_2 = $2 AND id_lev_1 = $6`;
 
 const duplicateVerbaleLev2ByStepId = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, blocked, priority, wbe, sfc)
     SELECT "order", $3, lev_2, id_lev_2, machine_type, $4, time_lev_2, uom, $5, status_lev_2, plant, $6, blocked, priority, wbe, sfc
@@ -175,7 +175,7 @@ const updateCommentCancel = `UPDATE z_comments
 
 const updateVerbaleLev2Unblock = `UPDATE z_verbale_lev_2
     SET blocked = false
-    WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3 AND machine_type = $4 AND id_lev_1 = $5`;
+    WHERE plant = $1 AND sfc = $2 AND id_lev_2 = $3 AND machine_type = $4`;
 
 const getVerbaleLev2ForUnblocking = `SELECT id_lev_2, safety, blocked
     FROM z_verbale_lev_2

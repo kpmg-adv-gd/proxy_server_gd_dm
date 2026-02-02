@@ -2622,9 +2622,9 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     plant,
                     stepId,
                     suffix,
-                    safety !== undefined ? safety : false,
+                    safety,
                     workcenter !== undefined ? workcenter : null,
-                    active !== undefined ? active : false,
+                    active,
                     originalStepId
                 );
         }
