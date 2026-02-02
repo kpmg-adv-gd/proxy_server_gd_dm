@@ -238,13 +238,8 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/db/getDefectsTI", async (req, res) => {
         const { plant, project, onlyOpenDefects } = req.body;
-        var result = [];
         try {
-            if(onlyOpenDefects === true){
-                result = await postgresdbService.getDefectsTIOpen(plant, project);
-            } else {
-                result = await postgresdbService.getDefectsTI(plant, project);
-            }
+            const result = await postgresdbService.getDefectsTI(plant, project, onlyOpenDefects);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);

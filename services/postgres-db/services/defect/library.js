@@ -212,8 +212,13 @@ async function getCauses(plant) {
 }
 
 
-async function getDefectsTI(plant, project) {
-    const defects = await postgresdbService.executeQuery(queryDefect.getDefectsTI, [plant, project]);
+async function getDefectsTI(plant, project,isOnlyOpenDefects) {
+    var defects = [];
+    if(isOnlyOpenDefects){
+        defects = await postgresdbService.executeQuery(queryDefect.getDefectsTIOpen, [plant, project]);
+    }else{ 
+        defects = await postgresdbService.executeQuery(queryDefect.getDefectsTI, [plant, project]);
+    }   
     var difettiStandard = [], codesTrovati = [], url = hostname;
     // prima di mandare a FE, recuperare dati STD
     url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;

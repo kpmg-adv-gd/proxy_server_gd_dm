@@ -447,6 +447,7 @@ async function getCustomWeights(plant, project, order, report) {
             const currentId = item.id || 1;
             const weight = parseFloat(item.weight || 0);
             const value = item.value || '';
+            const dateTime = item.datetime || null;
             
             // Inizializzo il gruppo per questo id se non esiste
             if (!groupedByIdMap[currentId]) {
@@ -463,7 +464,8 @@ async function getCustomWeights(plant, project, order, report) {
                 id: currentId,
                 section: item.section,
                 weight: weight,
-                value: value
+                value: value,
+                datetime: dateTime
             });
             
             // Converto value in numero per calcolare la media pesata
@@ -490,7 +492,8 @@ async function getCustomWeights(plant, project, order, report) {
                     id: section.id,
                     section: section.section,
                     weight: section.weight,
-                    value: section.value
+                    value: section.value,
+                    datetime: section.datetime
                 });
             }
             
@@ -505,7 +508,8 @@ async function getCustomWeights(plant, project, order, report) {
                 id: parseInt(currentId),
                 section: "Risultato dell'ispezione",
                 weight: group.totalWeight,
-                value: finalValue
+                value: finalValue,
+                datetime: null
             });
         }
         
