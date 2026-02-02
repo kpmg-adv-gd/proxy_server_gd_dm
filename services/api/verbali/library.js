@@ -2021,6 +2021,26 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
             });
         }
         
+        // Ordino i risultati per datetime crescente
+        results.sort((a, b) => {
+            if (!a.datetime && !b.datetime) return 0;
+            if (!a.datetime) return 1;
+            if (!b.datetime) return -1;
+            
+            // Parsing DD/MM/YYYY HH:MM:SS format
+            const parseDateTime = (dateTimeStr) => {
+                const [datePart, timePart] = dateTimeStr.split(' ');
+                const [day, month, year] = datePart.split('/');
+                const [hours, minutes, seconds] = timePart.split(':');
+                return new Date(year, month - 1, day, hours, minutes, seconds);
+            };
+            
+            const dateA = parseDateTime(a.datetime);
+            const dateB = parseDateTime(b.datetime);
+            
+            return dateA - dateB;
+        });
+        
         return results;
     } catch (error) {
         console.error("Error in getSafetyApprovalData:", error);
@@ -2179,6 +2199,7 @@ async function getVerbalManagementTreeTable(plant, order) {
         const treeTable = [];
         
         for (const step of routingSteps) {
+            if(step.stepId == "10" || step.stepId == "0010") continue; // Salta lo step 10 / 0010 che è del simultaenous
             const stepId = step.stepId;
             const description = step.description || '';
             const operationActivity = step.routingOperation?.operationActivity?.operationActivity || '';
@@ -2312,6 +2333,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
         const treeTable = [];
         
         for (const step of routingSteps) {
+            if(step.stepId == "10" || step.stepId == "0010") continue; // Salta lo step 10 / 0010 che è del simultaenous
             const stepId = step.stepId;
             const description = step.description || '';
             const workCenter = step.workCenter?.workCenter || '';

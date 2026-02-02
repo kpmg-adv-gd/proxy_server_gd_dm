@@ -215,8 +215,8 @@ const getActivitiesTestingQuery = `SELECT *
 
 const updateActivitiesOwnerAndDueDateQuery = `UPDATE z_verbale_lev_2 SET owner = $1, due_date = $2 WHERE id_lev_1 = $3 AND id_lev_2 = $4 AND "order" = $5`;
 
-const upsertWeightValueQuery = `INSERT INTO z_weight_values (id, section, plant, project, "order", report, value)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+const upsertWeightValueQuery = `INSERT INTO z_weight_values (id, section, plant, project, "order", report, value, datetime)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     ON CONFLICT (id, section, plant, project, "order", report)
     DO UPDATE SET value = EXCLUDED.value`;
 

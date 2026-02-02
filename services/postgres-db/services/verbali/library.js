@@ -364,8 +364,9 @@ async function getReportWeightWithValues(plant, project, order, report) {
 async function upsertWeightValue(plant, project, order, weightData) {
     const { id, section, value } = weightData;
     const report = 'Testing';
+    let dateNow = new Date();
     const data = await postgresdbService.executeQuery(queryVerbali.upsertWeightValueQuery, 
-        [id, section, plant, project, order, report, value]);
+        [id, section, plant, project, order, report, value,dateNow]);
     return data;
 }
 async function updateZverbaleLev1TableWithSfc(plant, order, sfc) {

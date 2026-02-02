@@ -319,7 +319,36 @@ module.exports.listenerSetup = (app) => {
             res.status(status).json({ error: errMessage });
         }
     });
+    // Endpoint per invio a Installazione (aggiornamento custom fields)
+    app.post("/api/sendToInstallation", async (req, res) => {
+        try {
+            const { plant, order, customFieldsUpdate } = req.body;
+            
+            
+            if (!plant || !order ) {
+                return res.status(400).json({ error: "Missing required parameters: plant, order" });
+            }
 
+            // Step 1: Aggiorna i custom fields (se presenti)
+            if (customFieldsUpdate && Array.isArray(customFieldsUpdate) && customFieldsUpdate.length > 0) {
+                // Verifica che ogni elemento dell'array abbia customField e customValue
+                for (const field of customFieldsUpdate) {
+                    if (!field.customField || field.customValue === undefined) {
+                        return res.status(400).json({ error: "Each element in customFieldsUpdate must have customField and customValue properties" });
+                    }
+                }
+                
+                await updateCustomField(plant, order, customFieldsUpdate);
+            }
+            
+            // Restituisci il PDF al client
+            res.status(200).json({ info: "Send To Installation did successfully" });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
     // Endpoint unificato per generare pdf report di fine collaudo + aggiornare custom fields + salvare come WI
     app.post("/api/generateFinalCollaudoRelation", async (req, res) => {
         try {
