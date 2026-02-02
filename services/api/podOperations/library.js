@@ -66,6 +66,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
 }
 
 function getPodOperationsTI(responseRouting){
+    console.log("getPodOperationsTI - responseRouting:", responseRouting);
     try{
         var operations = [];
         if (responseRouting.length==0 || !responseRouting[0].routingOperationGroups){
