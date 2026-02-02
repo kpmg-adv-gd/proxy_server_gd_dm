@@ -103,13 +103,13 @@ module.exports.listenerSetup = (app) => {
     app.post("/db/autoApproveDefectQN", async (req, res) => {
         const { dataForSap, defectId, userId, plant } = req.body;
         try {
-            let sapCode = await postgresdbService.getOrderCustomDataDefectType(dataForSap.code, plant);
+            let sapCode = await postgresdbService.getOrderCustomDataDefectType(dataForSap.dCode, plant);
             if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
                 sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
             }else{
                 sapCode = null;
             }
-            dataForSap.code = sapCode;
+            dataForSap.dCode = sapCode;
             const result = await postgresdbService.sendApproveDefectQN(dataForSap, defectId, userId, plant);
             if (result.OUTPUT.esito == "OK")
                 res.status(200).json(result);
