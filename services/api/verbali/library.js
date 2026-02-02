@@ -2604,6 +2604,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                 // Aggiorno solo i campi specificati (workcenter, safety, active)
                 await updateVerbaleLev2(
                     plant,
+                    change.idLev1,
                     change.idLev2,
                     change.workcenter !== undefined ? change.workcenter : null,
                     change.safety !== undefined ? change.safety : null,
@@ -2613,9 +2614,9 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
         }
         
         // Step 5: Duplicazione livello 2
-        if (newLevel2 && newLevel2.length > 0) {
-                const { originalStepId, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = newLevel2[0];
-                
+        if (newLevel2 && newLevel2.length > 0) {  
+            for (let newLev2El of newLevel2) {
+                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = newLev2El;
                 await duplicateVerbaleLev2(
                     order,
                     plant,
@@ -2624,8 +2625,10 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     safety !== undefined ? safety : false,
                     workcenter !== undefined ? workcenter : null,
                     active !== undefined ? active : false,
-                    originalStepId
+                    originalStepId,
+                    lev2Id
                 );
+            }
         }
         
         // Step 6: Duplicazione livello 3
@@ -2680,6 +2683,14 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     routingResponse[0].routingOperationGroups = routingResponse[0].routingOperationGroups.filter(
                         opGroup => opGroup.routingOperationGroup !== operationActivity
                     );
+                }
+
+                // Rimuovo il routing Step dal routingStepGroupStepList del simultaneous se esiste
+                if (routingResponse[0].routingSteps[0].routingStepGroup) {
+                    routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList = 
+                        routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList.filter(group => 
+                            group.routingStep.stepId !== stepId
+                        );
                 }
                 
                 // Elimino le righe dal database
