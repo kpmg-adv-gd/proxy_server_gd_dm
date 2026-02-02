@@ -168,8 +168,6 @@ async function updateRoutingForReleaseUtility(plant, routing) {
     if (responseGetRouting && responseGetRouting.length > 0) {
         routingSteps = responseGetRouting[0].routingSteps;
     }
-    console.log("UPDATE ROUTING FOR RELEASE - Routing: " + routing + " - Plant: " + plant);
-    console.log("Routing stampa: " + JSON.stringify(responseGetRouting));
     await doUpdateNoMachRouting(responseGetRouting, routingSteps);
 }
 
