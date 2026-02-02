@@ -94,10 +94,14 @@ async function insertZAddtionalOperations(rows) {
         var row = rows[i];
         for (let j = 0; j < rows[i].operations.length; j++) {
             var opt = rows[i].operations[j];
-            await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
-                row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
-                opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter
-            ]);
+            try {
+                await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
+                    row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
+                    opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter
+                ]);
+            } catch (error) {
+                console.log("Error inserting additional operation for SFC " + row.sfc + " operation " + opt.operation + ": " + error);
+            }
         }
     }
 }

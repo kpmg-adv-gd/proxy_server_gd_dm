@@ -376,6 +376,7 @@ async function updateTestingModifiche(plant, project, wbeMachine, section) {
 // Funzione per eseguire invio al Testing Additional Operations
 async function sendToTestingAdditionalOperations(plant, selectedData) {
     // Recupero info ordine principale
+    console.log("chiamo con ordine "    + selectedData.order);
     var url = hostname + "/order/v1/orders?order=" + selectedData.order + "&plant=" + plant;
     var order = await callGet(url);
     var commessa = order?.customValues?.find(obj => obj.attribute == "COMMESSA")?.value || "";
@@ -393,6 +394,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
             continue;
         }
         // Check sullo stato degli ordini sul valore "executionStatus"
+        console.log("Chiamo con ordine " + childOrders[index].child_order);
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
         var selectedOrder = await callGet(url); 
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
@@ -437,13 +439,13 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                         opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
                     }
                     // Recupero ulteriori dettagli, dai campi custom
-                    if (opt.MES_ORDER != null) {
+                    if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
                         var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
                         var mesOrder = await callGet(urlMesOrder);
                         opt.groupCode = mesOrder?.material?.material;
                         opt.groupDescription = mesOrder?.material?.description;
                     }
-                    if (opt.MF != null) {
+                    if (opt.MF != null && opt.MF != "") {
                         var productionPhase = await getMappingPhase(plant, opt.MF);
                         opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
                     }
