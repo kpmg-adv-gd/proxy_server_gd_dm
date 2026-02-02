@@ -60,7 +60,7 @@ const startOtherTerzoLivelloInQueue = `UPDATE z_verbale_lev_3
     AND id_lev_3 != $3`;
 
 const startSecondoLivello = `UPDATE z_verbale_lev_2
-    SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Work' ELSE status_lev_2 END, 
+    SET status_lev_2 = CASE WHEN status_lev_2 in ('New','In Queue') THEN 'In Work' ELSE status_lev_2 END, 
     start_lev_2 = CASE WHEN status_lev_2 = 'New' THEN (current_timestamp AT TIME ZONE 'UTC') ELSE start_lev_2 END
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
     AND id_lev_2 = $4 AND machine_type = $5`;
