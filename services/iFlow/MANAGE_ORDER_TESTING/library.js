@@ -397,7 +397,7 @@ async function saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue) {
         if (level1.areaRelevance == "M") continue;
         for (var j=0; j<level1.level2.length; j++) {
             var level2 = level1.level2[j];
-            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, "00" + numberStep, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe);    
+            var res = await insertZVerbaleLev2(jsonOrderTesting.idOrdine, "00" + numberStep, level2.level2Description, level2.idLevel2, level2.machineType, level2.safety, level2.timeLevel2, "HCN", workCenterDmValue, plant, true, level2.priority, level2.wbe, level1.date, level1.operationActivityDescription);    
             if (!res) result = false;
         }
         numberStep += 10;

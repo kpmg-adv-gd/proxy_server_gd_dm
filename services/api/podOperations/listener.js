@@ -62,7 +62,7 @@ module.exports.listenerSetup = (app) => {
                 } else if (status.quantityDone == 1) {
                     primoLivello[i].status = 'Done';
                 }
-
+                primoLivello[i].datetime = secondoLivello.length > 0 ? secondoLivello[0].date_lev_1 : null;
                 // Calcolo percentuale completamento del primo livello, facendo media ponderata sul time_lev_2
                 var totalTimeDone = 0, totalTime = 0, idsAnalizzati = [];
                 secondoLivello.forEach(element => {
