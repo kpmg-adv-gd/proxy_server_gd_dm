@@ -134,14 +134,14 @@ SET
 WHERE plant = $1 AND id_lev_2 = $2`;
 
 const duplicateVerbaleLev2ByStepId = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe, sfc)
-    SELECT "order", $3, lev_2, CONCAT(id_lev_2, $4::text), machine_type, $5, time_lev_2, uom, $6, status_lev_2, plant, $7, priority, wbe, sfc
+    SELECT "order", $3, lev_2, id_lev_2, machine_type, $4, time_lev_2, uom, $5, status_lev_2, plant, $6, priority, wbe, sfc
     FROM z_verbale_lev_2 
-    WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $8`;
+    WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $7`;
 
 const duplicateVerbaleLev3ByLev2Ids = `INSERT INTO z_verbale_lev_3 ("order", id_lev_1, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances, sfc)
-    SELECT "order", $3, CONCAT(id_lev_2, $4::text), CONCAT(id_lev_3, $4::text), lev_3, machine_type, plant, status_lev_3, nonconformances, sfc
+    SELECT "order", $3, id_lev_2, id_lev_3, lev_3, machine_type, plant, status_lev_3, nonconformances, sfc
     FROM z_verbale_lev_3 
-    WHERE "order" = $1 AND plant = $2 AND id_lev_2 = $5`;
+    WHERE "order" = $1 AND plant = $2 AND id_lev_2 = $4 AND id_lev_1 = $5`;
 
 const duplicateMarkingRecap = `INSERT INTO z_marking_recap (plant, project, wbe_machine, operation, mes_order, confirmation_number, planned_labor, uom_planned_labor, marked_labor, uom_marked_labor, remaining_labor, uom_remaining_labor, variance_labor, uom_variance, operation_description, modify)
     SELECT plant, project, wbe_machine, $3, mes_order, confirmation_number, planned_labor, uom_planned_labor, marked_labor, uom_marked_labor, remaining_labor, uom_remaining_labor, variance_labor, uom_variance, $4, modify
