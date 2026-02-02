@@ -95,6 +95,7 @@ async function createOperations(plant, jsonOrderTesting) {
         }
     } catch (error) {
         console.error("Error creating new testing operations:", error.message || error);
+        console.error("Body error operations:", JSON.stringify(newOperations));
         return false;
     }
 }
