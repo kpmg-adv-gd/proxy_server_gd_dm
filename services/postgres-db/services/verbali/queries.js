@@ -133,8 +133,8 @@ SET
     active = CASE WHEN $5::boolean IS NOT NULL THEN $5 ELSE active END
 WHERE plant = $1 AND id_lev_2 = $2 AND id_lev_1 = $6`;
 
-const duplicateVerbaleLev2ByStepId = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, blocked, priority, wbe, sfc)
-    SELECT "order", $3, lev_2, id_lev_2, machine_type, $4, time_lev_2, uom, $5, status_lev_2, plant, $6, blocked, priority, wbe, sfc
+const duplicateVerbaleLev2ByStepId = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, blocked, priority, wbe, sfc, date_lev_1, lev_1)
+    SELECT "order", $3, lev_2, id_lev_2, machine_type, $4, time_lev_2, uom, $5, status_lev_2, plant, $6, blocked, priority, wbe, sfc, date_lev_1, lev_1
     FROM z_verbale_lev_2 
     WHERE "order" = $1 AND plant = $2 AND id_lev_1 = $7 AND id_lev_2 = $8`;
 

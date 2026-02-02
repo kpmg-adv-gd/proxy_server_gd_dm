@@ -3,6 +3,7 @@ const { updateStatusModifica, updateStatusModificaMA, getModificheTestingByOrder
 const { getErpPlantFromDMPlant } = require("../../../utility/MappingPlant");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const { dispatch } = require("../../mdo/library");
+const { getStatusDefects } = require("../../postgres-db/services/defect/queries");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -96,6 +97,7 @@ async function getModificheTestingData(plant, project) {
                 resolution: modifica.resolution || "",
                 note: modifica.note || "",
                 status: modifica.status || "",
+                statusDescription: modifica.status_description || "",
                 owner: modifica.owner || "", // nuova colonna
                 due_date: modifica.due_date || "", // nuova colonna
                 sfc: modifica.sfc || "",
