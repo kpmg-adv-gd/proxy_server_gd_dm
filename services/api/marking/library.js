@@ -163,7 +163,7 @@ async function sendZDMConfirmations(plant, personalNumber, activityNumber, activ
 
 }
 
-async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
+async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -197,7 +197,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, ac
             var durationMarked = 0;
             var durationVariance = Number(duration);
         }
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null, true);
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null, true);
         await updateZMarkingTesting(plant, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
