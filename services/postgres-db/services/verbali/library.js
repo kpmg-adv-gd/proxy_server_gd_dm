@@ -251,8 +251,8 @@ async function getVerbaleLev3ByOrder(order, plant) {
 }
 
 // Update level 2 fields (workcenter, safety, active)
-async function updateVerbaleLev2(plant, idLev2, workcenter, safety, active) {
-    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Fields, [plant, idLev2, workcenter, safety, active]);
+async function updateVerbaleLev2(plant, idLev1, idLev2, workcenter, safety, active) {
+    await postgresdbService.executeQuery(queryVerbali.updateVerbaleLev2Fields, [plant, idLev2, workcenter, safety, active, idLev1]);
 }
 
 // Duplicate level 2 by stepId

@@ -2604,6 +2604,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                 // Aggiorno solo i campi specificati (workcenter, safety, active)
                 await updateVerbaleLev2(
                     plant,
+                    change.idLev1,
                     change.idLev2,
                     change.workcenter !== undefined ? change.workcenter : null,
                     change.safety !== undefined ? change.safety : null,
@@ -2680,6 +2681,14 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     routingResponse[0].routingOperationGroups = routingResponse[0].routingOperationGroups.filter(
                         opGroup => opGroup.routingOperationGroup !== operationActivity
                     );
+                }
+
+                // Rimuovo il routing Step dal routingStepGroupStepList del simultaneous se esiste
+                if (routingResponse[0].routingSteps[0].routingStepGroup) {
+                    routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList = 
+                        routingResponse[0].routingSteps[0].routingStepGroup.routingStepGroupStepList.filter(group => 
+                            group.routingStep.stepId !== stepId
+                        );
                 }
                 
                 // Elimino le righe dal database
