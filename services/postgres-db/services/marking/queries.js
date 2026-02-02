@@ -6,8 +6,8 @@ const getMarkingDataQuery = `SELECT *
 const insertOpConfirmationQuery = `INSERT INTO z_op_confirmations (plant,wbe_machine, operation, mes_order,
                                 sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, 
                                 variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,
-                                modification, workcenter, operation_description, project, updated_timestamp, defect_id)
-                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`;   
+                                modification, workcenter, operation_description, project, updated_timestamp, defect_id, testing)
+                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`;   
                                
 const updateMarkingRecapQuery = `UPDATE z_marking_recap
                                 SET 

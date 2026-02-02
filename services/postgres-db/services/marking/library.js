@@ -38,9 +38,9 @@ async function getMarkingData(wbe_machine, mes_order, operation) {
     return data;
 }
 
-async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId) {
+async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId, isTesting) {
     let actualDate = new Date();
-    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId]);
+    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId, isTesting && isTesting === true ? true : false]);
     return data;
 }
 

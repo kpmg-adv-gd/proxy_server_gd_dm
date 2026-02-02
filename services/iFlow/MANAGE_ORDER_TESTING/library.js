@@ -1,6 +1,7 @@
 const { json } = require("express");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPut, callPost } = require("../../../utility/CommonCallApi");
+const { updateRoutingForReleaseUtility } = require("../UPDATE_ROUTING/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 var { getWorkcenterDmByPlantGdAndWorkCenterErp } = require("../../postgres-db/services/loipro/library");
 const { insertZVerbaleLev2, insertZVerbaleLev3 } = require("../../postgres-db/services/verbali/library");
@@ -32,9 +33,8 @@ async function manageNewOrderTesting(jsonOrderTesting) {
     // 5. Creazione dell'ordine
     var resultOrder = await createOrder(plant, jsonOrderTesting);
     if (!resultOrder) return { result: false, message: "Error creation order" };
-    // 6. Aggiornamento del routing - spostato nella tile supervisore
-    //var resultUpdateRouting = await updateRouting(plant, jsonOrderTesting);
-    //if (!resultUpdateRouting) return { result: false, message: "Error updating routing" };
+    // 6. Aggiornamento del routing
+    await updateRoutingForReleaseUtility(plant, jsonOrderTesting.idOrdine);
     // 7. Compilazione z_verbale_lev2
     var resultSaveZVerbale2 = await saveZVerbale2(plant, jsonOrderTesting, workCenterDmValue);
     if (!resultSaveZVerbale2) return { result: false, message: "Error saving z_verbale_lev2" };

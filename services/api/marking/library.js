@@ -197,7 +197,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, ac
             var durationMarked = 0;
             var durationVariance = Number(duration);
         }
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null, true);
         await updateZMarkingTesting(plant, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
