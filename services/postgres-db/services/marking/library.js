@@ -3,7 +3,7 @@ const queryMarking = require("./queries");
 
 
 async function getZOpConfirmationData(plant,project,wbe,userId,startMarkingDate,endMarkingDate){
-    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"'";
+    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"' and testing = false";
     if (!!project) {
         whereCondition += " AND zoc.project = '"+project+"'";
     }

@@ -77,7 +77,7 @@ function getPodOperationsTI(responseRouting){
                     id: operation.routingStep.stepId,
                     operation: operation.routingStep.routingOperation.operationActivity.operationActivity,
                     description: operation.routingStep.description,
-                    datetime: operation.routingStep.customValues.find(obj => obj.attribute == "DATE")?.value || ""
+                    datetime: operation.routingStep.routingOperation.customValues.find(obj => obj.attribute == "DATE")?.value || ""
                 });
             });
         });
