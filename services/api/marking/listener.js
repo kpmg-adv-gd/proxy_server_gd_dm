@@ -54,9 +54,9 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/sendZDMConfirmationsTesting", async (req, res) => {
         try {
-            const { plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId } = req.body;
+            const { plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification } = req.body;
 
-            var response = await sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId);
+            var response = await sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification);
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;
