@@ -55,6 +55,7 @@ async function createOperations(plant, jsonOrderTesting) {
     // ciclo le operazioni di livello 1
     for (var i = 0; i < jsonOrderTesting.level1.length; i++) {
         const operation = jsonOrderTesting.level1[i];
+        operation.operationActivity = validateNameOperationActivity(operation.operationActivity);
         if (operation.areaRelevance == "M") {
             console.log("Skipping operation creation for area relevance M: "+operation.operationActivity);
             continue; 
@@ -479,6 +480,16 @@ async function updateRoutingSimultaneous(bodyUpdateRouting){
     let response = await callPut(url,bodyUpdateRouting);
     console.log("UPDATE ROUTING: "+response);
     return response;
+}
+
+function validateNameOperationActivity(operation) {
+    // Rimuovi caratteri oltre i 34
+    if (operation.length > 34) {
+        operation = operation.substring(0, 34);
+    }
+    // Rimuovi virgole e apostrofi
+    operation = operation.replace(/[,']/g, '');
+    return operation;
 }
 
 module.exports = { manageNewOrderTesting }
