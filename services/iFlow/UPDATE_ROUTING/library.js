@@ -159,7 +159,6 @@ function getRoutingStepsByMacrofase(macrofase,routingSteps){
 async function updateRoutingSimultaneous(bodyUpdateRouting){
     let url = hostname + "/routing/v1/routings";
     let response = await callPut(url,bodyUpdateRouting);
-    console.log("UPDATE ROUTING: "+response);
     return response;
 }
 
