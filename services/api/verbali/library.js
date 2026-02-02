@@ -3845,7 +3845,7 @@ async function generatePdfFineCollaudo(data) {
                 mod.child_material || "N/A",
                 mod.quantity || "N/A",
                 mod.flux_type || "N/A",
-                mod.status || "N/A",
+                mod.statusDescription || "N/A",
                 mod.resolution || "N/A",
                 mod.note || "N/A",
                 mod.owner || "N/A",
