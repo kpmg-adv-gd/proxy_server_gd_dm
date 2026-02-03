@@ -64,13 +64,15 @@ const getMarkingTestingDataByOrderQuery = `SELECT *
                                              WHERE plant = $1 AND "order" = $2 AND type = $3`;
 
 const getAnalisiOreVarianzaQuery = `SELECT 
-                                        SUBSTRING(reason_for_variance, 1, 2) as variance_cluster,
-                                        SUM(variance_labor) as total_variance_labor
-                                    FROM z_op_confirmations
-                                    WHERE plant = $1 
-                                        AND mes_order = $2 
-                                        AND reason_for_variance IS NOT NULL 
-                                        AND cancellation_flag = false
-                                    GROUP BY SUBSTRING(reason_for_variance, 1, 2)`;
+                                        SUBSTRING(zoc.reason_for_variance, 1, 2) as variance_cluster,
+                                        SUM(zoc.variance_labor) as total_variance_labor
+                                    FROM z_op_confirmations zoc
+                                    INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant
+                                    WHERE zoc.plant = $1
+                                        AND zmt."type" != 'M'
+                                        AND zmt."order" = $2 
+                                        AND zoc.reason_for_variance IS NOT NULL 
+                                        AND zoc.cancellation_flag = false
+                                    GROUP BY SUBSTRING(zoc.reason_for_variance, 1, 2)`;
 
 module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery, getAnalisiOreVarianzaQuery };
