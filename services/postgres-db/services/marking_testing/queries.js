@@ -10,6 +10,6 @@ const getMarkingTestingByConfirmationNumberQuery = ` SELECT * FROM z_marking_tes
 const updateMarkingTestingQuery = ` UPDATE z_marking_testing 
     SET marked_labor = marked_labor + $4, variance_labor = variance_labor + $5,
     remaining_labor = CASE WHEN $4 = 0 THEN remaining_labor ELSE planned_labor - (marked_labor + $4) END
-    WHERE plant = $1 and operation = $2 and confirmation_number = $3`;
+    WHERE plant = $1 and id_lev_1 = $2 and confirmation_number = $3`;
 
 module.exports = { insertMarkingTestingQuery, getMarkingTestingQuery, getMarkingDataTestingQuery, updateMarkingTestingQuery, getMarkingTestingByConfirmationNumberQuery };
