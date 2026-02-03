@@ -198,7 +198,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, personalNumber, ac
             var durationVariance = Number(duration);
         }
         await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null, true);
-        await updateZMarkingTesting(plant, confirmationNumber, durationMarked, durationVariance);
+        await updateZMarkingTesting(plant, operation, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
         let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";

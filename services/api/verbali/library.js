@@ -376,7 +376,6 @@ async function updateTestingModifiche(plant, project, wbeMachine, section) {
 // Funzione per eseguire invio al Testing Additional Operations
 async function sendToTestingAdditionalOperations(plant, selectedData) {
     // Recupero info ordine principale
-    console.log("chiamo con ordine "    + selectedData.order);
     var url = hostname + "/order/v1/orders?order=" + selectedData.order + "&plant=" + plant;
     var order = await callGet(url);
     var commessa = order?.customValues?.find(obj => obj.attribute == "COMMESSA")?.value || "";
@@ -394,7 +393,6 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
             continue;
         }
         // Check sullo stato degli ordini sul valore "executionStatus"
-        console.log("Chiamo con ordine " + childOrders[index].child_order);
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
         var selectedOrder = await callGet(url); 
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
@@ -521,10 +519,15 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 second: '2-digit',
                 hour12: false
             }).replace(',', '');
-            doc.font('Helvetica').fontSize(10).text(`Verbale generato da `, { continued: true }).font('Helvetica-Bold').text(`${user}`, { continued: true }).font('Helvetica').text(` in data `, { continued: true }).font('Helvetica-Bold').text(`${formattedDate}`);
-            doc.moveDown(0.5);
+
 
             //doc.moveDown(1.5);
+            // Messaggio generazione verbale sotto il titolo della testata
+            doc.font('Helvetica').fontSize(10).text(`Verbale generato da `, { continued: true })
+                .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                .font('Helvetica').text(` in data `, { continued: true })
+                .font('Helvetica-Bold').text(`${formattedDate}`);
+            doc.moveDown(0.5);
             doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
             doc.moveDown(1);
 
@@ -539,6 +542,13 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     // Titolo della sezione
                     doc.fontSize(14).font('Helvetica-Bold')
                         .text(`${collection.description || 'Data Collection'}`, { underline: true });
+                    doc.moveDown(0.5);
+
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
                     doc.moveDown(0.5);
 
                     doc.moveDown(0.5);
@@ -828,6 +838,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE DIFETTI', { align: 'center' });
                     doc.moveDown(0.5);
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
+                    doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
                     doc.moveDown(1);
@@ -867,8 +883,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.rect(colPositionsDefects.qn, doc.y, colWidthsDefects.qn, 20).stroke();
 
                     const headerYDefects = doc.y + 6;
-                    doc.text('Group', colPositionsDefects.group + 2, headerYDefects, { width: colWidthsDefects.group - 4, align: 'left' });
-                    doc.text('Code', colPositionsDefects.code + 2, headerYDefects, { width: colWidthsDefects.code - 4, align: 'left' });
+                    doc.text('Defect Group', colPositionsDefects.group + 2, headerYDefects, { width: colWidthsDefects.group - 4, align: 'left' });
+                    doc.text('Defect Code', colPositionsDefects.code + 2, headerYDefects, { width: colWidthsDefects.code - 4, align: 'left' });
                     doc.text('Material', colPositionsDefects.material + 2, headerYDefects, { width: colWidthsDefects.material - 4, align: 'left' });
                     doc.text('Priority', colPositionsDefects.priority + 2, headerYDefects, { width: colWidthsDefects.priority - 4, align: 'left' });
                     doc.text('User', colPositionsDefects.user + 2, headerYDefects, { width: colWidthsDefects.user - 4, align: 'left' });
@@ -968,6 +984,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     // Titolo sezione modifiche con bordo più visibile
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE MODIFICHE', { align: 'center' });
+                    doc.moveDown(0.5);
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
                     doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1109,6 +1131,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE OPERAZIONI NON COMPLETATE', { align: 'center' });
                 doc.moveDown(0.5);
+                // Messaggio generazione verbale sotto il titolo della sezione
+                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                    .font('Helvetica').text(` in data `, { continued: true })
+                    .font('Helvetica-Bold').text(`${formattedDate}`);
+                doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
                 doc.moveDown(1);
@@ -1213,6 +1241,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE MANCANTI', { align: 'center' });
+                doc.moveDown(0.5);
+                // Messaggio generazione verbale sotto il titolo della sezione
+                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                    .font('Helvetica').text(` in data `, { continued: true })
+                    .font('Helvetica-Bold').text(`${formattedDate}`);
                 doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();

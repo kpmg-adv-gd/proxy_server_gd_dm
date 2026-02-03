@@ -57,7 +57,7 @@ const startTerzoLivello = `UPDATE z_verbale_lev_3
 const startOtherTerzoLivelloInQueue = `UPDATE z_verbale_lev_3
     SET status_lev_3 = CASE WHEN status_lev_3 = 'New' THEN 'In Queue' ELSE status_lev_3 END
     WHERE plant = $1 AND sfc = $2
-    AND id_lev_3 != $3`;
+    AND (id_lev_1 != $3 OR id_lev_2 != $4 OR id_lev_3 != $5)`;
 
 const startSecondoLivello = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 in ('New','In Queue') THEN 'In Work' ELSE status_lev_2 END, 
@@ -68,7 +68,7 @@ const startSecondoLivello = `UPDATE z_verbale_lev_2
 const startOtherSecondoLivelloInQueue = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Queue' ELSE status_lev_2 END
     WHERE plant = $1 AND sfc = $2
-    AND id_lev_2 != $3`;
+    AND (id_lev_1 != $3 OR id_lev_2 != $4)`;
 
 const completeTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'Done', complete_date = (current_timestamp AT TIME ZONE 'UTC'), complete_user = $7
@@ -84,7 +84,7 @@ const completeSecondoLivello = `UPDATE z_verbale_lev_2
                             WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
                             AND id_lev_2 = $4 AND machine_type = $5 AND status_lev_3 != 'Done') = 0 
                         THEN (current_timestamp AT TIME ZONE 'UTC') ELSE complete_lev_2 END
-        WHERE plant = $1 AND sfc = $2 
+        WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
         AND id_lev_2 = $4 AND machine_type = $5`;
 
 const updateNonConformanceLevel3 = `UPDATE z_verbale_lev_3
@@ -112,7 +112,8 @@ const getGroupByPriorityDefects = `with PRIO as (
     case when prio.quantity is null then 0 else prio.quantity end as quantity, 
     case when prio.value is null then 0 else prio.value end as value
     from z_priority zp
-    left join PRIO prio ON zp.priority = prio.priority`;
+    left join PRIO prio ON zp.priority = prio.priority
+    order by zp.priority`;
 
 const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;
 

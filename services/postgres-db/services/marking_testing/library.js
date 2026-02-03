@@ -16,8 +16,8 @@ async function getMarkingDataTesting(plant, wbs, id_lev_1, order) {
     return data;
 }
 
-async function updateZMarkingTesting(plant, confirmationNumber, durationMarked, durationVariance) {
-    await postgresdbService.executeQuery(queryMarking.updateMarkingTestingQuery, [plant, confirmationNumber, durationMarked, durationVariance]);
+async function updateZMarkingTesting(plant, operation, confirmationNumber, durationMarked, durationVariance) {
+    await postgresdbService.executeQuery(queryMarking.updateMarkingTestingQuery, [plant, operation, confirmationNumber, durationMarked, durationVariance]);
 }
 
 async function getMarkingTestingByConfirmationNumber(plant, confirmationNumber) {
