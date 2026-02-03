@@ -201,7 +201,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, operation, persona
         await updateZMarkingTesting(plant, operation, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
-        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
+        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM Testing";
         throw { status: 400, message: errorMessage };
     }
 

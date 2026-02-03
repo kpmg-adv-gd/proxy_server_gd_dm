@@ -13,6 +13,7 @@ async function getAdditionalOperations(plant, order) {
 
     if (!commessa) return [];
     const data = await postgresdbService.executeQuery(queryAdditionalOperations.getAdditionalOperationsQuery, [plant, commessa]);
+    /* logica per colonna mancanti
     for (let i = 0; i < data.length; i++) {
         try {
             await hasMancanti(plant,data[i].order);
@@ -21,6 +22,7 @@ async function getAdditionalOperations(plant, order) {
             data[i].mancanti = true;
         }
     }
+    */
     return data;
 }
 
