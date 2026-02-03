@@ -79,7 +79,7 @@ async function mangeConfirmationMarking(plant,personalNumber,wbe_machine,operati
         await updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor, variance_labor);
     } else {
         // Testing
-        await sendZDMConfirmationsTesting(plant, sfc, mes_order, personalNumber, data[0].network, data[0].activity_id, cancellation, "", "", confirmation_number, marking_date, (marked_labor + variance_labor).toString(), uom_marked_labor, reason_for_variance, "", "X", { wbe: wbe_machine, wbs_description: operation, wbs: mes_order }, user_id);
+        await sendZDMConfirmationsTesting(plant, sfc, mes_order, operation, personalNumber, data[0].network, data[0].activity_id, cancellation, "", "", confirmation_number, marking_date, (marked_labor + variance_labor).toString(), uom_marked_labor, reason_for_variance, "", "X", { wbe: wbe_machine, wbs_description: operation, wbs: mes_order }, user_id);
     }
     if(cancellation=="X"){
         await updateCancelFlagOpConfirmation(confirmation_number,cancelled_confirmation,user_id);
