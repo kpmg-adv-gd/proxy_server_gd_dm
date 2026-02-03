@@ -1560,7 +1560,7 @@ async function getFilterSafetyApproval(plant) {
         
         // Step 2: Recupero gli MFG_ORDER dalla tabella SAP_MDO_SFC_V con gli SFC trovati
         const sfcFilter = sfcList.map(sfc => `SFC eq '${sfc}'`).join(' or ');
-        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${sfcFilter}))`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
@@ -1692,7 +1692,7 @@ async function getFilterFinalCollaudo(plant) {
         const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
         
         // Step 4: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
-        const filterSFC = `(PLANT eq '${plant}' AND (${ordersFilter}))`;
+        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${ordersFilter}))`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
@@ -1805,7 +1805,7 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
         });
         
         // Step 6: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
-        const filterSFC = `(PLANT eq '${plant}' AND (${ordersFilter}))`;
+        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${ordersFilter}))`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
@@ -1973,7 +1973,7 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
         // Step 5: Recupero gli MFG_ORDER per gli SFC dei commenti filtrati
         const sfcList = [...new Set(filteredComments.map(c => c.sfc).filter(s => s))];
         const sfcFilter = sfcList.map(s => `SFC eq '${s}'`).join(' or ');
-        const filterSFC = `(PLANT eq '${plant}' AND (${sfcFilter}))`;
+        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${sfcFilter}))`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
@@ -2152,7 +2152,7 @@ async function getVerbalManagementTable(plant, project, co, order, customer, sho
         const customDataList = outMockCustomData?.data?.value?.length > 0 ? outMockCustomData.data.value : [];
         
         // Recupero gli SFC per tutti gli ordini
-        const filterSFC = `(PLANT eq '${plant}' AND (${filteredOrdersList}))`;
+        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${filteredOrdersList}))`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
@@ -2348,7 +2348,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
         const lev3Data = await getVerbaleLev3ByOrder(order, plant);
         
         // Step 5: Recupero SFC per calcolare lo status del livello 1
-        const filterSFC = `(MFG_ORDER eq '${order}' and PLANT eq '${plant}')`;
+        const filterSFC = `(MFG_ORDER eq '${order}' and STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND PLANT eq '${plant}')`;
         const mockReqSFC = {
             path: "/mdo/SFC",
             query: { $apply: `filter(${filterSFC})` },
