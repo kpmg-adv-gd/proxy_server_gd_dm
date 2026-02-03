@@ -2452,30 +2452,46 @@ async function getCollaudoProgressTreeTable(plant, order) {
                 
                 // Processa i livelli 3
                 for (const lev3 of matchingLev3) {
+                    // Formatto le date fermandosi ai secondi (DD/MM/YYYY HH:mm:ss)
+                    let formattedStartDate = '';
+                    let formattedCompleteDate = '';
+                    
+                    if (lev3.start_date) {
+                        // Estraggo solo DD/MM/YYYY HH:mm:ss
+                        const dateMatch = lev3.start_date.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/);
+                        formattedStartDate = dateMatch ? dateMatch[1] : lev3.start_date.substring(0, 19);
+                    }
+                    
+                    if (lev3.complete_date) {
+                        // Estraggo solo DD/MM/YYYY HH:mm:ss
+                        const dateMatch = lev3.complete_date.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/);
+                        formattedCompleteDate = dateMatch ? dateMatch[1] : lev3.complete_date.substring(0, 19);
+                    }
+                    
                     // Costruisco Start e Complete
-                    const startText = lev3.start_user && lev3.start_date 
-                        ? `${lev3.start_user}\n${lev3.start_date}` 
+                    const startText = lev3.start_user && formattedStartDate 
+                        ? `${lev3.start_user}\n${formattedStartDate}` 
                         : '';
-                    const completeText = lev3.complete_user && lev3.complete_date 
-                        ? `${lev3.complete_user}\n${lev3.complete_date}` 
+                    const completeText = lev3.complete_user && formattedCompleteDate 
+                        ? `${lev3.complete_user}\n${formattedCompleteDate}` 
                         : '';
                     
                     if (startText) {
-                        // Parsing data italiana DD/MM/YYYY HH:mm
-                        const [datePart, timePart] = lev3.start_date.split(' ');
+                        // Parsing data italiana DD/MM/YYYY HH:mm:ss
+                        const [datePart, timePart] = formattedStartDate.split(' ');
                         const [day, month, year] = datePart.split('/');
-                        const [hours, minutes] = timePart.split(':');
-                        const startDate = new Date(year, month - 1, day, hours, minutes);
+                        const [hours, minutes, seconds] = timePart.split(':');
+                        const startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
                         
                         lev2Starts.push({ date: startDate, text: startText });
                         allStarts.push({ date: startDate, text: startText });
                     }
                     if (completeText) {
-                        // Parsing data italiana DD/MM/YYYY HH:mm
-                        const [datePart, timePart] = lev3.complete_date.split(' ');
+                        // Parsing data italiana DD/MM/YYYY HH:mm:ss
+                        const [datePart, timePart] = formattedCompleteDate.split(' ');
                         const [day, month, year] = datePart.split('/');
-                        const [hours, minutes] = timePart.split(':');
-                        const completeDate = new Date(year, month - 1, day, hours, minutes);
+                        const [hours, minutes, seconds] = timePart.split(':');
+                        const completeDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
                         
                         lev2Completes.push({ date: completeDate, text: completeText });
                         allCompletes.push({ date: completeDate, text: completeText });
