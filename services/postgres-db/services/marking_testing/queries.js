@@ -8,8 +8,8 @@ const getMarkingDataTestingQuery = ` SELECT DISTINCT * FROM z_marking_testing wh
 const getMarkingTestingByConfirmationNumberQuery = ` SELECT * FROM z_marking_testing WHERE plant = $1 AND confirmation_number = $2`;
 
 const updateMarkingTestingQuery = ` UPDATE z_marking_testing 
-    SET marked_labor = marked_labor + $3, variance_labor = variance_labor + $4,
-    remaining_labor = CASE WHEN $3 = 0 THEN remaining_labor ELSE planned_labor - (marked_labor + $3) END
-    WHERE plant = $1 and confirmation_number = $2`;
+    SET marked_labor = marked_labor + $4, variance_labor = variance_labor + $5,
+    remaining_labor = CASE WHEN $4 = 0 THEN remaining_labor ELSE planned_labor - (marked_labor + $4) END
+    WHERE plant = $1 and operation = $2 and confirmation_number = $3`;
 
 module.exports = { insertMarkingTestingQuery, getMarkingTestingQuery, getMarkingDataTestingQuery, updateMarkingTestingQuery, getMarkingTestingByConfirmationNumberQuery };

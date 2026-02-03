@@ -121,13 +121,13 @@ async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machi
         // terzo livello passa da New a In Work
         await postgresdbService.executeQuery(queryVerbali.startTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user]);
         // Gli altri terzo livello dello stesso secondo livello che sono in New passano In Queue
-        await postgresdbService.executeQuery(queryVerbali.startOtherTerzoLivelloInQueue, [plant, sfc, id_lev_3]);
+        await postgresdbService.executeQuery(queryVerbali.startOtherTerzoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2, id_lev_3]);
         // secondo livello passa da New a In Work (se lo era già non accade nulla)
         await postgresdbService.executeQuery(queryVerbali.startSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
         // Gli altri secondo livello dello stesso primo livello che sono in New passano In Queue
-        await postgresdbService.executeQuery(queryVerbali.startOtherSecondoLivelloInQueue, [plant, sfc, id_lev_2]);
+        await postgresdbService.executeQuery(queryVerbali.startOtherSecondoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2]);
         // primo livello passa da New a In Work (se lo era già non accade nulla)
-        if (infoSecondoLivello.filter(item => item.status_lev_3 == 'New').length == infoSecondoLivello.length) {
+        if (infoSecondoLivello.filter(item => item.status_lev_3 == 'New' || item.status_lev_3 == 'In Queue').length == infoSecondoLivello.length) {
             var url = hostname+"/sfc/v1/sfcs/start";
             var params = {
                 "plant": plant,
