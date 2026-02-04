@@ -2470,10 +2470,10 @@ async function getCollaudoProgressTreeTable(plant, order) {
                     
                     // Costruisco Start e Complete
                     const startText = lev3.start_user && formattedStartDate 
-                        ? `${lev3.start_user}\n${formattedStartDate}` 
+                        ? `${lev3.start_user} - ${formattedStartDate}` 
                         : '';
                     const completeText = lev3.complete_user && formattedCompleteDate 
-                        ? `${lev3.complete_user}\n${formattedCompleteDate}` 
+                        ? `${lev3.complete_user} - ${formattedCompleteDate}` 
                         : '';
                     
                     if (startText) {
