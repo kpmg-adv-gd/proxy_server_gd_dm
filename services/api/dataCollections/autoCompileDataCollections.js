@@ -106,7 +106,6 @@ async function ruleParameter0(data, group, parameterName, dcData, refresh) {
             query: { $apply: `filter(${filter2})` },
             method: "GET"
         };
-        console.log("filter2: ", filter2);
         var outMock2 = await dispatch(mockReq2);
         var dcData2 = (outMock2?.data?.value && outMock2.data.value.length > 0) ? outMock2.data.value : [];
         // escludiamo valori vuoti
@@ -265,6 +264,8 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
             ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == optDaConsiderare[i].operation)[0] : null;
         if (selectedOpt != null) {
             var time = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : 0;
+            // check time è un numero valido
+            if (isNaN(time) || time == "") time = 0;
             totalTime += parseFloat(time);
         }
     }

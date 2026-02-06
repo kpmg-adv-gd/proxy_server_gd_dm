@@ -61,7 +61,7 @@ module.exports.listenerSetup = (app) => {
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error?.message || "Internal Server Error";
-            console.error("Error api sendZDMConfirmations:", errMessage);
+            console.error("Error api sendZDMConfirmationsTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });
