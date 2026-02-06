@@ -2470,10 +2470,10 @@ async function getCollaudoProgressTreeTable(plant, order) {
                     
                     // Costruisco Start e Complete
                     const startText = lev3.start_user && formattedStartDate 
-                        ? `${lev3.start_user}\n${formattedStartDate}` 
+                        ? `${lev3.start_user} - ${formattedStartDate}` 
                         : '';
                     const completeText = lev3.complete_user && formattedCompleteDate 
-                        ? `${lev3.complete_user}\n${formattedCompleteDate}` 
+                        ? `${lev3.complete_user} - ${formattedCompleteDate}` 
                         : '';
                     
                     if (startText) {
@@ -3673,10 +3673,11 @@ async function generatePdfFineCollaudo(data) {
         drawLine(2);
         y -= 10;
         
-        // Informazioni header
-        drawText(`Progetto: ${header.project || "N/A"}`, { size: 12, bold: true });
-        drawText(`SFC: ${header.sfc || "N/A"}`, { size: 12 });
-        drawText(`Cliente: ${header.customer || "N/A"}`, { size: 12 });
+        // Informazioni header - Rimuovi newline per evitare errori WinAnsi
+        const cleanText = (text) => text ? String(text).replace(/\n/g, ' ').replace(/\r/g, '') : "N/A";
+        drawText(`Progetto: ${cleanText(header.project)}`, { size: 12, bold: true });
+        drawText(`SFC: ${cleanText(header.sfc)}`, { size: 12 });
+        drawText(`Cliente: ${cleanText(header.customer)}`, { size: 12 });
         
         const now = new Date();
         const formattedDate = now.toLocaleString('it-IT', {
@@ -3698,7 +3699,7 @@ async function generatePdfFineCollaudo(data) {
             
             drawSectionHeader("Sezioni del verbale di collaudo");
             groupsData.forEach(group => {
-                drawText(`• ${group.description || "N/A"}`, { size: 10 });
+                drawText(`• ${cleanText(group.description)}`, { size: 10 });
             });
         }
 
@@ -3714,7 +3715,7 @@ async function generatePdfFineCollaudo(data) {
                     y = page.getSize().height - margin;
                     
                     // Intestazione della sezione con il nome
-                    const sectionTitle = section.description || section.group || "PARAMETRI DI COLLAUDO";
+                    const sectionTitle = cleanText(section.description || section.group || "PARAMETRI DI COLLAUDO");
                     drawSectionHeader(sectionTitle);
                     
                     // Creo le righe della tabella dai parametri di questa sezione
@@ -3722,9 +3723,9 @@ async function generatePdfFineCollaudo(data) {
                         const value = p.valueText || p.valueNumber || p.valueData || 
                                      p.valueBoolean || p.valueList || "-";
                         return [
-                            p.description || "N/A",
-                            String(value),
-                            p.comment || ""
+                            cleanText(p.description),
+                            cleanText(String(value)),
+                            cleanText(p.comment)
                         ];
                     });
                     
@@ -3746,10 +3747,10 @@ async function generatePdfFineCollaudo(data) {
             drawSectionHeader("SEZIONI ISPEZIONE");
             
             const weightRows = weights.map(w => [
-                w.id || "N/A",
-                w.section || "N/A",
-                (w.weight || "0") + (String(w.weight || "").includes("%") ? "" : "%"),
-                w.value || "N/A"
+                cleanText(w.id),
+                cleanText(w.section),
+                cleanText((w.weight || "0") + (String(w.weight || "").includes("%") ? "" : "%")),
+                cleanText(w.value)
             ]);
             
             const colWidths = [contentWidth * 0.1, contentWidth * 0.4, contentWidth * 0.25, contentWidth * 0.25];
@@ -3765,9 +3766,9 @@ async function generatePdfFineCollaudo(data) {
             
             // Tabella con tutti i parametri ore collaudo
             const oreCollaudoRows = resultsOreCollaudo.map(item => [
-                item.description || item.parameterName || "N/A",
-                String(item.valueNumber || "0"),
-                item.comment || ""
+                cleanText(item.description || item.parameterName),
+                cleanText(String(item.valueNumber || "0")),
+                cleanText(item.comment)
             ]);
             
             const colWidths = [contentWidth * 0.5, contentWidth * 0.25, contentWidth * 0.25];
@@ -3832,8 +3833,8 @@ async function generatePdfFineCollaudo(data) {
             drawSectionHeader("ANALISI VARIANZA COLLAUDO");
             
             const varianzaRows = varianzaCollaudo.map(v => [
-                v.cluster || "N/A",
-                String(v.hours || "0") + " ore"
+                cleanText(v.cluster),
+                cleanText(String(v.hours || "0") + " ore")
             ]);
             
             const colWidths = [contentWidth * 0.6, contentWidth * 0.4];
@@ -3862,16 +3863,16 @@ async function generatePdfFineCollaudo(data) {
         // NON CONFORMITÀ (Adattamento Intelligente)
         if (treeData.length > 0) {
             const ncRows = treeData.map(nc => [
-                nc.groupDesc || "N/A",
-                nc.codeDesc || "N/A",
-                nc.material || "N/A",
-                nc.priority_description || "N/A",
-                nc.user || "N/A",
-                nc.phase || "N/A",
-                nc.status || "N/A",
-                nc.qn_code || "N/A",
-                nc.owner || "N/A",
-                nc.due_date || "N/A"
+                cleanText(nc.groupDesc),
+                cleanText(nc.codeDesc),
+                cleanText(nc.material),
+                cleanText(nc.priority_description),
+                cleanText(nc.user),
+                cleanText(nc.phase),
+                cleanText(nc.status),
+                cleanText(nc.qn_code),
+                cleanText(nc.owner),
+                cleanText(nc.due_date)
             ]);
             
             const ncHeaders = ["NC Group", "NC Code", "Material", "Priority", "User", "Phase", "Status", "QN Code", "Owner", "Due Date"];
@@ -3887,19 +3888,19 @@ async function generatePdfFineCollaudo(data) {
         // MODIFICHE (Adattamento Intelligente)
         if (treeDataModifiche.length > 0) {
             const modRows = treeDataModifiche.map(mod => [
-                mod.type || "N/A",
-                mod.prog_eco || "N/A",
-                mod.process_id || "N/A",
-                mod.material || "N/A",
-                mod.material_description || "N/A",
-                mod.child_material || "N/A",
-                mod.quantity || "N/A",
-                mod.flux_type || "N/A",
-                mod.statusDescription || "N/A",
-                mod.resolution || "N/A",
-                mod.note || "N/A",
-                mod.owner || "N/A",
-                mod.due_date || "N/A"
+                cleanText(mod.type),
+                cleanText(mod.prog_eco),
+                cleanText(mod.process_id),
+                cleanText(mod.material),
+                cleanText(mod.material_description),
+                cleanText(mod.child_material),
+                cleanText(mod.quantity),
+                cleanText(mod.flux_type),
+                cleanText(mod.statusDescription),
+                cleanText(mod.resolution),
+                cleanText(mod.note),
+                cleanText(mod.owner),
+                cleanText(mod.due_date)
             ]);
             
             const modHeaders = ["Type", "Progr.Eco", "Proc.Id", "Material", "Material Desc.", "Child Mat.", "Qty", "Flux Type", "Status", "Resolution", "Note", "Owner", "Due Date"];
@@ -3915,15 +3916,15 @@ async function generatePdfFineCollaudo(data) {
         // ACTIVITIES (Adattamento Intelligente)
         if (treeDataActivities.length > 0) {
             const actRows = treeDataActivities.map(act => [
-                act.id_lev_1 || "N/A",
-                act.macroattivita || "N/A",
-                act.machine_type || "N/A",
-                act.progressivo || "N/A",
-                act.workcenter || "N/A",
-                act.status || "N/A",
-                act.safety || "N/A",
-                act.owner || "N/A",
-                act.due_date || "N/A"
+                cleanText(act.id_lev_1),
+                cleanText(act.macroattivita),
+                cleanText(act.machine_type),
+                cleanText(act.progressivo),
+                cleanText(act.workcenter),
+                cleanText(act.status),
+                cleanText(act.safety),
+                cleanText(act.owner),
+                cleanText(act.due_date)
             ]);
             
             const actHeaders = ["Macro-Phase", "Macro-Activity", "Mach.Type", "Progr.", "WorkCenter", "Status", "Safety", "Owner", "Due Date"];
@@ -3938,17 +3939,33 @@ async function generatePdfFineCollaudo(data) {
 
         // MANCANTI (Adattamento Intelligente)
         if (mancanti.length > 0) {
-            const manRows = mancanti.map(m => [
-                m.wbs_element || "N/A",
-                m.material || "N/A",
-                m.missing_component || "N/A",
-                m.component_description || "N/A",
-                m.type_mancante || "N/A",
-                m.type_cover_element || "N/A",
-                m.receipt_expected_date || "N/A",
-                m.owner || "N/A",
-                m.due_date || "N/A"
-            ]);
+            const manRows = mancanti.map(m => {
+                // Formatta receipt_expected_date fermandosi ai secondi (DD/MM/YYYY HH:mm:ss)
+                let formattedReceiptDate = "N/A";
+                if (m.receipt_expected_date) {
+                    const dateMatch = m.receipt_expected_date.match(/(\d{2}\/\d{2}\/\d{4}(?:\s+\d{2}:\d{2}:\d{2})?)/);
+                    formattedReceiptDate = dateMatch ? dateMatch[1] : cleanText(m.receipt_expected_date).substring(0, 19);
+                }
+                
+                // Formatta due_date fermandosi ai secondi (DD/MM/YYYY HH:mm:ss)
+                let formattedDueDate = "N/A";
+                if (m.due_date) {
+                    const dateMatch = m.due_date.match(/(\d{2}\/\d{2}\/\d{4}(?:\s+\d{2}:\d{2}:\d{2})?)/);
+                    formattedDueDate = dateMatch ? dateMatch[1] : cleanText(m.due_date).substring(0, 19);
+                }
+                
+                return [
+                    cleanText(m.wbs_element),
+                    cleanText(m.material),
+                    cleanText(m.missing_component),
+                    cleanText(m.component_description),
+                    cleanText(m.type_mancante),
+                    cleanText(m.type_cover_element),
+                    formattedReceiptDate,
+                    cleanText(m.owner),
+                    formattedDueDate
+                ];
+            });
             
             const manHeaders = ["WBS", "Material", "Miss.Comp.", "Miss.Comp.Desc.", "Type", "Cover Elem.Type", "Receipt Date", "Owner", "Due Date"];
             
@@ -3970,7 +3987,7 @@ async function generatePdfFineCollaudo(data) {
             const lines = riepilogoText.split("\n");
             lines.forEach(line => {
                 if (line.trim()) {
-                    drawText(line, { size: 10 });
+                    drawText(cleanText(line), { size: 10 });
                 } else {
                     y -= 5;
                 }
