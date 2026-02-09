@@ -265,7 +265,12 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
         if (selectedOpt != null) {
             var time = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : 0;
             // check time è un numero valido
-            if (isNaN(time) || time == "") time = 0;
+            if (isNaN(time) || time == "") {
+                time = 0;
+            }else{
+                time = time.replaceAll(".", "")
+                time = time.replaceAll(",", ".")
+            }           
             totalTime += parseFloat(time);
         }
     }
