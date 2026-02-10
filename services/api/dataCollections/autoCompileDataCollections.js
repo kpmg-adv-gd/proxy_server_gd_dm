@@ -362,7 +362,7 @@ async function ruleParameter3Testing(data, group, parameterName, selected, plant
         const order = selected.order || '';
         
         // Recupero dati da z_marking_testing con type="T"
-        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        const markingData = await getMarkingTestingDataByOrder(plant, order);
         
         // Sommo planned_labor e converto da HCN a ore se necessario
         let totalHours = 0;
@@ -406,7 +406,7 @@ async function ruleParameter4Testing(data, group, parameterName, selected, plant
         const order = selected.order || '';
         
         // Recupero dati da z_marking_testing con type="T"
-        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        const markingData = await getMarkingTestingDataByOrder(plant, order);
         
         // Sommo marked_labor e converto da HCN a ore se necessario
         let totalHours = 0;
@@ -447,7 +447,7 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
         const order = selected.order || '';
         
         // Recupero dati da z_marking_testing con type="T"
-        const markingData = await getMarkingTestingDataByOrder(plant, order, "T");
+        const markingData = await getMarkingTestingDataByOrder(plant, order);
         
         // Sommo variance_labor e converto da HCN a ore se necessario
         let totalHours = 0;

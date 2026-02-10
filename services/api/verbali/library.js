@@ -1871,7 +1871,9 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             
             // Filtro per sentToInstallation (se specificato)
             if (sentToInstallation === true) {
-                if (sentToInstallationValue === false) continue;
+                if (sentToInstallationValue === 'true' || sentToInstallationValue === true) {} else continue;
+            } else {
+                if (sentToInstallationValue === 'true' || sentToInstallationValue === true) continue;
             }
             
             // Filtro per showAll (TESTING_REPORT_STATUS)
@@ -2504,7 +2506,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
                         nc: lev3.nonconformances === true,
                         status: lev3.status_lev_3 || '',
                         start: startText,
-                        complete: completeText
+                        complete: lev3.status_lev_3 == "Done" ? completeText : ''
                     };
                     
                     level2Node.children.push(level3Node);
@@ -2517,7 +2519,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
                 }
                 if (lev2Completes.length > 0) {
                     lev2Completes.sort((a, b) => b.date - a.date);
-                    level2Node.complete = lev2Completes[0].text;
+                    level2Node.complete = level2Node.status === "Done" ? lev2Completes[0].text : '';
                 }
                 
                 level1Node.children.push(level2Node);
@@ -2533,7 +2535,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
             }
             if (allCompletes.length > 0) {
                 allCompletes.sort((a, b) => b.date - a.date);
-                level1Node.complete = allCompletes[0].text;
+                level1Node.complete = level1Node.status === "Done" ? allCompletes[0].text : '';
             }
             
             treeTable.push(level1Node);
@@ -2690,7 +2692,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
         // Step 5: Duplicazione livello 2
         if (newLevel2 && newLevel2.length > 0) {  
             for (let newLev2El of newLevel2) {
-                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = newLev2El;
+                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity, descriptionLev1 } = newLev2El;
                 await duplicateVerbaleLev2(
                     order,
                     plant,
@@ -2700,7 +2702,8 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     workcenter !== undefined ? workcenter : null,
                     active !== undefined ? active : false,
                     originalStepId,
-                    lev2Id
+                    lev2Id,
+                    descriptionLev1
                 );
             }
         }

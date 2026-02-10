@@ -61,7 +61,7 @@ const getSumVarianceLaborByOrderQuery = `SELECT COALESCE(SUM(variance_labor), 0)
 
 const getMarkingTestingDataByOrderQuery = `SELECT * 
                                              FROM z_marking_testing 
-                                             WHERE plant = $1 AND "order" = $2 AND type = $3`;
+                                             WHERE plant = $1 AND "order" = $2`;
 
 const getAnalisiOreVarianzaQuery = `SELECT 
                                         SUBSTRING(zoc.reason_for_variance, 1, 2) as variance_cluster,
@@ -69,7 +69,7 @@ const getAnalisiOreVarianzaQuery = `SELECT
                                     FROM z_op_confirmations zoc
                                     INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant
                                     WHERE zoc.plant = $1
-                                        AND zmt."type" != 'M'
+                                        --AND zmt."type" != 'M'
                                         AND zmt."order" = $2 
                                         AND zoc.reason_for_variance IS NOT NULL 
                                         AND zoc.cancellation_flag = false

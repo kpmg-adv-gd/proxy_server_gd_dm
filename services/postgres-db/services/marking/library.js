@@ -72,8 +72,8 @@ async function getSumVarianceLaborByOrder(plant, order) {
     return data && data.length > 0 ? data[0].total_variance_labor : 0;
 }
 
-async function getMarkingTestingDataByOrder(plant, order, type) {
-    const data = await postgresdbService.executeQuery(queryMarking.getMarkingTestingDataByOrderQuery, [plant, order, type]);
+async function getMarkingTestingDataByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getMarkingTestingDataByOrderQuery, [plant, order]);
     return data || [];
 }
 

@@ -9,7 +9,7 @@ const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
 
-    // Endpoint per ottenere le data collections per supervisore assembly
+    // Endpoint per ottenere le data collections per supervisore assembly & testing
     app.post("/api/getDataCollectionsBySFC", async (req, res) => {
         try {
             const { plant, resource, selected, refresh } = req.body;

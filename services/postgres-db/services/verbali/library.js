@@ -256,8 +256,8 @@ async function updateVerbaleLev2(plant, idLev1, idLev2, workcenter, safety, acti
 }
 
 // Duplicate level 2 by stepId
-async function duplicateVerbaleLev2(order, plant, newStepId, suffix, safety, workcenter, active, originalStepId, idLev2) {
-    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev2ByStepId, [order, plant, newStepId, safety, workcenter, active, originalStepId, idLev2]);
+async function duplicateVerbaleLev2(order, plant, newStepId, suffix, safety, workcenter, active, originalStepId, idLev2, descriptionLev1) {
+    await postgresdbService.executeQuery(queryVerbali.duplicateVerbaleLev2ByStepId, [order, plant, newStepId, safety, workcenter, active, originalStepId, idLev2, descriptionLev1]);
 }
 
 // Duplicate level 3 by lev2 id
