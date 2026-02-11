@@ -13,16 +13,21 @@ async function getAdditionalOperations(plant, order) {
 
     if (!commessa) return [];
     const data = await postgresdbService.executeQuery(queryAdditionalOperations.getAdditionalOperationsQuery, [plant, commessa]);
-    /* logica per colonna mancanti
+    // Mappa ordine e hasMancanti in modo da non rifare la ricerca per operazioni con stesso ordine
+    var orderMancantiMap = {};
     for (let i = 0; i < data.length; i++) {
-        try {
-            await hasMancanti(plant,data[i].order);
-            data[i].mancanti = false;
-        } catch (error) {
-            data[i].mancanti = true;
+        if (orderMancantiMap[data[i].order] !== undefined) {
+            data[i].mancanti = orderMancantiMap[data[i].order];
+        }else{
+            try {
+                await hasMancanti(plant,data[i].order);
+                data[i].mancanti = false;
+            } catch (error) {
+                data[i].mancanti = true;
+            }
+            orderMancantiMap[data[i].order] = data[i].mancanti;
         }
     }
-    */
     return data;
 }
 
@@ -107,7 +112,7 @@ async function insertZAddtionalOperations(rows) {
             try {
                 await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
                     row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
-                    opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter
+                    opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter, opt.DURATION
                 ]);
             } catch (error) {
                 console.log("Error inserting additional operation for SFC " + row.sfc + " operation " + opt.operation + ": " + error);

@@ -75,7 +75,7 @@ module.exports.listenerSetup = (app) => {
                     }
                 });
                 var percent = totalTime == 0 ? 0 : ((totalTimeDone / totalTime) * 100);
-                primoLivello[i].percent = Math.round(percent * 100) / 100;
+                primoLivello[i].percent = Math.floor(Math.round(percent * 100) / 100);
 
                 primoLivello[i].SecondoLivello = secondoLivello;
             }

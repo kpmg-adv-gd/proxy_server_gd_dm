@@ -287,8 +287,8 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/getFinalCollaudoData", async (req, res) => {
         try {
-            const { plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus } = req.body;
-            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus);
+            const { plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus, tab } = req.body;
+            const data = await getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus, tab);
             res.status(200).json(data);
         } catch (error) {
             let status = error.status || 500;
@@ -300,12 +300,12 @@ module.exports.listenerSetup = (app) => {
     // Endpoint per recuperare activities Testing in formato tree table
     app.post("/api/getActivitiesTesting", async (req, res) => {
         try {
-            const { plant, project } = req.body;
-            if (!plant || !project) {
-                return res.status(400).json({ error: "Missing required parameters: plant, project" });
+            const { plant, sfc } = req.body;
+            if (!plant || !sfc) {
+                return res.status(400).json({ error: "Missing required parameters: plant, sfc" });
             }
 
-            const result = await getActivitiesTestingData(plant, project);
+            const result = await getActivitiesTestingData(plant, sfc);
             
             if (result === false) {
                 return res.status(500).json({ error: "Error retrieving activities testing data" });
