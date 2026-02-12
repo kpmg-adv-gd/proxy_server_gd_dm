@@ -1160,7 +1160,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_code: 60,
                     group_description: 80,
                     operation: 60,
-                    operation_description: 80
+                    operation_description: 80,
+                    duration: 50
                 };
                 const colPositionsOp = {
                     section: 50,
@@ -1169,7 +1170,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_code: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + 6,
                     group_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + 8,
                     operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + 10,
-                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12
+                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12,
+                    duration: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + colWidthsOp.operation_description + 14
                 };
 
                 // Intestazione tabella
@@ -1181,6 +1183,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.rect(colPositionsOp.group_description, doc.y, colWidthsOp.group_description, 20).stroke();
                 doc.rect(colPositionsOp.operation, doc.y, colWidthsOp.operation, 20).stroke();
                 doc.rect(colPositionsOp.operation_description, doc.y, colWidthsOp.operation_description, 20).stroke();
+                doc.rect(colPositionsOp.duration, doc.y, colWidthsOp.duration, 20).stroke();
 
                 const headerYOp = doc.y + 6;
                 doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
@@ -1190,6 +1193,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.text('Group Description', colPositionsOp.group_description + 2, headerYOp, { width: colWidthsOp.group_description - 4, align: 'left' });
                 doc.text('Operation', colPositionsOp.operation + 2, headerYOp, { width: colWidthsOp.operation - 4, align: 'left' });
                 doc.text('Operation Description', colPositionsOp.operation_description + 2, headerYOp, { width: colWidthsOp.operation_description - 4, align: 'left' });
+                doc.text('Duration', colPositionsOp.duration + 2, headerYOp, { width: colWidthsOp.duration - 4, align: 'left' });
 
                 doc.y += 20;
 
@@ -1202,6 +1206,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const group_description = op.group_description || 'N/A';
                     const operation = op.operation || 'N/A';
                     const operation_description = op.operation_description || 'N/A';
+                    const duration = op.duration || 'N/A';
 
                     // Calcola altezza riga
                     const sectionHeight = doc.heightOfString(section, { width: colWidthsOp.section - 4 });
@@ -1211,7 +1216,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const groupDescHeight = doc.heightOfString(group_description, { width: colWidthsOp.group_description - 4 });
                     const operationHeight = doc.heightOfString(operation, { width: colWidthsOp.operation - 4 });
                     const opDescHeight = doc.heightOfString(operation_description, { width: colWidthsOp.operation_description - 4 });
-                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight) + 8;
+                    const durationHeight = doc.heightOfString(duration, { width: colWidthsOp.duration - 4 });
+                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight, durationHeight) + 8;
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
@@ -1228,6 +1234,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.rect(colPositionsOp.group_description, rowY, colWidthsOp.group_description, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation, rowY, colWidthsOp.operation, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation_description, rowY, colWidthsOp.operation_description, rowHeight).stroke();
+                    doc.rect(colPositionsOp.duration, rowY, colWidthsOp.duration, rowHeight).stroke();
 
                     doc.fontSize(6).font('Helvetica');
                     const textY = rowY + 4;
@@ -1238,6 +1245,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.text(group_description, colPositionsOp.group_description + 2, textY, { width: colWidthsOp.group_description - 4, align: 'left', lineBreak: true });
                     doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
                     doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
+                    doc.text(duration, colPositionsOp.duration + 2, textY, { width: colWidthsOp.duration - 4, align: 'left', lineBreak: true });
 
                     doc.y = rowY + rowHeight;
                 });
