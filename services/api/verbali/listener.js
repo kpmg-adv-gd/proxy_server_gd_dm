@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -407,6 +407,26 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error in generate-pdf:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per recuperare o creare il testo di riepilogo del collaudo finale
+    app.post("/api/getRiepilogoTextFinalCollaudo", async (req, res) => {
+        try {
+            const { plant, key } = req.body;
+            
+            if (!plant || !key) {
+                return res.status(400).json({ error: "Missing required parameters: plant, key" });
+            }
+
+            const value = await getRiepilogoTextFinalCollaudo(plant, key);
+            
+            res.status(200).json({ value: value });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in getRiepilogoTextFinalCollaudo:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

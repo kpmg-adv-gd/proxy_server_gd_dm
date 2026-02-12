@@ -378,6 +378,24 @@ async function updateZverbaleLev2TableWithSfc(plant, order, sfc) {
     return update;
 }
 
+// Funzione per recuperare un valore da z_storage
+async function getZStorageByPlantAndKey(plant, key) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getZStorageByPlantAndKeyQuery, [plant, key]);
+    return data;
+}
+
+// Funzione per inserire un nuovo record in z_storage
+async function insertZStorage(plant, key, type, format, value) {
+    const data = await postgresdbService.executeQuery(queryVerbali.insertZStorageQuery, [plant, key, type, format, value]);
+    return data;
+}
+
+// Funzione per aggiornare il value in z_storage
+async function updateZStorageValue(plant, key, value) {
+    const data = await postgresdbService.executeQuery(queryVerbali.updateZStorageValueQuery, [plant, key, value]);
+    return data;
+}
 
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc };
+
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue };

@@ -231,6 +231,12 @@ const updateZverbaleLev2TableWithSfcQuery = `UPDATE z_verbale_lev_3
     SET sfc = $3
     WHERE plant = $1 AND "order" = $2`;
 
+const getZStorageByPlantAndKeyQuery = `SELECT plant, key, type, format, value FROM z_storage WHERE plant = $1 AND key = $2`;
+
+const insertZStorageQuery = `INSERT INTO z_storage (plant, key, type, format, value) VALUES ($1, $2, $3, $4, $5)`;
+
+const updateZStorageValueQuery = `UPDATE z_storage SET value = $3 WHERE plant = $1 AND key = $2`;
+
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
     startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, duplicateMarkingTesting, deleteMarkingTestingByStepId, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
-    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue };
+    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue, getZStorageByPlantAndKeyQuery, insertZStorageQuery, updateZStorageValueQuery };
