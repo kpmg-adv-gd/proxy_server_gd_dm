@@ -17,7 +17,6 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     };
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-    console.log("ESTRAZIONE  ordersChildrenRecursion" + new Date().toLocaleTimeString());
     var ordersList = await ordersChildrenRecursion(plant, selected.order);
     var optDaConsiderare = await getIncompleteOperations(plant, selected, ordersList);
     for (var i = 0; i < parametriAuto.length; i++) {
@@ -256,23 +255,32 @@ async function ruleParameter7(data, group, parameterName, selected, plant, refre
 }
 async function ruleParameter8(data, group, parameterName, selected, plant, refresh, optDaConsiderare) {
     var totalTime = 0;
-    for (var i = 0; i < optDaConsiderare.length; i++) {
-        var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+optDaConsiderare[i].routing+"&type=SHOP_ORDER";
-        var responseRouting = await callGet(url);
-        var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == optDaConsiderare[i].operation).length > 0 
-            ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == optDaConsiderare[i].operation)[0] : null;
-        if (selectedOpt != null) {
-            var time = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : 0;
-            // check time è un numero valido
-            if (isNaN(time) || time == "") {
-                time = 0;
-            }else{
-                time = time.replaceAll(".", "")
-                time = time.replaceAll(",", ".")
-            }           
-            totalTime += parseFloat(time);
+    // Creo la lista di optDaConsiderare[i].order/operation/routing e ci entro in MDO per estrarre il campo DURATION da custom values, sommo tutto e aggiorno il parametro
+    // Creo query per MDO con filtro su (order AND operation AND routing) OR (order AND operation AND routing) OR ...
+    console.log("Inizio estrazione MDO per parametro 8 alle ore " + new Date().toLocaleTimeString());
+    var filters = optDaConsiderare.map(opt => `(MFG_ORDER eq '${opt.order}' and OPERATION eq '${opt.operation}' and ROUTING eq '${opt.routing}' and PLANT eq '${plant}' and IS_DELETED eq 'false')`).join(' or ');
+    filters = `(MFG_ORDER eq 'sss')`; // Nel caso in cui non ci siano operazioni da considerare, metto un filtro che non restituisce risultati per evitare di prendere dati non corretti
+    console.log("Filtro per MDO: " + filters);
+    var mockReq = {
+        path: "/mdo/ORDER_SCHEDULE",
+        query: { $apply: `filter(${filters})` },
+        method: "GET"
+    };
+    var outMock = await dispatch(mockReq);
+    // Sommo i valori di DURATION per ogni riga restituita da MDO (PLAN_PROCESSING_TIME)
+    var mdoData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
+    console.log("Fine estrazione MDO per parametro 8 alle ore " + new Date().toLocaleTimeString());
+    console.log("Estrazione result: " + JSON.stringify(outMock));
+    var totalTime = 0;
+    mdoData.forEach(item => {
+        var time = item.PLAN_PROCESSING_TIME || "0";
+        time = time.replaceAll(",", "")
+        if (isNaN(time) || time == "") {
+            time = 0;
         }
-    }
+        totalTime += parseFloat(time);
+    });
+    console.log("Tempo totale calcolato per parametro 8: " + totalTime);
     // Aggiorno il parametro
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
@@ -496,6 +504,7 @@ async function getIncompleteOperations(plant, selected, ordersList) {
             var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
             stepNotDone.forEach(element => {
                 optDaConsiderare.push({
+                    order: ordersList[i],
                     operation: element.operation.operation,
                     routing: element.stepRouting.routing,
                     routingVersion: element.stepRouting.version,
