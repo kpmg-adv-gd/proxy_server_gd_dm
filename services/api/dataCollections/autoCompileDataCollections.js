@@ -8,7 +8,6 @@ const { getMarkingTestingDataByOrder } = require("../../postgres-db/services/mar
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-
 async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriAuto, selected, refresh) {
     var filter = `(DATA_FIELD_VALUE eq '${selected.project_parent}' and DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}')`;
     var mockReq = {
@@ -18,7 +17,9 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     };
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-
+    console.log("ESTRAZIONE  ordersChildrenRecursion" + new Date().toLocaleTimeString());
+    var ordersList = await ordersChildrenRecursion(plant, selected.order);
+    var optDaConsiderare = await getIncompleteOperations(plant, selected, ordersList);
     for (var i = 0; i < parametriAuto.length; i++) {
         var numParametro = parametriAuto[i].parametro;
         var group = parametriAuto[i].group;
@@ -38,7 +39,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
                 data = await ruleParameter3(data, group, parameterName, selected, refresh);
                 break;
             case "4":
-                data = await ruleParameter4(data, group, parameterName, selected, plant, refresh);
+                data = await ruleParameter4(data, group, parameterName, selected, plant, refresh, ordersList);
                 break;
             case "5":
                 data = await ruleParameter5(data, group, parameterName, selected, plant, refresh);
@@ -50,10 +51,10 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
                 data = await ruleParameter7(data, group, parameterName, selected, plant, refresh);
                 break;
             case "8":
-                data = await ruleParameter8(data, group, parameterName, selected, plant, refresh);
+                data = await ruleParameter8(data, group, parameterName, selected, plant, refresh, optDaConsiderare);
                 break;
             case "9":
-                data = await ruleParameter9(data, group, parameterName, selected, plant, refresh);
+                data = await ruleParameter9(data, group, parameterName, selected, plant, refresh, optDaConsiderare);
                 break;
             default:
                 // Nessuna azione
@@ -175,9 +176,8 @@ async function ruleParameter3(data, group, parameterName, selected, refresh) {
     }
     return data;
 }
-async function ruleParameter4(data, group, parameterName, selected, plant, refresh) {
-    var ordersToCheck = await ordersChildrenRecursion(plant, selected.order);
-    var quantity = await getTotalQuantityFromOrders(plant, ordersToCheck);
+async function ruleParameter4(data, group, parameterName, selected, plant, refresh, ordersList) {
+    var quantity = await getTotalQuantityFromOrders(plant, ordersList);
     quantity = quantity == null ? "0" : quantity
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
@@ -254,8 +254,7 @@ async function ruleParameter7(data, group, parameterName, selected, plant, refre
     }
     return data;
 }
-async function ruleParameter8(data, group, parameterName, selected, plant, refresh) {
-    var optDaConsiderare = await getIncompleteOperations(plant, selected);
+async function ruleParameter8(data, group, parameterName, selected, plant, refresh, optDaConsiderare) {
     var totalTime = 0;
     for (var i = 0; i < optDaConsiderare.length; i++) {
         var url = hostname+"/routing/v1/routings/routingSteps?plant="+plant+"&routing="+optDaConsiderare[i].routing+"&type=SHOP_ORDER";
@@ -286,8 +285,7 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
     }
     return data;
 }
-async function ruleParameter9(data, group, parameterName, selected, plant, refresh) {
-    var optDaConsiderare = await getIncompleteOperations(plant, selected);
+async function ruleParameter9(data, group, parameterName, selected, plant, refresh, optDaConsiderare) {
     var operazioniRodaggioShared = await getZSharedMemoryData(plant,"OPERAZIONI_RODAGGIO");
     try {
         var operazioniRodaggio = operazioniRodaggioShared.length > 0 ? JSON.parse(operazioniRodaggioShared[0].value).values : [];
@@ -486,12 +484,11 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
 
 // utils
 // Funzione per estrarre operazioni non concluse
-async function getIncompleteOperations(plant, selected) {
+async function getIncompleteOperations(plant, selected, ordersList) {
     var optDaConsiderare = [];
     // Ricavo routing e routing_version
-    var ordersToCheck = await ordersChildrenRecursion(plant, selected.order);
-    for (var i = 0; i < ordersToCheck.length; i++) {
-        var url = hostname + "/order/v1/orders?order=" + ordersToCheck[i] + "&plant=" + plant;
+    for (var i = 0; i < ordersList.length; i++) {
+        var url = hostname + "/order/v1/orders?order=" + ordersList[i] + "&plant=" + plant;
         var selectedOrder = await callGet(url);
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+selectedOrder.sfcs[0];
