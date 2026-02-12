@@ -73,6 +73,7 @@ const getAnalisiOreVarianzaQuery = `SELECT
                                         AND zmt."order" = $2 
                                         AND zoc.reason_for_variance IS NOT NULL 
                                         AND zoc.cancellation_flag = false
+                                        AND zoc.testing = true
                                     GROUP BY SUBSTRING(zoc.reason_for_variance, 1, 2)`;
 
 module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery, getAnalisiOreVarianzaQuery };
