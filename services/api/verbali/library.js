@@ -475,7 +475,30 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
     return new Promise((resolve, reject) => {
         try {
+
             const doc = new PDFDocument({ margin: 50 });
+            doc.fontSize(12).font('Helvetica-Bold');
+            /**
+             * Disegna il piè di pagina con la data in basso a destra
+             */
+            const footerDate = new Date().toLocaleDateString('it-IT', {
+                timeZone: 'Europe/Rome',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            const drawFooter = () => {
+                const pageWidth = doc.page.width;
+                const footerText = footerDate;
+                
+                doc.fontSize(8).font('Helvetica')
+                   .fillColor('#808080')
+                   .text(footerText, pageWidth - 100, 20, {
+                       width: 50,
+                       align: 'right'
+                   });
+            };
+
             const chunks = [];
 
             // Raccoglie i chunk del PDF in memoria
@@ -536,19 +559,13 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 dataCollections.forEach((collection, index) => {
                     // Verifica se serve una nuova pagina
                     if (doc.y > doc.page.height - 150) {
-                        doc.addPage();
+                        page = doc.addPage();
+                        drawFooter();
                     }
 
                     // Titolo della sezione
                     doc.fontSize(14).font('Helvetica-Bold')
                         .text(`${collection.description || 'Data Collection'}`, { underline: true });
-                    doc.moveDown(0.5);
-
-                    // Messaggio generazione verbale sotto il titolo della sezione
-                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
-                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
-                        .font('Helvetica').text(` in data `, { continued: true })
-                        .font('Helvetica-Bold').text(`${formattedDate}`);
                     doc.moveDown(0.5);
 
                     doc.moveDown(0.5);
@@ -625,7 +642,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                             // Nuova pagina se necessario
                             if (doc.y + rowHeight > doc.page.height - 100) {
-                                doc.addPage();
+                                page = doc.addPage();
+                                drawFooter();
                                 doc.y = 50;
                             }
 
@@ -697,7 +715,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                             // Nuova pagina se necessario
                             if (doc.y + rowHeight > doc.page.height - 100) {
-                                doc.addPage();
+                                page = doc.addPage();
+                                drawFooter();
                                 doc.y = 50;
                             }
 
@@ -773,7 +792,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                             // Verifica se serve una nuova pagina
                             if (doc.y + rowHeight > doc.page.height - 100) {
-                                doc.addPage();
+                                page = doc.addPage();
+                                drawFooter();
                                 doc.y = 50;
                             }
 
@@ -828,7 +848,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                 if (allDefects.length > 0) {
                     // Aggiungi sempre una nuova pagina per i difetti
-                    doc.addPage();
+                    page = doc.addPage();
+                    drawFooter();
 
                     // Reset posizione X
                     doc.x = 50;
@@ -838,11 +859,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE DIFETTI', { align: 'center' });
                     doc.moveDown(0.5);
-                    // Messaggio generazione verbale sotto il titolo della sezione
-                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
-                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
-                        .font('Helvetica').text(` in data `, { continued: true })
-                        .font('Helvetica-Bold').text(`${formattedDate}`);
                     doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -918,7 +934,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Verifica se serve una nuova pagina
                         if (doc.y + rowHeight > doc.page.height - 100) {
-                            doc.addPage();
+                            page = doc.addPage();
+                            drawFooter();
                             doc.y = 50;
                         }
 
@@ -975,7 +992,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                 if (allModificheChildren.length > 0) {
                     // Aggiungi sempre una nuova pagina per le modifiche
-                    doc.addPage();
+                    page = doc.addPage();
+                    drawFooter();
 
                     // Reset posizione X
                     doc.x = 50;
@@ -985,11 +1003,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE MODIFICHE', { align: 'center' });
                     doc.moveDown(0.5);
-                    // Messaggio generazione verbale sotto il titolo della sezione
-                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
-                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
-                        .font('Helvetica').text(` in data `, { continued: true })
-                        .font('Helvetica-Bold').text(`${formattedDate}`);
                     doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1083,7 +1096,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Verifica se serve una nuova pagina
                         if (doc.y + rowHeight > doc.page.height - 100) {
-                            doc.addPage();
+                            page = doc.addPage();
+                            drawFooter();
                             doc.y = 50;
                         }
 
@@ -1124,18 +1138,14 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
             // SEZIONE OPERAZIONI ADDIZIONALI
             if (additionalOperations && additionalOperations.length > 0) {
-                doc.addPage();
+                page = doc.addPage();
+                drawFooter();
                 doc.x = 50;
                 doc.y = 50;
 
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE OPERAZIONI NON COMPLETATE', { align: 'center' });
                 doc.moveDown(0.5);
-                // Messaggio generazione verbale sotto il titolo della sezione
-                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
-                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
-                    .font('Helvetica').text(` in data `, { continued: true })
-                    .font('Helvetica-Bold').text(`${formattedDate}`);
                 doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1205,7 +1215,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
-                        doc.addPage();
+                        page = doc.addPage();
+                        drawFooter();
                         doc.y = 50;
                     }
 
@@ -1235,18 +1246,14 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
             // SEZIONE MANCANTI
             if (mancanti && mancanti.length > 0) {
-                doc.addPage();
+                page = doc.addPage();
+                drawFooter();
                 doc.x = 50;
                 doc.y = 50;
 
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE MANCANTI', { align: 'center' });
                 doc.moveDown(0.5);
-                // Messaggio generazione verbale sotto il titolo della sezione
-                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
-                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
-                    .font('Helvetica').text(` in data `, { continued: true })
-                    .font('Helvetica-Bold').text(`${formattedDate}`);
                 doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1349,7 +1356,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
-                        doc.addPage();
+                        page = doc.addPage();
+                        drawFooter();
                         doc.y = 50;
                     }
 
