@@ -13,6 +13,7 @@
   "author": "amancini",
   "license": "ISC",
   "dependencies": {
+    "@sap/hana-client": "^2.22.40",
     "@sap/xsenv": "^5.4.0",
     "@sap/xssec": "^3.6.1",
     "axios": "^1.7.9",
