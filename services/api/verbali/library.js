@@ -1746,7 +1746,7 @@ async function getFilterFinalCollaudo(plant) {
 }
 
 // Funzione per popolare la tabella Final Collaudo con filtri opzionali
-async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus) {
+async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus, tab) {
     try {
         // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
         const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
@@ -1887,12 +1887,16 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             
             // Filtro per sentToInstallation (se specificato)
             if (sentToInstallation === true) {
-                if (sentToInstallationValue === false) continue;
+                if (sentToInstallationValue === 'true' || sentToInstallationValue === true) {} else continue;
+            } else {
+                if (tab == "progressCollaudo" && (sentToInstallationValue === 'true' || sentToInstallationValue === true)) continue;
             }
             
             // Filtro per showAll (TESTING_REPORT_STATUS)
-            if (showAll === false || showAll === 'false') {
-                if (reportStatusValue === 'DONE') continue;
+            if (tab !== "progressCollaudo") {
+                if (showAll === false || showAll === 'false') {
+                    if (reportStatusValue === 'DONE') continue;
+                }
             }
             
             // Filtro per showAllSfcStatus (se false, esclude SFC con status DONE)
@@ -2388,7 +2392,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
         routingSteps.sort((a, b) => {
             return Number(a.stepId) - Number(b.stepId);
         });
-        
+
         for (const step of routingSteps) {
             if(step.stepId == "10" || step.stepId == "0010") continue; // Salta lo step 10 / 0010 che è del simultaenous
             const stepId = step.stepId;
