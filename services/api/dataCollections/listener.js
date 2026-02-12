@@ -1,6 +1,6 @@
 const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { elaborateDataCollectionsSupervisoreAssembly, getReportWeightDataCollections, generateJsonParameters, elaborateDataCollectionstTesting, getCustomWeights, elaborateAnalisiOreVarianza } = require("./library");
-const { updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight } = require("../../api/verbali/library");
+const { updateCustomAssemblyReportStatusOrderInWork, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, saveRiepilogoTextFinalCollaudo } = require("../../api/verbali/library");
 const { updateModifyOwnerAndDueDate } = require("../../postgres-db/services/modifiche/library");
 const { updateMancantiOwnerAndDueDate } = require("../../postgres-db/services/mancanti/library");
 const { updateActivitiesOwnerAndDueDate, upsertWeightValue } = require("../../postgres-db/services/verbali/library");
@@ -145,7 +145,7 @@ module.exports.listenerSetup = (app) => {
     // Endpoint per salvare le data collections e aggiornare modifiche, mancanti, activities e difetti
     app.post("/api/saveDataCollectionsTesting", async (req, res) => {
         try {
-            const { plant, project, order, sfc, resource, dataCollections, passInWork, modifiche, mancanti, activities, difetti, weights } = req.body;
+            const { plant, project, order, sfc, resource, dataCollections, passInWork, modifiche, mancanti, activities, difetti, weights, riepilogoText } = req.body;
             
             // 1. Salvo le data collections (stessa logica di saveDataCollections)
             var url = hostname + "/datacollection/v1/log";
@@ -234,6 +234,15 @@ module.exports.listenerSetup = (app) => {
                     } catch (error) {
                         console.error("Error updating weight:", error);
                     }
+                }
+            }
+            
+            // 7. Salvo il riepilogo text in z_storage
+            if (riepilogoText) {
+                try {
+                    await saveRiepilogoTextFinalCollaudo(plant, order, riepilogoText);
+                } catch (error) {
+                    console.error("Error saving riepilogo text:", error);
                 }
             }
             

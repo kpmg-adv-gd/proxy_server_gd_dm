@@ -1,6 +1,6 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
 const { dispatch } = require("../../mdo/library");
-const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting } = require("../../postgres-db/services/verbali/library");
+const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue } = require("../../postgres-db/services/verbali/library");
 const { getDefectsToVerbale, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
 const { getModificheToVerbaleTesting, updateModificheToTesting } = require("../../postgres-db/services/modifiche/library");
 const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require("../../postgres-db/services/additional_operations/library");
@@ -4022,10 +4022,38 @@ async function generatePdfFineCollaudo(data) {
             
             drawSectionHeader("RIEPILOGO COLLAUDO");
             
-            const lines = riepilogoText.split("\n");
+            // Funzione helper per convertire HTML semplice in testo formattato
+            const parseHtmlToLines = (html) => {
+                // Rimuovi newline e carriage return dall'HTML
+                let cleanHtml = html.replace(/\r/g, '').replace(/\n/g, '');
+                
+                // Sostituisci <br>, <br/>, <br /> con carattere speciale per split
+                cleanHtml = cleanHtml.replace(/<br\s*\/?>/gi, '\n');
+                
+                // Rimuovi altri tag HTML comuni mantenendo il testo
+                cleanHtml = cleanHtml.replace(/<\/?p>/gi, '\n');
+                cleanHtml = cleanHtml.replace(/<\/?div>/gi, '\n');
+                cleanHtml = cleanHtml.replace(/<\/?strong>/gi, '');
+                cleanHtml = cleanHtml.replace(/<\/?b>/gi, '');
+                cleanHtml = cleanHtml.replace(/<\/?i>/gi, '');
+                cleanHtml = cleanHtml.replace(/<\/?em>/gi, '');
+                cleanHtml = cleanHtml.replace(/<\/?u>/gi, '');
+                cleanHtml = cleanHtml.replace(/<\/?span[^>]*>/gi, '');
+                cleanHtml = cleanHtml.replace(/&nbsp;/gi, ' ');
+                cleanHtml = cleanHtml.replace(/&amp;/gi, '&');
+                cleanHtml = cleanHtml.replace(/&lt;/gi, '<');
+                cleanHtml = cleanHtml.replace(/&gt;/gi, '>');
+                cleanHtml = cleanHtml.replace(/&quot;/gi, '"');
+                
+                // Split per newline
+                return cleanHtml.split('\n');
+            };
+            
+            const lines = parseHtmlToLines(riepilogoText);
             lines.forEach(line => {
-                if (line.trim()) {
-                    drawText(cleanText(line), { size: 10 });
+                const trimmedLine = line.trim();
+                if (trimmedLine) {
+                    drawText(cleanText(trimmedLine), { size: 10 });
                 } else {
                     y -= 5;
                 }
@@ -4075,5 +4103,56 @@ async function updateCustomField(plant, order, customFieldsUpdate) {
     }
 }
 
+// Funzione per recuperare o creare il testo di riepilogo del collaudo finale
+async function getRiepilogoTextFinalCollaudo(plant, key) {
+    try {
+        // Cerca nella tabella z_storage
+        const result = await getZStorageByPlantAndKey(plant, key);
+        
+        if (result && result.length > 0) {
+            // Se trova la riga, ritorna il value
+            return result[0].value;
+        } else {
+            // Se non trova nessuna riga, la crea
+            const type = "REPORT COLLAUDO FINALE TESTING";
+            const format = "HTML";
+            const defaultValue = "Data:<br/><br/>Invitati:<br/><br/>Presenti:";
+            
+            await insertZStorage(plant, key, type, format, defaultValue);
+            
+            // Ritorna il value della riga creata
+            return defaultValue;
+        }
+    } catch (error) {
+        console.error("Error in getRiepilogoTextFinalCollaudo:", error.message);
+        throw error;
+    }
+}
+
+// Funzione per salvare il testo di riepilogo del collaudo finale
+async function saveRiepilogoTextFinalCollaudo(plant, order, riepilogoText) {
+    try {
+        const key = `RIEPILOGO_FINAL_COLLAUDO_${order}`;
+        
+        // Verifica se esiste già un record
+        const result = await getZStorageByPlantAndKey(plant, key);
+        
+        if (result && result.length > 0) {
+            // Se esiste, aggiorna il value
+            await updateZStorageValue(plant, key, riepilogoText);
+        } else {
+            // Se non esiste, crea un nuovo record
+            const type = "REPORT COLLAUDO FINALE TESTING";
+            const format = "HTML";
+            await insertZStorage(plant, key, type, format, riepilogoText);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error("Error in saveRiepilogoTextFinalCollaudo:", error.message);
+        throw error;
+    }
+}
+
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo };
