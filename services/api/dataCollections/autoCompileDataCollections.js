@@ -258,21 +258,23 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
     // Creo la lista di optDaConsiderare[i].order/operation/routing e ci entro in MDO per estrarre il campo DURATION da custom values, sommo tutto e aggiorno il parametro
     // Creo query per MDO con filtro su (order AND operation AND routing) OR (order AND operation AND routing) OR ...
     console.log("Inizio estrazione MDO per parametro 8 alle ore " + new Date().toLocaleTimeString());
-    var filters = optDaConsiderare.map(opt => `(MFG_ORDER eq '${opt.order}' and OPERATION eq '${opt.operation}' and ROUTING eq '${opt.routing}' and PLANT eq '${plant}' and IS_DELETED eq 'false')`).join(' or ');
-    filters = `(MFG_ORDER eq 'sss')`; // Nel caso in cui non ci siano operazioni da considerare, metto un filtro che non restituisce risultati per evitare di prendere dati non corretti
-    console.log("Filtro per MDO: " + filters);
-    var mockReq = {
-        path: "/mdo/ORDER_SCHEDULE",
-        query: { $apply: `filter(${filters})` },
-        method: "GET"
-    };
-    var outMock = await dispatch(mockReq);
-    // Sommo i valori di DURATION per ogni riga restituita da MDO (PLAN_PROCESSING_TIME)
-    var mdoData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
-    console.log("Fine estrazione MDO per parametro 8 alle ore " + new Date().toLocaleTimeString());
-    console.log("Estrazione result: " + JSON.stringify(outMock));
+    var mdoTotal = [];
+    // Chiamo la MDO 10 opt alla volta, poi unisco i risultati (per evitare di fare query troppo pesanti in caso di molte operazioni non concluse)
+    for (var i = 0; i < optDaConsiderare.length; i += 10) {
+        var optSlice = optDaConsiderare.slice(i, i + 10);
+        var filters = optSlice.map(opt => `(MFG_ORDER eq '${opt.order}' and OPERATION_ACTIVITY eq '${opt.operation}' and ROUTING eq '${opt.routing}' and PLANT eq '${plant}' and IS_DELETED eq 'false')`).join(' or ');
+        var mockReq = {
+            path: "/mdo/ORDER_SCHEDULE",
+            query: { $apply: `filter(${filters})` },
+            method: "GET"
+        };
+        var outMock = await dispatch(mockReq);
+        // Sommo i valori di DURATION per ogni riga restituita da MDO (PLAN_PROCESSING_TIME)
+        var mdoData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
+        mdoTotal = [...mdoTotal, ...mdoData];
+    }
     var totalTime = 0;
-    mdoData.forEach(item => {
+    mdoTotal.forEach(item => {
         var time = item.PLAN_PROCESSING_TIME || "0";
         time = time.replaceAll(",", "")
         if (isNaN(time) || time == "") {
@@ -280,7 +282,6 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
         }
         totalTime += parseFloat(time);
     });
-    console.log("Tempo totale calcolato per parametro 8: " + totalTime);
     // Aggiorno il parametro
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
@@ -506,9 +507,7 @@ async function getIncompleteOperations(plant, selected, ordersList) {
                 optDaConsiderare.push({
                     order: ordersList[i],
                     operation: element.operation.operation,
-                    routing: element.stepRouting.routing,
-                    routingVersion: element.stepRouting.version,
-                    routingType: element.stepRouting.type
+                    routing: element.stepRouting.routing
                 });
             });
         }         
