@@ -3244,14 +3244,14 @@ async function generatePdfFineCollaudo(data) {
         const drawFooter = (targetPage) => {
             const pageWidth = targetPage.getSize().width;
             const footerText = footerDate;
-            const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
+            const footerTextWidth = font.widthOfTextAtSize(footerText, 10);
             
             targetPage.drawText(footerText, {
                 x: pageWidth - footerTextWidth - 50,
-                y: 20,
-                size: 8,
+                y: 30,
+                size: 10,
                 font: font,
-                color: rgb(0.5, 0.5, 0.5)
+                color: rgb(0.3, 0.3, 0.3)
             });
         };
         

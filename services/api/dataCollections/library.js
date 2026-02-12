@@ -105,7 +105,9 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
             results.push(data);
         }
         // Ordinare le data collection in base al nome del gruppo
-        results = await autoCompileFieldsDataCollection(plant, results, selected, refresh);
+        if (selected.reportStatus != "DONE" || true) {
+            results = await autoCompileFieldsDataCollection(plant, results, selected, refresh);
+        }
         results.sort((a, b) => a.group.localeCompare(b.group));
         return results;
     } catch (error) {
