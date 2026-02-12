@@ -2720,7 +2720,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
         // Step 5: Duplicazione livello 2
         if (newLevel2 && newLevel2.length > 0) {  
             for (let newLev2El of newLevel2) {
-                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = newLev2El;
+                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity, descriptionLev1  } = newLev2El;
                 await duplicateVerbaleLev2(
                     order,
                     plant,
@@ -2730,7 +2730,8 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     workcenter !== undefined ? workcenter : null,
                     active !== undefined ? active : false,
                     originalStepId,
-                    lev2Id
+                    lev2Id,
+                    descriptionLev1 
                 );
             }
         }
