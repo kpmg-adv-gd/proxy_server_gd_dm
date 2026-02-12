@@ -2383,6 +2383,11 @@ async function getCollaudoProgressTreeTable(plant, order) {
         
         // Step 6: Costruisco la TreeTable
         const treeTable = [];
+
+        //ordino per stepID
+        routingSteps.sort((a, b) => {
+            return Number(a.stepId) - Number(b.stepId);
+        });
         
         for (const step of routingSteps) {
             if(step.stepId == "10" || step.stepId == "0010") continue; // Salta lo step 10 / 0010 che è del simultaenous
