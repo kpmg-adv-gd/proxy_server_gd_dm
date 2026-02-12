@@ -1,6 +1,7 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
 const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
+const mdoQueries = require('../../mdo/queries');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -427,6 +428,32 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error in getRiepilogoTextFinalCollaudo:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+
+    // ENDPOINT DI TEST - Commentato per produzione
+    // Decommentare solo per testare la connessione SAP HANA
+    app.post("/testQueryMDO", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            console.log('testQueryMDO - plant:', plant);
+            
+            // Query su ordine
+            const orders = await mdoQueries.getOrders(plant, "DM0000027743");
+            console.log('testQueryMDO - orders count:', orders ? orders.length : 0);
+            
+            if (orders && orders.length > 0) {
+                console.log('testQueryMDO - first order:', JSON.stringify(orders[0]).substring(0, 200));
+                res.status(200).json(orders[0]);
+            } else {
+                res.status(200).json({ message: "No orders found" });
+            }
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in testQueryMDO:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });
