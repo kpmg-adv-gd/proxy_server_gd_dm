@@ -435,7 +435,6 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                     if (selectedOpt != null) {
                         opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
                         opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                        opt.DURATION = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : null;
                     }
                     // Recupero ulteriori dettagli, dai campi custom
                     if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
@@ -532,7 +531,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
             doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
             doc.moveDown(1);
 
-
             // SEZIONE DATA COLLECTIONS - Sezioni con parametri
             if (dataCollections && dataCollections.length > 0) {
                 dataCollections.forEach((collection, index) => {
@@ -545,6 +543,14 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(14).font('Helvetica-Bold')
                         .text(`${collection.description || 'Data Collection'}`, { underline: true });
                     doc.moveDown(0.5);
+
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
+                    doc.moveDown(0.5);
+
                     doc.moveDown(0.5);
 
                     // Aggiungo eventuale parametro aggiuntivo di voto se presente
@@ -832,6 +838,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE DIFETTI', { align: 'center' });
                     doc.moveDown(0.5);
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
+                    doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
                     doc.moveDown(1);
@@ -973,6 +985,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.fontSize(18).font('Helvetica-Bold')
                         .text('SEZIONE MODIFICHE', { align: 'center' });
                     doc.moveDown(0.5);
+                    // Messaggio generazione verbale sotto il titolo della sezione
+                    doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                        .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                        .font('Helvetica').text(` in data `, { continued: true })
+                        .font('Helvetica-Bold').text(`${formattedDate}`);
+                    doc.moveDown(0.5);
                     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                     doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
                     doc.moveDown(1);
@@ -1113,6 +1131,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE OPERAZIONI NON COMPLETATE', { align: 'center' });
                 doc.moveDown(0.5);
+                // Messaggio generazione verbale sotto il titolo della sezione
+                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                    .font('Helvetica').text(` in data `, { continued: true })
+                    .font('Helvetica-Bold').text(`${formattedDate}`);
+                doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
                 doc.moveDown(1);
@@ -1126,8 +1150,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_code: 60,
                     group_description: 80,
                     operation: 60,
-                    operation_description: 80,
-                    duration: 80
+                    operation_description: 80
                 };
                 const colPositionsOp = {
                     section: 50,
@@ -1136,8 +1159,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_code: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + 6,
                     group_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + 8,
                     operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + 10,
-                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12,
-                    duration: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + colWidthsOp.operation_description + 14
+                    operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12
                 };
 
                 // Intestazione tabella
@@ -1149,7 +1171,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.rect(colPositionsOp.group_description, doc.y, colWidthsOp.group_description, 20).stroke();
                 doc.rect(colPositionsOp.operation, doc.y, colWidthsOp.operation, 20).stroke();
                 doc.rect(colPositionsOp.operation_description, doc.y, colWidthsOp.operation_description, 20).stroke();
-                doc.rect(colPositionsOp.duration, doc.y, colWidthsOp.duration, 20).stroke();
 
                 const headerYOp = doc.y + 6;
                 doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
@@ -1159,7 +1180,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.text('Group Description', colPositionsOp.group_description + 2, headerYOp, { width: colWidthsOp.group_description - 4, align: 'left' });
                 doc.text('Operation', colPositionsOp.operation + 2, headerYOp, { width: colWidthsOp.operation - 4, align: 'left' });
                 doc.text('Operation Description', colPositionsOp.operation_description + 2, headerYOp, { width: colWidthsOp.operation_description - 4, align: 'left' });
-                doc.text('Duration', colPositionsOp.duration + 2, headerYOp, { width: colWidthsOp.duration - 4, align: 'left' });
+
                 doc.y += 20;
 
                 // Righe tabella
@@ -1171,7 +1192,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const group_description = op.group_description || 'N/A';
                     const operation = op.operation || 'N/A';
                     const operation_description = op.operation_description || 'N/A';
-                    const duration = op.duration || 'N/A';
+
                     // Calcola altezza riga
                     const sectionHeight = doc.heightOfString(section, { width: colWidthsOp.section - 4 });
                     const materialHeight = doc.heightOfString(material, { width: colWidthsOp.material - 4 });
@@ -1180,8 +1201,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const groupDescHeight = doc.heightOfString(group_description, { width: colWidthsOp.group_description - 4 });
                     const operationHeight = doc.heightOfString(operation, { width: colWidthsOp.operation - 4 });
                     const opDescHeight = doc.heightOfString(operation_description, { width: colWidthsOp.operation_description - 4 });
-                    const durationHeight = doc.heightOfString(duration, { width: colWidthsOp.duration - 4 });
-                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight, durationHeight) + 8;
+                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight) + 8;
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
@@ -1197,7 +1217,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.rect(colPositionsOp.group_description, rowY, colWidthsOp.group_description, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation, rowY, colWidthsOp.operation, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation_description, rowY, colWidthsOp.operation_description, rowHeight).stroke();
-                    doc.rect(colPositionsOp.duration, rowY, colWidthsOp.duration, rowHeight).stroke();
+
                     doc.fontSize(6).font('Helvetica');
                     const textY = rowY + 4;
                     doc.text(section, colPositionsOp.section + 2, textY, { width: colWidthsOp.section - 4, align: 'left', lineBreak: true });
@@ -1207,7 +1227,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.text(group_description, colPositionsOp.group_description + 2, textY, { width: colWidthsOp.group_description - 4, align: 'left', lineBreak: true });
                     doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
                     doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
-                    doc.text(duration, colPositionsOp.duration + 2, textY, { width: colWidthsOp.duration - 4, align: 'left', lineBreak: true });
 
                     doc.y = rowY + rowHeight;
                 });
@@ -1222,6 +1241,12 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                 doc.fontSize(18).font('Helvetica-Bold')
                     .text('SEZIONE MANCANTI', { align: 'center' });
+                doc.moveDown(0.5);
+                // Messaggio generazione verbale sotto il titolo della sezione
+                doc.font('Helvetica').fontSize(9).text(`Verbale generato da `, { continued: true })
+                    .font('Helvetica-Bold').text(`${user}`, { continued: true })
+                    .font('Helvetica').text(` in data `, { continued: true })
+                    .font('Helvetica-Bold').text(`${formattedDate}`);
                 doc.moveDown(0.5);
                 doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
                 doc.moveTo(50, doc.y + 2).lineTo(doc.page.width - 50, doc.y + 2).stroke();
@@ -1705,7 +1730,7 @@ async function getFilterFinalCollaudo(plant) {
 }
 
 // Funzione per popolare la tabella Final Collaudo con filtri opzionali
-async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus, tab) {
+async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus) {
     try {
         // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
         const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
@@ -1846,16 +1871,12 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
             
             // Filtro per sentToInstallation (se specificato)
             if (sentToInstallation === true) {
-                if (sentToInstallationValue === 'true' || sentToInstallationValue === true) {} else continue;
-            } else {
-                if (tab == "progressCollaudo" && (sentToInstallationValue === 'true' || sentToInstallationValue === true)) continue;
+                if (sentToInstallationValue === false) continue;
             }
             
             // Filtro per showAll (TESTING_REPORT_STATUS)
-            if (tab !== "progressCollaudo") {
-                if (showAll === false || showAll === 'false') {
-                    if (reportStatusValue === 'DONE') continue;
-                }
+            if (showAll === false || showAll === 'false') {
+                if (reportStatusValue === 'DONE') continue;
             }
             
             // Filtro per showAllSfcStatus (se false, esclude SFC con status DONE)
@@ -2483,7 +2504,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
                         nc: lev3.nonconformances === true,
                         status: lev3.status_lev_3 || '',
                         start: startText,
-                        complete: lev3.status_lev_3 == "Done" ? completeText : ''
+                        complete: completeText
                     };
                     
                     level2Node.children.push(level3Node);
@@ -2496,7 +2517,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
                 }
                 if (lev2Completes.length > 0) {
                     lev2Completes.sort((a, b) => b.date - a.date);
-                    level2Node.complete = level2Node.status === "Done" ? lev2Completes[0].text : '';
+                    level2Node.complete = lev2Completes[0].text;
                 }
                 
                 level1Node.children.push(level2Node);
@@ -2512,7 +2533,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
             }
             if (allCompletes.length > 0) {
                 allCompletes.sort((a, b) => b.date - a.date);
-                level1Node.complete = level1Node.status === "Done" ? allCompletes[0].text : '';
+                level1Node.complete = allCompletes[0].text;
             }
             
             treeTable.push(level1Node);
@@ -2669,7 +2690,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
         // Step 5: Duplicazione livello 2
         if (newLevel2 && newLevel2.length > 0) {  
             for (let newLev2El of newLevel2) {
-                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity, descriptionLev1 } = newLev2El;
+                const { originalStepId, lev2Id, stepId, suffix, safety, workcenter, active, originalOperationActivity, operationActivity } = newLev2El;
                 await duplicateVerbaleLev2(
                     order,
                     plant,
@@ -2679,8 +2700,7 @@ async function saveVerbalManagementTreeTableChanges(plant, order, level1Changes,
                     workcenter !== undefined ? workcenter : null,
                     active !== undefined ? active : false,
                     originalStepId,
-                    lev2Id,
-                    descriptionLev1
+                    lev2Id
                 );
             }
         }
@@ -2834,11 +2854,44 @@ async function doCancelSafety(plant, sfc, idLev2, user) {
     }
 }
 
-async function getActivitiesTestingData(plant, sfc) {
+async function getActivitiesTestingData(plant, project) {
     try {
-        
+        // Step 1: Recupero SFC dalla tabella ORDER_CUSTOM_DATA con COMMESSA = project
+        const orderFilter = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and IS_DELETED eq 'false')`;
+        const mockReqOrder = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${orderFilter})` },
+            method: "GET"
+        };
+        const orderResult = await dispatch(mockReqOrder);
+        const orders = (orderResult?.data?.value && orderResult.data.value.length > 0) 
+            ? orderResult.data.value.map(item => item.MFG_ORDER) 
+            : [];
+
+        if (orders.length === 0) {
+            return [];
+        }
+
+        // Step 2: Recupero SFC dagli ordini
+        const sfcs = [];
+        for (const order of orders) {
+            try {
+                const orderUrl = `${hostname}/order/v1/orders?order=${order}&plant=${plant}`;
+                const orderResponse = await callGet(orderUrl);
+                if (orderResponse?.sfcs && orderResponse.sfcs.length > 0) {
+                    sfcs.push(...orderResponse.sfcs);
+                }
+            } catch (error) {
+                console.log(`Error fetching SFC for order ${order}: ${error.message}`);
+            }
+        }
+
+        if (sfcs.length === 0) {
+            return [];
+        }
+
         // Step 3: Recupero activities da z_verbale_lev_2 con status != 'Done' e active = true
-        const activities = await getActivitiesTesting(plant, [sfc]);
+        const activities = await getActivitiesTesting(plant, sfcs);
 
         if (activities.length === 0) {
             return [];
@@ -3185,9 +3238,34 @@ async function generatePdfFineCollaudo(data) {
         let contentWidth = width - (margin * 2);
         let y = height - margin;
 
+        // Data per il piè di pagina
+        const footerDate = new Date().toLocaleDateString('it-IT', {
+            timeZone: 'Europe/Rome',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+
         // ============================================
         // HELPER FUNCTIONS
         // ============================================
+        
+        /**
+         * Disegna il piè di pagina con la data in basso a destra
+         */
+        const drawFooter = (targetPage) => {
+            const pageWidth = targetPage.getSize().width;
+            const footerText = footerDate;
+            const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
+            
+            targetPage.drawText(footerText, {
+                x: pageWidth - footerTextWidth - 50,
+                y: 20,
+                size: 8,
+                font: font,
+                color: rgb(0.5, 0.5, 0.5)
+            });
+        };
         
         /**
          * Controlla se serve una nuova pagina
@@ -3195,6 +3273,7 @@ async function generatePdfFineCollaudo(data) {
         const checkNewPage = (requiredSpace = 80) => {
             if (y < requiredSpace) {
                 page = pdfDoc.addPage();
+                drawFooter(page);
                 y = page.getSize().height - margin;
                 return true;
             }
@@ -3279,6 +3358,7 @@ async function generatePdfFineCollaudo(data) {
                         y = page.getSize().height - margin;
                     } else {
                         page = pdfDoc.addPage();
+                        drawFooter(page);
                         y = page.getSize().height - margin;
                     }
                     return true;
@@ -3428,6 +3508,7 @@ async function generatePdfFineCollaudo(data) {
          */
         const createLandscapePage = () => {
             const landscapePage = pdfDoc.addPage([height, width]); // Inverte dimensioni
+            drawFooter(landscapePage);
             return landscapePage;
         };
 
@@ -3485,6 +3566,7 @@ async function generatePdfFineCollaudo(data) {
                 y = targetHeight - targetMargin;
             } else {
                 targetPage = pdfDoc.addPage();
+                drawFooter(targetPage);
                 targetWidth = targetPage.getSize().width;
                 targetHeight = targetPage.getSize().height;
                 targetMargin = margin;
@@ -3639,9 +3721,13 @@ async function generatePdfFineCollaudo(data) {
         }).replace(',', '');
         drawText(`Data generazione: ${formattedDate}`, { size: 10, color: rgb(0.4, 0.4, 0.4) });
         
+        // Disegna footer sulla prima pagina
+        drawFooter(page);
+        
         // Sezioni del verbale di collaudo
         if (groupsData.length > 0) {
             page = pdfDoc.addPage();
+            drawFooter(page);
             y = page.getSize().height - margin;
             
             drawSectionHeader("Sezioni del verbale di collaudo");
@@ -3659,6 +3745,7 @@ async function generatePdfFineCollaudo(data) {
                 
                 if (sectionParams.length > 0) {
                     page = pdfDoc.addPage();
+                    drawFooter(page);
                     y = page.getSize().height - margin;
                     
                     // Intestazione della sezione con il nome
@@ -3689,6 +3776,7 @@ async function generatePdfFineCollaudo(data) {
         // VALUTAZIONE PESI
         if (weights.length > 0) {
             page = pdfDoc.addPage();
+            drawFooter(page);
             y = page.getSize().height - margin;
             
             drawSectionHeader("SEZIONI ISPEZIONE");
@@ -3707,6 +3795,7 @@ async function generatePdfFineCollaudo(data) {
         // ANALISI ORE COLLAUDO
         if (resultsOreCollaudo.length > 0) {
             page = pdfDoc.addPage();
+            drawFooter(page);
             y = page.getSize().height - margin;
             
             drawSectionHeader("ANALISI ORE COLLAUDO");
@@ -3775,6 +3864,7 @@ async function generatePdfFineCollaudo(data) {
         // ANALISI ORE VARIANZA
         if (varianzaCollaudo.length > 0) {
             page = pdfDoc.addPage();
+            drawFooter(page);
             y = page.getSize().height - margin;
             
             drawSectionHeader("ANALISI VARIANZA COLLAUDO");
@@ -3927,6 +4017,7 @@ async function generatePdfFineCollaudo(data) {
         // RIEPILOGO FINALE
         if (riepilogoText) {
             page = pdfDoc.addPage();
+            drawFooter(page);
             y = page.getSize().height - margin;
             
             drawSectionHeader("RIEPILOGO COLLAUDO");
