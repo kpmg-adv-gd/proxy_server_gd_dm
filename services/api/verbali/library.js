@@ -2536,11 +2536,12 @@ async function getCollaudoProgressTreeTable(plant, order) {
                 }
                 
                 // Calcolo Start e Complete per livello 2: primo start e ultimo complete
+                // Complete: solo se TUTTI i figli di livello 3 hanno un complete
                 if (lev2Starts.length > 0) {
                     lev2Starts.sort((a, b) => a.date - b.date);
                     level2Node.start = lev2Starts[0].text;
                 }
-                if (lev2Completes.length > 0) {
+                if (lev2Completes.length > 0 && lev2Completes.length === matchingLev3.length) {
                     lev2Completes.sort((a, b) => b.date - a.date);
                     level2Node.complete = lev2Completes[0].text;
                 }
@@ -2552,11 +2553,15 @@ async function getCollaudoProgressTreeTable(plant, order) {
             level1Node.nc = hasNC;
             
             // Calcolo Start e Complete per livello 1: primo start e ultimo complete tra tutti i figli
+            // Complete: solo se TUTTI i figli di livello 2 hanno un complete
             if (allStarts.length > 0) {
                 allStarts.sort((a, b) => a.date - b.date);
                 level1Node.start = allStarts[0].text;
             }
-            if (allCompletes.length > 0) {
+            // Verifica che tutti i figli di livello 2 abbiano un complete
+            const allLevel2HaveComplete = level1Node.children.length > 0 && 
+                                          level1Node.children.every(child => child.complete !== '');
+            if (allCompletes.length > 0 && allLevel2HaveComplete) {
                 allCompletes.sort((a, b) => b.date - a.date);
                 level1Node.complete = allCompletes[0].text;
             }
