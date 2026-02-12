@@ -2870,44 +2870,11 @@ async function doCancelSafety(plant, sfc, idLev2, user) {
     }
 }
 
-async function getActivitiesTestingData(plant, project) {
+async function getActivitiesTestingData(plant, sfc) {
     try {
-        // Step 1: Recupero SFC dalla tabella ORDER_CUSTOM_DATA con COMMESSA = project
-        const orderFilter = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and IS_DELETED eq 'false')`;
-        const mockReqOrder = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${orderFilter})` },
-            method: "GET"
-        };
-        const orderResult = await dispatch(mockReqOrder);
-        const orders = (orderResult?.data?.value && orderResult.data.value.length > 0) 
-            ? orderResult.data.value.map(item => item.MFG_ORDER) 
-            : [];
-
-        if (orders.length === 0) {
-            return [];
-        }
-
-        // Step 2: Recupero SFC dagli ordini
-        const sfcs = [];
-        for (const order of orders) {
-            try {
-                const orderUrl = `${hostname}/order/v1/orders?order=${order}&plant=${plant}`;
-                const orderResponse = await callGet(orderUrl);
-                if (orderResponse?.sfcs && orderResponse.sfcs.length > 0) {
-                    sfcs.push(...orderResponse.sfcs);
-                }
-            } catch (error) {
-                console.log(`Error fetching SFC for order ${order}: ${error.message}`);
-            }
-        }
-
-        if (sfcs.length === 0) {
-            return [];
-        }
-
+        
         // Step 3: Recupero activities da z_verbale_lev_2 con status != 'Done' e active = true
-        const activities = await getActivitiesTesting(plant, sfcs);
+        const activities = await getActivitiesTesting(plant, [sfc]);
 
         if (activities.length === 0) {
             return [];
