@@ -2,7 +2,8 @@ const getVerbaleLev2NotDoneQuery = `SELECT DISTINCT "order", plant, sfc, workcen
 
 const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_type as machine_type_2, l2.safety, 
     l2.status_lev_2 as status, l2.time_lev_2, l2.workcenter_lev_2, l2.wbe, l2.date_lev_1,
-    l3.id_lev_3, l3.lev_3, l3.status_lev_3, l3.machine_type as machine_type_3, l3.status_lev_3, l3.nonconformances
+    l3.id_lev_3, l3.lev_3, l3.status_lev_3, l3.machine_type as machine_type_3, l3.status_lev_3, l3.nonconformances,
+    (select count(*) from z_comments where plant = $1 and sfc = l2.sfc and id_lev_1 = $4 and id_lev_2 = l2.id_lev_2 and id_lev_3 = l3.id_lev_3 and comment_type = 'C') as has_comments
     FROM z_verbale_lev_2 l2 
     INNER JOIN z_verbale_lev_3 l3 ON l2.id_lev_2 = l3.id_lev_2 AND l2.sfc = l3.sfc
     WHERE l2.plant = $1 AND l2."order" = $2 AND l2.sfc = $3
