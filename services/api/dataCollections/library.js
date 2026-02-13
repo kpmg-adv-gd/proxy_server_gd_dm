@@ -273,7 +273,7 @@ async function elaborateDataCollectionstTesting(plant, selected, resource, datac
         }
         
         // Ordinare le data collection in base al nome del gruppo
-        //results = await autoCompileFieldsDataCollectionTesting(plant, results, selected, refresh);
+        results = await autoCompileFieldsDataCollectionTesting(plant, results, selected, refresh);
         results.sort((a, b) => {
             // Estraggo il numero iniziale dalla stringa (se presente)
             const aMatch = a.group.match(/^(\d+)/);
