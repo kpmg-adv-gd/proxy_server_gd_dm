@@ -257,7 +257,6 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
     var totalTime = 0;
     // Creo la lista di optDaConsiderare[i].order/operation/routing e ci entro in MDO per estrarre il campo DURATION da custom values, sommo tutto e aggiorno il parametro
     // Creo query per MDO con filtro su (order AND operation AND routing) OR (order AND operation AND routing) OR ...
-    console.log("Inizio estrazione MDO per parametro 8 alle ore " + new Date().toLocaleTimeString());
     var mdoTotal = [];
     // Chiamo la MDO 10 opt alla volta, poi unisco i risultati (per evitare di fare query troppo pesanti in caso di molte operazioni non concluse)
     for (var i = 0; i < optDaConsiderare.length; i += 10) {

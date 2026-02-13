@@ -105,7 +105,7 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
             results.push(data);
         }
         // Ordinare le data collection in base al nome del gruppo
-        if (selected.reportStatus != "DONE" || true) {
+        if (selected.reportStatus != "DONE") {
             results = await autoCompileFieldsDataCollection(plant, results, selected, refresh);
         }
         results.sort((a, b) => a.group.localeCompare(b.group));
@@ -273,7 +273,7 @@ async function elaborateDataCollectionstTesting(plant, selected, resource, datac
         }
         
         // Ordinare le data collection in base al nome del gruppo
-        results = await autoCompileFieldsDataCollectionTesting(plant, results, selected, refresh);
+        //results = await autoCompileFieldsDataCollectionTesting(plant, results, selected, refresh);
         results.sort((a, b) => {
             // Estraggo il numero iniziale dalla stringa (se presente)
             const aMatch = a.group.match(/^(\d+)/);
