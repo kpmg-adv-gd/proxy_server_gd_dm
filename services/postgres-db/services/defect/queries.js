@@ -51,7 +51,7 @@ const getDefectsWBE = `SELECT DISTINCT z_defects.wbe from z_defects WHERE z_defe
 
 const getDefectsTI = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
                     z_notification_type.description as notification_type_description, 
-                    zvl2.id_lev_1, zvl2.lev_2, zvl3.lev_3,  
+                    zvl2.id_lev_1, zvl2.lev_2, zvl3.lev_3, zvl3.id_lev_3,
                     z_variance_type.description as variance_description,
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
@@ -132,4 +132,15 @@ const getDefectsTestingQuery = `SELECT * FROM z_defects WHERE mes_order = ANY($1
 
 const updateDefectsOwnerAndDueDateQuery = `UPDATE z_defects SET owner = $1, due_date = $2 WHERE id = $3`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, getDefectsToVerbale, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting, getDefectsTestingQuery, updateDefectsOwnerAndDueDateQuery, getDefectsTIOpen };
+const checkNonconformanceField = `select zdt2.* from z_defect_testing zdt 
+                        inner join z_defect_testing zdt2 on zdt.id_lev_1 = zdt2.id_lev_1 and zdt.id_lev_2 = zdt2.id_lev_2 
+                            and zdt.id_lev_3 = zdt2.id_lev_3 and zdt.sfc = zdt2.sfc 
+                        inner join z_defects zd on zd.id = zdt2.defect_id and zd.status = 'OPEN'
+                        where zdt.defect_id = $1 and zdt.plant = $2`;
+
+const setNonconformanceField = `update z_verbale_lev_3 set nonconformances = false 
+            where id_lev_1 = $1 and id_lev_2 = $2 and id_lev_3 = $3 and sfc = $4 and plant = $5`;
+
+const getDatiDifetto = `SELECT id_lev_1, id_lev_2, id_lev_3, sfc FROM z_defect_testing WHERE defect_id = $1 and plant = $2`;
+
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, getDefectsToVerbale, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting, getDefectsTestingQuery, updateDefectsOwnerAndDueDateQuery, getDefectsTIOpen, checkNonconformanceField, setNonconformanceField, getDatiDifetto };
