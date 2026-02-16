@@ -37,6 +37,10 @@ async function manageSfc(sfcs,wbsValue,plant,wbeTesting,phaseValue,material){
         if(phaseValue=="TESTING"){
             sfcNew = wbeTesting + "_" +  material + "_" + sfcOld;
         }
+        // Convertiamo a MAIUSCOLO perché la regex accetta solo lettere maiuscole
+        sfcNew = sfcNew.toUpperCase();
+        // Puliamo i caratteri non validi
+        sfcNew = sanitizeSfc(sfcNew);
         let url = hostname + "/sfc/v1/sfcs/relabel";
         let body = {
             "plant": plant,
