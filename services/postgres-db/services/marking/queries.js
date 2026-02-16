@@ -67,7 +67,7 @@ const getAnalisiOreVarianzaQuery = `SELECT
                                         SUBSTRING(zoc.reason_for_variance, 1, 2) as variance_cluster,
                                         SUM(zoc.variance_labor) as total_variance_labor
                                     FROM z_op_confirmations zoc
-                                    INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant
+                                    INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant AND zoc.operation = zmt.id_lev_1
                                     WHERE zoc.plant = $1
                                         --AND zmt."type" != 'M'
                                         AND zmt."order" = $2 

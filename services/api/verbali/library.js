@@ -151,6 +151,7 @@ async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, 
             data.material  = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
+            data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
             if (data.reportStatus !== "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
