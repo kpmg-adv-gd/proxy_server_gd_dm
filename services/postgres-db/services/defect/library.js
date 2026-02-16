@@ -6,6 +6,7 @@ const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
 const { getUserGroup } = require("../../../api/users/library");
 const { callGet, callPost } = require("../../../../utility/CommonCallApi");
+const { stringify } = require('yamljs');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -180,6 +181,16 @@ async function checkAllDefectClose(sfc) {
     const data = await postgresdbService.executeQuery(queryDefect.checkAllDefectClose, [sfc]);
     // If the length of the data is 0, it means there are no open defects
     return data.length === 0;
+}
+
+async function setNonconformanceField(id, plant) {
+    var data = await postgresdbService.executeQuery(queryDefect.checkNonconformanceField, [id, plant]);
+    console.log("dati difetto: " + JSON.stringify(datiDifetto))
+    console.log("data: " + JSON.stringify(data))
+    if (data.length == 0) {
+        var datiDifetto = await postgresdbService.executeQuery(queryDefect.getDatiDifetto, [id, plant]);
+        await postgresdbService.executeQuery(queryDefect.setNonconformanceField, [datiDifetto[0].id_lev_1, datiDifetto[0].id_lev_2, datiDifetto[0].id_lev_3, datiDifetto[0].sfc, plant]);
+    }
 }
 
 async function receiveStatusByQNCode(jsonDefects) {
@@ -555,4 +566,4 @@ async function updateDefectsOwnerAndDueDate(defect) {
     return data;
 }
 
-module.exports = { insertZDefect, getDefectsWBE, updateZDefect, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };
+module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };

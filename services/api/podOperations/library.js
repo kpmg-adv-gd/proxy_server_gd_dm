@@ -66,7 +66,6 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
 }
 
 function getPodOperationsTI(responseRouting){
-    console.log("getPodOperationsTI - responseRouting:", responseRouting);
     try{
         var operations = [];
         if (responseRouting.length==0 || !responseRouting[0].routingOperationGroups){
@@ -81,11 +80,13 @@ function getPodOperationsTI(responseRouting){
                 });
             });
         });
+        // Ordino le operazioni per id
+        operations.sort((a, b) => a.id - b.id);
         return operations;
 
     } catch(error){
         console.log("Internal Server Error:"+error);
-        throw { status: 500, message: "Error service getPodOperations: "+error};
+        throw { status: 500, message: "Error service getPodOperationsTI: "+error};
     }
 }
 
