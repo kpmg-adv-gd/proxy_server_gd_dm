@@ -3,11 +3,12 @@ const postgresdbService = require('./library');
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/insertDefect", async (req, res) => {
-        const { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType, coding, replaceInAssembly, defectNote,
-            responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder } = req.body;
+        var { idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, cause, notificationType, coding, replaceInAssembly, defectNote,
+            responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, project, phase, idLev1, idLev2, idLev3 } = req.body;
+        if (!cause) cause = null;
         try {
             const result = await postgresdbService.insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, notificationType,
-                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder);
+                coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
@@ -110,6 +111,27 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    app.post("/db/autoApproveDefectQN", async (req, res) => {
+        const { dataForSap, defectId, userId, plant } = req.body;
+        try {
+            let sapCode = await postgresdbService.getOrderCustomDataDefectType(dataForSap.dCode, plant);
+            if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
+                sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
+            }else{
+                sapCode = null;
+            }
+            dataForSap.dCode = sapCode;
+            const result = await postgresdbService.sendApproveDefectQN(dataForSap, defectId, userId, plant);
+            if (result.OUTPUT.esito == "OK")
+                res.status(200).json(result);
+            else
+                res.status(400).json({error: result.OUTPUT.message || result.OUTPUT.error || "Error while approving defect"});
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    });
+
     app.post("/db/selectDefectForReport", async (req, res) => {
         const { plant, wbe, sfc, order, qnCode, priority, startDate, endDate, status } = req.body;
         try {
@@ -192,7 +214,6 @@ module.exports.listenerSetup = (app) => {
         }
     });
     
-
     app.post("/db/getDefectsWBE", async (req, res) => {
         const { plant } = req.body;
         try {
@@ -203,5 +224,51 @@ module.exports.listenerSetup = (app) => {
             res.status(500).json({ error: "Error while executing query" });
         }
     });
+    
+    app.post("/db/getCauses", async (req, res) => {
+        const { plant } = req.body;
+        try {
+            const result = await postgresdbService.getCauses(plant);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing parsing: "+error);
+            res.status(500).json({ error: "Error while executing parsing" });
+        }
+    });
 
-};
+    app.post("/db/getFiltersDefectsTI", async (req, res) => {
+        const { } = req.body;
+        try {
+            const result = await postgresdbService.getFiltersDefectsTI();
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+    app.post("/db/getDefectsTI", async (req, res) => {
+        const { plant, project, onlyOpenDefects } = req.body;
+        try {
+            const result = await postgresdbService.getDefectsTI(plant, project, onlyOpenDefects);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+    app.post("/db/getDefectsFromAdditionalOperationsTI", async (req, res) => {
+        const { plant, project, operation, sfc } = req.body;
+        try {
+            const result = await postgresdbService.getDefectsFromAdditionalOperationsTI(plant, project, operation, sfc);
+            res.status(200).json(result);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    }); 
+
+    
+
+}

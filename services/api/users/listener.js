@@ -1,4 +1,4 @@
-const { getPersonnelNumber, getUserGroup } = require("./library");
+const { getPersonnelNumber, getUserGroup ,getUserPhase} = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -34,6 +34,22 @@ module.exports.listenerSetup = (app) => {
             console.error("Error calling external API:", errMessage);
             res.status(status).json({ error: errMessage });
         }
-    });
+    }); 
+    app.post("/api/getUserPhase", async (req, res) => {
+        try {
+            const { plant, userId } = req.body;
+            if (!plant || !userId) {
+                return res.status(400).json({ error: "Missing required query parameter: plant or userId" });
+            }
+
+            const apiResponseUserPhase = await getUserPhase(plant, userId);
+            res.status(200).json(apiResponseUserPhase);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });    
 
 };

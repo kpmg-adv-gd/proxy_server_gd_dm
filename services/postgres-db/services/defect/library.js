@@ -1,14 +1,18 @@
 const postgresdbService = require('../../connection');
 const { getErpPlantFromDMPlant, getPlantFromERPPlant } = require("../../../../utility/MappingPlant");
 const queryDefect = require("./queries");
+const queryPriority = require("../priority/queries");
 const { dispatch } = require("../../../mdo/library");
 const { getZSharedMemoryData } = require("../../../postgres-db/services/shared_memory/library");
+const { getUserGroup } = require("../../../api/users/library");
 const { callGet, callPost } = require("../../../../utility/CommonCallApi");
+const { stringify } = require('yamljs');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder) {
+
+async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN,
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3) {
     
     // Devo recuperare il campo custom del defect type, per salvarlo nella tabella z_defect
     let sapCode = await getOrderCustomDataDefectType(code, plant);
@@ -20,15 +24,20 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
     }
 
     if (createQN) {
-        const data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, 
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode]);
-        return data;
+        var data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN,
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase]);
     }else{
-        const data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode]);
-        return data;
+        var data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase]);
     }
+
+    if (phase == "Testing") {
+        await postgresdbService.executeQuery(queryDefect.insertZDefectTesting, [idDefect, plant, sfc, idLev1, idLev2, idLev3]); 
+    }
+
+    return data;
+
 }
 
 async function updateZDefect(idDefect, title, description, priority, variance, create_qn, blocking, notificationType, coding, replaceInAssembly, defectNote, responsible){
@@ -179,6 +188,16 @@ async function checkAllDefectClose(sfc) {
     return data.length === 0;
 }
 
+async function setNonconformanceField(id, plant) {
+    var data = await postgresdbService.executeQuery(queryDefect.checkNonconformanceField, [id, plant]);
+    console.log("dati difetto: " + JSON.stringify(datiDifetto))
+    console.log("data: " + JSON.stringify(data))
+    if (data.length == 0) {
+        var datiDifetto = await postgresdbService.executeQuery(queryDefect.getDatiDifetto, [id, plant]);
+        await postgresdbService.executeQuery(queryDefect.setNonconformanceField, [datiDifetto[0].id_lev_1, datiDifetto[0].id_lev_2, datiDifetto[0].id_lev_3, datiDifetto[0].sfc, plant]);
+    }
+}
+
 async function receiveStatusByQNCode(jsonDefects) {
 
     var result = [];
@@ -197,4 +216,358 @@ async function receiveStatusByQNCode(jsonDefects) {
     return result;
 }
 
-module.exports = { insertZDefect, getDefectsWBE, updateZDefect, selectZDefect, selectZDefectByWBE, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode };
+async function getCauses(plant) {
+    var data = await getZSharedMemoryData(plant,"CAUSA_DIFETTI");
+    try {
+        return JSON.parse(data[0].value);
+    } catch (error) {
+        console.error("Error parsing CAUSA_DIFETTI data: ", error);
+    }
+    return [];
+}
+
+
+async function getDefectsTI(plant, project,isOnlyOpenDefects) {
+    var defects = [];
+    if(isOnlyOpenDefects){
+        defects = await postgresdbService.executeQuery(queryDefect.getDefectsTIOpen, [plant, project]);
+    }else{ 
+        defects = await postgresdbService.executeQuery(queryDefect.getDefectsTI, [plant, project]);
+    }   
+    var difettiStandard = [], codesTrovati = [], url = hostname;
+    // prima di mandare a FE, recuperare dati STD
+    url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
+    var groupResponse = await callGet(url);
+    for (var i = 0; i < defects.length; i++) {
+        try {
+            // Altri dati custom
+            defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
+            // Recupero difetto standard
+            if (difettiStandard.filter(dif => dif.id == defects[i].id).length == 0) {
+                url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
+                var defectResponse = await callGet(url);
+                defectResponse = defectResponse.content || [];
+                difettiStandard = [...difettiStandard, ...defectResponse];
+            }
+            defects[i].defectStandard = difettiStandard.filter(dif => dif.id == defects[i].id)[0] || null;
+            // Recupero code description
+            if (codesTrovati.filter(code => code.code == defects[i].code).length == 0) {
+                url = hostname + "/nonconformancecode/v1/nonconformancecodes?plant=" + plant + "&code=" + defects[i].code;
+                var codeResponse = await callGet(url) || [];
+                codesTrovati = [...codesTrovati, ...codeResponse];
+            }
+            defects[i].codeDescription = codesTrovati.filter(code => code.code == defects[i].code)[0]?.description || null;
+            defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
+            // Recupero livello 1 associato al difetto
+            if (defects[i].phase == "Testing") {
+                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+                var responseRouting = await callGet(urlRouting);
+                responseRouting[0].routingOperationGroups.forEach(group => {
+                    group.routingOperationGroupSteps.forEach(operation => {
+                        if (operation.routingStep.stepId == defects[i].id_lev_1) {
+                            defects[i].lev1 = operation.routingStep.description;
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Error processing defect ID " + defects[i].id + ": " + error);
+        }
+    }
+    // Una volta aggiunti i dati, creo TreeTable partendo dal group description
+    var treeTable = []
+    for (var i = 0; i < defects.length; i++) {
+        var child = {
+            level: 2,
+            id: defects[i].id,
+            groupOrCode: defects[i].codeDescription,
+            material: defects[i].material,
+            priority: defects[i].priority,
+            priority_description: defects[i].priority_description,
+            user: defects[i].user,
+            phase: defects[i].phase,
+            status: defects[i].status,
+            qn_code: defects[i].qn_code,
+            okClose: defects[i].okClose,
+            lev1: defects[i].lev1,
+            lev2: defects[i].lev_2,
+            lev3: defects[i].lev_3,
+            system_status: defects[i].system_status,
+            type_order: defects[i].type_order,
+            mes_order: defects[i].mes_order,
+            assembly: defects[i].assembly,
+            title: defects[i].title,
+            description: defects[i].description,
+            varianceDesc: defects[i].variance_description,
+            defect_note: defects[i].defect_note,
+            responsible_description: defects[i].responsible_description,
+            groupDesc: defects[i].groupDescription,
+            codeDesc: defects[i].codeDescription,
+            varianceDesc: defects[i].variance_description,
+            blocking: defects[i].blocking,
+            notification_type_description: defects[i].notification_type_description,
+            coding_group_description: defects[i].coding_group_description,
+            coding_description: defects[i].coding_description,
+            replaced_in_assembly: defects[i].replaced_in_assembly,
+            user_status: defects[i].user_status,
+            approval_user: defects[i].approval_user,
+            creation_date: defects[i].creation_date,
+            cause: defects[i].cause,
+            modifiedDateTime: defects[i].defectStandard.modifiedDateTime,
+            hasAttachment: defects[i].defectStandard.fileIds && defects[i].defectStandard.fileIds.length > 0,
+            fileIds: defects[i].defectStandard.fileIds || [],
+            numDefect: defects[i].defectStandard.quantity || 1,
+            sfc: defects[i].sfc,
+            wbe: defects[i].wbe,
+            dm_order: defects[i].dm_order,
+            owner: defects[i].owner,
+            due_date: defects[i].due_date
+        };
+        if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
+            treeTable.push({
+                level: 1,
+                groupOrCode: defects[i].groupDescription,
+                // elementi figli
+                Children: [child]
+            });
+        }else{
+            treeTable.filter(item => item.groupOrCode == defects[i].groupDescription)[0].Children.push(child);
+        }
+    }
+    return treeTable;
+}   
+
+// Per il verbale
+async function getDefectsToVerbale(plant, orders) {
+    const defects = await postgresdbService.executeQuery(queryDefect.getDefectsToVerbale, [plant, orders]);
+    var difettiStandard = [], codesTrovati = [], url = hostname;
+    // prima di mandare a FE, recuperare dati STD
+    url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
+    var groupResponse = await callGet(url);
+    for (var i = 0; i < defects.length; i++) {
+        try {
+            // Altri dati custom
+            defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
+            // Recupero difetto standard
+            if (difettiStandard.filter(dif => dif.id == defects[i].id).length == 0) {
+                url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
+                var defectResponse = await callGet(url);
+                defectResponse = defectResponse.content || [];
+                difettiStandard = [...difettiStandard, ...defectResponse];
+            }
+            defects[i].defectStandard = difettiStandard.filter(dif => dif.id == defects[i].id)[0] || null;
+            // Recupero code description
+            if (codesTrovati.filter(code => code.code == defects[i].code).length == 0) {
+                url = hostname + "/nonconformancecode/v1/nonconformancecodes?plant=" + plant + "&code=" + defects[i].code;
+                var codeResponse = await callGet(url) || [];
+                codesTrovati = [...codesTrovati, ...codeResponse];
+            }
+            defects[i].codeDescription = codesTrovati.filter(code => code.code == defects[i].code)[0]?.description || null;
+            defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
+            // Recupero livello 1 associato al difetto
+            if (defects[i].phase == "Testing") {
+                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+                var responseRouting = await callGet(urlRouting);
+                responseRouting[0].routingOperationGroups.forEach(group => {
+                    group.routingOperationGroupSteps.forEach(operation => {
+                        if (operation.routingStep.stepId == defects[i].id_lev_1) {
+                            defects[i].lev1 = operation.routingStep.description;
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Error processing defect ID " + defects[i].id + ": " + error);
+        }
+    }
+    // Una volta aggiunti i dati, creo TreeTable partendo dal group description
+    var treeTable = []
+    for (var i = 0; i < defects.length; i++) {
+        var child = {
+            level: 2,
+            id: defects[i].id,
+            groupOrCode: defects[i].codeDescription,
+            material: defects[i].material,
+            priority: defects[i].priority,
+            priority_description: defects[i].priority_description,
+            user: defects[i].user,
+            phase: defects[i].phase,
+            status: defects[i].status,
+            qn_code: defects[i].qn_code,
+            okClose: defects[i].okClose,
+            lev1: defects[i].lev1,
+            lev2: defects[i].lev_2,
+            lev3: defects[i].lev_3,
+            system_status: defects[i].system_status,
+            type_order: defects[i].type_order,
+            mes_order: defects[i].mes_order,
+            assembly: defects[i].assembly,
+            title: defects[i].title,
+            description: defects[i].description,
+            varianceDesc: defects[i].variance_description,
+            defect_note: defects[i].defect_note,
+            responsible_description: defects[i].responsible_description,
+            groupDesc: defects[i].groupDescription,
+            codeDesc: defects[i].codeDescription,
+            varianceDesc: defects[i].variance_description,
+            blocking: defects[i].blocking,
+            notification_type_description: defects[i].notification_type_description,
+            coding_group_description: defects[i].coding_group_description,
+            coding_description: defects[i].coding_description,
+            replaced_in_assembly: defects[i].replaced_in_assembly,
+            user_status: defects[i].user_status,
+            approval_user: defects[i].approval_user,
+            creation_date: defects[i].creation_date,
+            cause: defects[i].cause,
+            modifiedDateTime: defects[i].defectStandard.modifiedDateTime,
+            hasAttachment: defects[i].defectStandard.fileIds && defects[i].defectStandard.fileIds.length > 0,
+            fileIds: defects[i].defectStandard.fileIds || [],
+            numDefect: defects[i].defectStandard.quantity || 1,
+            sfc: defects[i].sfc,
+            wbe: defects[i].wbe,
+            dm_order: defects[i].dm_order,
+            owner: defects[i].owner,
+            due_date: defects[i].due_date
+        };
+        if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
+            treeTable.push({
+                level: 1,
+                groupOrCode: defects[i].groupDescription,
+                // elementi figli
+                Children: [child]
+            });
+        }else{
+            treeTable.filter(item => item.groupOrCode == defects[i].groupDescription)[0].Children.push(child);
+        }
+    }
+    return treeTable;
+}   
+
+async function getDefectsFromAdditionalOperationsTI(plant, project, operation, sfc) {
+    const defects = await postgresdbService.executeQuery(queryDefect.getDefectsFromAdditionalOperationsTI, [plant, project, operation, sfc]);
+    var difettiStandard = [], codesTrovati = [], url = hostname;
+    // prima di mandare a FE, recuperare dati STD
+    url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
+    var groupResponse = await callGet(url);
+    for (var i = 0; i < defects.length; i++) {
+        // Recupero difetto standard
+        if (difettiStandard.filter(dif => dif.id == defects[i].id).length == 0) {
+            url = hostname + "/nonconformance/v2/nonconformances?plant=" + plant + "&sfc=" + defects[i].sfc + "&size=1000";
+            var defectResponse = await callGet(url);
+            defectResponse = defectResponse.content || [];
+            difettiStandard = [...difettiStandard, ...defectResponse];
+        }
+        defects[i].defectStandard = difettiStandard.filter(dif => dif.id == defects[i].id)[0] || null;
+        // Recupero code description
+        if (codesTrovati.filter(code => code.code == defects[i].code).length == 0) {
+            url = hostname + "/nonconformancecode/v1/nonconformancecodes?plant=" + plant + "&code=" + defects[i].code;
+            var codeResponse = await callGet(url) || [];
+            codesTrovati = [...codesTrovati, ...codeResponse];
+        }
+        defects[i].codeDescription = codesTrovati.filter(code => code.code == defects[i].code)[0]?.description || null;
+        defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
+        // Recupero livello 1 associato al difetto
+        if (defects[i].phase == "Testing") {
+            var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+            var responseRouting = await callGet(urlRouting);
+            responseRouting[0].routingOperationGroups.forEach(group => {
+                group.routingOperationGroupSteps.forEach(operation => {
+                    if (operation.routingStep.stepId == defects[i].id_lev_1) {
+                        defects[i].lev1 = operation.routingStep.description;
+                    }
+                });
+            });
+        }
+        // Altri dati custom
+        defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
+    }
+    // Una volta aggiunti i dati, creo TreeTable partendo dal group description
+    var treeTable = []
+    for (var i = 0; i < defects.length; i++) {
+        var child = {
+            level: 2,
+            id: defects[i].id,
+            groupOrCode: defects[i].codeDescription,
+            material: defects[i].material,
+            priority: defects[i].priority,
+            priority_description: defects[i].priority_description,
+            user: defects[i].user,
+            phase: defects[i].phase,
+            status: defects[i].status,
+            qn_code: defects[i].qn_code,
+            okClose: defects[i].okClose,
+            lev1: defects[i].lev1,
+            lev2: defects[i].lev_2,
+            lev3: defects[i].lev_3,
+            system_status: defects[i].system_status,
+            type_order: defects[i].type_order,
+            mes_order: defects[i].mes_order,
+            assembly: defects[i].assembly,
+            title: defects[i].title,
+            description: defects[i].description,
+            varianceDesc: defects[i].variance_description,
+            defect_note: defects[i].defect_note,
+            responsible_description: defects[i].responsible_description,
+            groupDesc: defects[i].groupDescription,
+            codeDesc: defects[i].codeDescription,
+            varianceDesc: defects[i].variance_description,
+            blocking: defects[i].blocking,
+            notification_type_description: defects[i].notification_type_description,
+            coding_group_description: defects[i].coding_group_description,
+            coding_description: defects[i].coding_description,
+            replaced_in_assembly: defects[i].replaced_in_assembly,
+            user_status: defects[i].user_status,
+            approval_user: defects[i].approval_user,
+            creation_date: defects[i].creation_date,
+            cause: defects[i].cause,
+            modifiedDateTime: defects[i].defectStandard.modifiedDateTime,
+            hasAttachment: defects[i].defectStandard.fileIds && defects[i].defectStandard.fileIds.length > 0,
+            fileIds: defects[i].defectStandard.fileIds || [],
+            numDefect: defects[i].defectStandard.quantity || 1,
+            sfc: defects[i].sfc,
+            dm_order: defects[i].dm_order
+        };
+        if (treeTable.filter(item => item.groupOrCode == defects[i].groupDescription).length == 0) {
+            treeTable.push({
+                level: 1,
+                groupOrCode: defects[i].groupDescription,
+                // elementi figli
+                Children: [child]
+            });
+        }else{
+            treeTable.filter(item => item.groupOrCode == defects[i].groupDescription)[0].Children.push(child);
+        }
+    }
+    return treeTable;
+}   
+
+async function getFiltersDefectsTI() {
+    var phase = await postgresdbService.executeQuery(queryDefect.getPhaseDefects, []);
+    var status = await postgresdbService.executeQuery(queryDefect.getStatusDefects, []);
+    var priority = await postgresdbService.executeQuery(queryPriority.getZPriorityDataQuery, []);
+    return { 
+        phase: [...[{phase: ""}], ...phase], 
+        status: [...[{status: ""}], ...status],
+        priority: [...[{priority: "", description: ""}], ...priority]
+    };
+}   
+
+async function updateDefectsToTesting(plant, listOrders) {
+    const data = await postgresdbService.executeQuery(queryDefect.updateDefectsToTesting, [plant, listOrders]);
+    return data;
+}
+
+async function getDefectsTesting(orders) {
+    const data = await postgresdbService.executeQuery(queryDefect.getDefectsTestingQuery, [orders]);
+    return data;
+}
+
+// Funzione per aggiornare owner e due_date in z_defects
+async function updateDefectsOwnerAndDueDate(defect) {
+    const { id, owner, due_date } = defect;
+    const data = await postgresdbService.executeQuery(queryDefect.updateDefectsOwnerAndDueDateQuery, 
+        [owner, due_date, id]);
+    return data;
+}
+
+module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };

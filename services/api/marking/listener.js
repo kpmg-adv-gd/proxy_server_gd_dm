@@ -1,4 +1,4 @@
-const { getFilterMarkingReport, mangeConfirmationMarking, sendZDMConfirmations, getAccessUserGroupWBS, sendStornoUnproductive } = require("./library");
+const { getFilterMarkingReport, mangeConfirmationMarking, sendZDMConfirmations, sendZDMConfirmationsTesting, getAccessUserGroupWBS, sendStornoUnproductive } = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -48,6 +48,20 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error?.message || "Internal Server Error";
             console.error("Error api sendZDMConfirmations:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/sendZDMConfirmationsTesting", async (req, res) => {
+        try {
+            const { plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification } = req.body;
+
+            var response = await sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification);
+            res.status(200).json(response);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error?.message || "Internal Server Error";
+            console.error("Error api sendZDMConfirmationsTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

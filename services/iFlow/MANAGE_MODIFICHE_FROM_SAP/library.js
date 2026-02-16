@@ -21,29 +21,6 @@ async function manageNewModifiche(jsonModifiche) {
         orderCache.clear();
         plantMappingCache.clear();
         
-        // PARALLELO
-
-        //const promises = jsonModifiche?.MODIFICA.map(el => manageModifica(el));
-
-        // // Esegui tutte le promesse in parallelo
-        // const results = await Promise.allSettled(promises);
-        // // Raccogliamo gli errori dalle promise fallite
-        // const errors = results
-        // .filter(result => result.status === "rejected")
-        // .map(result => {
-        //     // Prendo il messaggio di errore
-        //     if (result.reason instanceof Error) {
-        //         return result.reason.message;  // Se l'errore è un'istanza di Error, prendi il messaggio
-        //     }
-        //     return JSON.stringify(result.reason);  // Altrimenti lo converto in una stringa JSON
-        // });
-        // // Se ci sono errori, li uniamo e li restituiamo al chiamante
-        // if (errors.length > 0) {
-        //     let errorMessage = `Errori durante l'elaborazione manageNewModifiche from SAP: ${errors.join(" | ")}`;
-        //     throw { status: 500, message: errorMessage};
-        // }
-
-        
 }
 
 
@@ -62,6 +39,13 @@ async function manageModifica(objModifica){
     var status = objModifica?.Status?.[0] || "";
     var isCO2 = await isOrderCO2(plant,order);
 
+    // Recupero campi custom ordine
+    var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
+    var orderResponse = await callGet(url);
+    var wbeMachine = orderResponse.customValues.filter(item => item.attribute == "WBE")[0]?.value || "";
+    var section = orderResponse.customValues.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+    var project = orderResponse.customValues.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
+
     if(isCO2){
         await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2);
         return;
@@ -70,7 +54,13 @@ async function manageModifica(objModifica){
     var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
     var { bom, bomType, materialOrder, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
 
-    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2)
+    var sentToTesting = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
+    var sentToInstallation = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_INSTALLATION")[0]?.value || "";
+    if (sentToTesting == "" && sentToInstallation == "") var phase = "Assembly";
+    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
+    else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
+
+    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase)
 
     if(!modificaValue){
         modificaValue = modificaType;
@@ -93,11 +83,6 @@ async function manageModifica(objModifica){
 }
 
 async function getOrderFromApi(plant, order) {
-    // const cacheKey = `${plant}_${order}`;
-
-    // if (orderCache.has(cacheKey)) {
-    //     return orderCache.get(cacheKey);
-    // }
 
     const url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     const orderResponse = await callGet(url);
@@ -279,7 +264,7 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
             // Insert modifica
             await insertZModifiche(
                 progEco, processId, plant, wbe, modificaType, sfc,
-                order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2
+                order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project
             );
 
             // Update modifica value
@@ -299,7 +284,7 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
         // Insert modifica
         await insertZModifiche(
             progEco, processId, plant, wbe, modificaType, baseSfc,
-            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2
+            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project
         );
 
         // Update modifica value
@@ -397,7 +382,6 @@ async function checkOrCreateMaterial(plant,childMaterial){
             await callPost(url, bodyCreateMaterial);
     }  
 }
-
 
 module.exports = { manageNewModifiche }
 
