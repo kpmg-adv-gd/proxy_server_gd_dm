@@ -144,7 +144,7 @@ module.exports.listenerSetup = (app) => {
                         + "left join z_priority on z_defects.priority = z_priority.priority "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "left join z_responsible on z_defects.responsible = z_responsible.id "
-                        + "WHERE z_defects.plant = '" + plant + "' and z_defects.phase != 'Testing'";
+                        + "WHERE z_defects.plant = '" + plant + "' and (z_defects.phase is null or z_defects.phase != 'Testing')";
             if (wbe) {
                 query += ` AND z_defects.wbe = '${wbe}'`;
             }
