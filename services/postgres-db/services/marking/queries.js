@@ -22,15 +22,6 @@ const insertMarkingRecapQuery = `INSERT INTO z_marking_recap(plant,project,wbe_m
 
 const getMarkingByConfirmationNumberQuery = `SELECT * FROM z_marking_recap WHERE confirmation_number = $1`;
 
-<<<<<<< HEAD
-const getZOpConfirmationDataByFilterQuery = `with zoc as (select distinct zoc.*,zrc.planned_labor,zrc.uom_planned_labor,zrc.marked_labor AS marked_labor_total,zrc.uom_marked_labor as uom_marked_labor_total,zrc.remaining_labor,zrc.uom_remaining_labor,zrc.variance_labor AS variance_labor_total,zrc.uom_variance AS uom_variance_total,zvt.cause,zvt.description AS variance_description,zdef.title AS defect_description, zol.child_material
-                                                FROM z_op_confirmations zoc
-                                                LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number and zrc.plant = $1
-                                                LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order and zol.plant = $1
-                                                LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause and zvt.plant = $1
-                                                LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id and zdef.plant = $1)
-                                             select * from zoc
-=======
 const getZOpConfirmationDataByFilterQuery = `SELECT zoc.*,
 COALESCE(zrc.planned_labor, zmt.planned_labor) as planned_labor,
 COALESCE(zrc.uom_planned_labor, zmt.uom_planned_labor) as uom_planned_labor,
@@ -47,7 +38,6 @@ left join z_marking_testing zmt on zoc.confirmation_number = zmt.confirmation_nu
 LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order or zol.child_order = zmt."order"  
 LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
 LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
->>>>>>> pod_ti
                                                 `;
 
 const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
@@ -65,19 +55,6 @@ const getModificationsByWBEQuery = `SELECT prog_eco,process_id,flux_type,"type"
 
 const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 
-<<<<<<< HEAD
-const updateZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
-                               SET marked_labor = marked_labor + $3,
-                                   variance_labor = variance_labor + $4
-                               WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
-
-const updateMinusZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
-                               SET marked_labor = marked_labor - $3,
-                                   variance_labor = variance_labor - $4
-                               WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
-
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsByWBEQuery, getModificationsBySfcQuery, getProjectDataQuery, updateZUnproductiveWBSQuery, updateMinusZUnproductiveWBSQuery };
-=======
 const getSumMarkedLaborByOrderQuery = `SELECT COALESCE(SUM(marked_labor), 0) as total_marked_labor 
                                         FROM z_marking_recap 
                                         WHERE plant = $1 AND mes_order = $2`;
@@ -104,4 +81,3 @@ const getAnalisiOreVarianzaQuery = `SELECT
                                     GROUP BY SUBSTRING(zoc.reason_for_variance, 1, 2)`;
 
 module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery, getAnalisiOreVarianzaQuery };
->>>>>>> pod_ti
