@@ -33,7 +33,7 @@ async function manageSfc(sfcs,wbsValue,plant,wbeTesting,phaseValue,material){
     var sfcArray = [];
     for(let sfc of sfcs){
         let sfcOld = sfc.sfc;
-        let sfcNew = wbsValue + "_" + sfcOld;
+        let sfcNew = wbsValue + "_" + material + "_" + sfcOld;
         if(phaseValue=="TESTING"){
             sfcNew = wbeTesting + "_" +  material + "_" + sfcOld;
         }
