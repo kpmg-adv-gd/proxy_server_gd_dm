@@ -33,11 +33,11 @@ COALESCE(zrc.variance_labor,zmt.variance_labor) AS variance_labor_total,
 COALESCE(zrc.uom_variance,zmt.uom_variance) AS uom_variance_total,
 zvt.description AS variance_description,zdef.title AS defect_description, zol.child_material
 FROM z_op_confirmations zoc
-LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number
-left join z_marking_testing zmt on zoc.confirmation_number = zmt.confirmation_number 
-LEFT JOIN z_orders_link zol on zol.child_order = zrc.mes_order or zol.child_order = zmt."order"  
-LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause
-LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id
+LEFT JOIN z_marking_recap zrc ON zoc.confirmation_number = zrc.confirmation_number and zoc.plant = zrc.plant
+left join z_marking_testing zmt on zoc.confirmation_number = zmt.confirmation_number and zoc.plant = zmt.plant 
+LEFT JOIN z_orders_link zol on (zol.child_order = zrc.mes_order or zol.child_order = zmt."order") and zol.plant = zoc.plant 
+LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause and zvt.plant = zoc.plant
+LEFT JOIN z_defects zdef ON zoc.defect_id = zdef.id and zoc.plant = zdef.plant
                                                 `;
 
 const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
