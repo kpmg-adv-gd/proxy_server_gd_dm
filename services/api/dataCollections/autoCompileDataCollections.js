@@ -13,7 +13,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     var mockReq = {
         path: "/mdo/ORDER_CUSTOM_DATA",
         query: { $apply: `filter(${filter})` },
-        method: "GET"
+        method: "GET" 
     };
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
