@@ -114,7 +114,7 @@ async function ruleParameter0(data, group, parameterName, dcData, refresh) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || data[i].parameters[j].valueText == null || refresh)) {
                             data[i].parameters[j].valueText = dcData2[0].DATA_FIELD_VALUE;
                         }
                     }
@@ -129,7 +129,7 @@ async function ruleParameter1(data, group, parameterName, selected, refresh) {
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || data[i].parameters[j].valueText == null || refresh)) {
                     data[i].parameters[j].valueText = project;
                 }
             }
@@ -152,7 +152,7 @@ async function ruleParameter2(data, group, parameterName, dcData, refresh) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].group === group) {
                     for (var j = 0; j < data[i].parameters.length; j++) {
-                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                        if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || data[i].parameters[j].valueText == null || refresh)) {
                             data[i].parameters[j].valueText = dcData2[0].DATA_FIELD_VALUE;
                         }
                     }
@@ -167,7 +167,7 @@ async function ruleParameter3(data, group, parameterName, selected, refresh) {
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueText == "" || data[i].parameters[j].valueText == null || refresh)) {
                     data[i].parameters[j].valueText = material;
                 }
             }
@@ -181,7 +181,7 @@ async function ruleParameter4(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || data[i].parameters[j].valueList == null || refresh)) {
                     data[i].parameters[j].valueList = quantity > 0 ? "SI" : "NO";
                     data[i].parameters[j].comment = "Quantity: " + quantity.toString();
                 }
@@ -202,7 +202,7 @@ async function ruleParameter5(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || data[i].parameters[j].valueList == null || refresh)) {
                     data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
@@ -223,7 +223,7 @@ async function ruleParameter6(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || data[i].parameters[j].valueList == null || refresh)) {
                     data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
@@ -244,7 +244,7 @@ async function ruleParameter7(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || data[i].parameters[j].valueList == null || refresh)) {
                     data[i].parameters[j].valueList = result.length > 0 ? "NO" : "SI";
                     if (result.length > 0) data[i].parameters[j].comment = commento;
                 }
@@ -285,7 +285,7 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueNumber == "" || data[i].parameters[j].valueNumber == null || refresh)) {
                     data[i].parameters[j].valueNumber = totalTime;
                 }
             }
@@ -313,7 +313,7 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
             for (var j = 0; j < data[i].parameters.length; j++) {
-                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || refresh)) {
+                if (data[i].parameters[j].parameterName === parameterName && (data[i].parameters[j].valueList == "" || data[i].parameters[j].valueList == null || refresh)) {
                     data[i].parameters[j].valueList = rigaTrovata ? "NO" : "SI";
                 }
             }
