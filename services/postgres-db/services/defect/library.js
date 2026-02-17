@@ -570,4 +570,4 @@ async function updateDefectsOwnerAndDueDate(defect) {
     return data;
 }
 
-module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };
+module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, selectZDefectByWBE, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };
