@@ -54,10 +54,9 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/sendZDMConfirmationsTesting", async (req, res) => {
         try {
-            const { plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification } = req.body;
-
-            var response = await sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification);
-            res.status(200).json(response);
+            const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification, defect } = req.body;
+            
+            var response = await sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification, defect);            res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error?.message || "Internal Server Error";
@@ -70,8 +69,8 @@ module.exports.listenerSetup = (app) => {
         try {
             const { plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, varianceLabor, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId } = req.body;
             var response = await sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, varianceLabor, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId);
-            res.status(200).json(response);
 
+            res.status(200).json(response);
 
         } catch (error) {
             let status = error.status || 500;

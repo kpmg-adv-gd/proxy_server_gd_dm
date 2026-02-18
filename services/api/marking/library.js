@@ -1,6 +1,6 @@
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost } = require("../../../utility/CommonCallApi");
-const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData } = require("../../postgres-db/services/marking/library");
+const { insertOpConfirmation, updateZMarkingRecap, updateCancelFlagOpConfirmation, getProjectData, updateZUnproductiveWBS, updateMinusZUnproductiveWBS } = require("../../postgres-db/services/marking/library");
 const { updateZMarkingTesting, getMarkingTestingByConfirmationNumber } = require("../../postgres-db/services/marking_testing/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -125,43 +125,6 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
     return response;
 }
 
-async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
-    var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
-    if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
-    var url = hostname + pathZDMConfirmations;      
-
-    var body = {
-        "personalNumber": personalNumber,
-        "activityNumber": activityNumber,
-        "activityNumberId": activityNumberId,
-        "cancellation": cancellation,
-        "confirmation": confirmation,
-        "confirmationCounter": confirmationCounter,
-        "confirmationNumber": confirmationNumber,
-        "date": date,
-        "duration": duration,
-        "durationUom": durationUom,
-        "reasonForVariance": reasonForVariance,
-        "unCancellation": unCancellation,
-        "unConfirmation": unConfirmation
-    };
-
-    console.log("SAP body:"+JSON.stringify(body));
-    let response = await callPost(url,body);
-    console.log("RESPONSE SAP: "+JSON.stringify(response));
-
-    if (response.OUTPUT && response.OUTPUT.type == "S") {
-        // Se la risposta è OK, aggiorno le conferme in ZDM
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, duration, durationUom, 0, durationUom, null, userId, personalNumber, false, null, null, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null);
-    } else {
-        // Se la risposta non è OK, lancio un errore
-        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM Testing";
-        throw { status: 400, message: errorMessage };
-    }
-
-   return response;
-
-}
 
 async function sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
@@ -209,6 +172,64 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, operation, persona
 
 }
 
+async function sendZDMConfirmations(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, 
+    duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId,modification, defectId) {
+    var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
+    if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
+    var url = hostname + pathZDMConfirmations;      
+
+    var body = {
+        "personalNumber": personalNumber,
+        "activityNumber": activityNumber,
+        "activityNumberId": activityNumberId,
+        "cancellation": cancellation,
+        "confirmation": confirmation,
+        "confirmationCounter": confirmationCounter,
+        "confirmationNumber": confirmationNumber,
+        "date": date,
+        "duration": duration,
+        "durationUom": durationUom,
+        "reasonForVariance": reasonForVariance == null ? "" : reasonForVariance,
+        "unCancellation": unCancellation,
+        "unConfirmation": unConfirmation
+    };
+
+    console.log("SAP body:"+JSON.stringify(body));
+    let response = await callPost(url,body);
+    console.log("RESPONSE SAP: "+JSON.stringify(response));
+
+    if (response.OUTPUT && response.OUTPUT.type == "S") {
+        if (rowSelectedWBS.coordination_activity) var operationDesc = rowSelectedWBS.activity_id_description;
+        else var operationDesc = rowSelectedWBS.wbs_description;
+        // Se la risposta è OK, aggiorno le conferme in ZDM
+        if (reasonForVariance != null) {
+            var varianceLabor = duration;
+            var markedLabor = 0;
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, operationDesc, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+                markedLabor, durationUom, 
+                varianceLabor, // variance labor
+                durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
+                rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defectId);
+        }else{
+            var varianceLabor = 0;
+            var markedLabor = duration;
+            await insertOpConfirmation(plant, rowSelectedWBS.wbe, operationDesc, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date,
+                markedLabor, durationUom, 
+                varianceLabor, // variance labor
+                durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null,
+                rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defectId);
+        }
+            // Entro in z_unproductive_wbs con confirmation number, plant e sommo alle colonne marked labor e variance labor il loro valore
+            await updateZUnproductiveWBS(plant, confirmationNumber, markedLabor, varianceLabor);
+    } else {
+        // Se la risposta non è OK, lancio un errore
+        let errorMessage = response.OUTPUT.message || response.OUTPUT.error || "Error sending confirmations to ZDM";
+        throw { status: 400, message: errorMessage };
+    }
+
+   return response;
+
+}
 
 async function sendStornoUnproductive(plant, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, varianceLabor, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
@@ -262,6 +283,7 @@ async function getAccessUserGroupWBS (plant) {
     }
     return [];
 }
+
 
 // Esporta la funzione
 module.exports = { getFilterMarkingReport,mangeConfirmationMarking, sendZDMConfirmations, sendZDMConfirmationsTesting, sendStornoUnproductive, getAccessUserGroupWBS };
