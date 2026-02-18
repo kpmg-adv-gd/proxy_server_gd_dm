@@ -288,6 +288,7 @@ async function getDefectsTI(plant, project,isOnlyOpenDefects) {
             phase: defects[i].phase,
             status: defects[i].status,
             qn_code: defects[i].qn_code,
+            qn_link: defects[i].qn_link,
             okClose: defects[i].okClose,
             lev1: defects[i].lev1,
             lev2: defects[i].lev_2,

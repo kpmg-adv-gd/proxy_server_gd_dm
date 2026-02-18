@@ -436,6 +436,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                     if (selectedOpt != null) {
                         opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
                         opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                        opt.DURATION = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : null;
                     }
                     // Recupero ulteriori dettagli, dai campi custom
                     if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
@@ -498,6 +499,8 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                        width: 50,
                        align: 'right'
                    });
+                // Ripristina il colore nero per il testo successivo
+                doc.fillColor('#000000');
             };
 
             const chunks = [];
@@ -565,8 +568,9 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     }
 
                     // Titolo della sezione
+                    doc.x = 50;
                     doc.fontSize(14).font('Helvetica-Bold')
-                        .text(`${collection.description || 'Data Collection'}`, { underline: true });
+                        .text(`${collection.description || 'Data Collection'}`, 50, doc.y, { underline: true, width: doc.page.width - 100 });
                     doc.moveDown(0.5);
 
                     doc.moveDown(0.5);
@@ -589,7 +593,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Sottotitolo per la tabella NC
                         doc.fontSize(12).font('Helvetica-Bold')
-                            .text('Non Conformità Pending', { align: 'left' });
+                            .text('Non Conformità Pending', 50, doc.y, { width: doc.page.width - 100 });
                         doc.moveDown(0.5);
 
                         // Definizione colonne
@@ -674,7 +678,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
 
                         // Sottotitolo per la tabella Risultato
                         doc.fontSize(12).font('Helvetica-Bold')
-                            .text('Risultato dell\'Ispezione', { align: 'left' });
+                            .text('Risultato dell\'Ispezione', 50, doc.y, { width: doc.page.width - 100 });
                         doc.moveDown(0.5);
 
                         // Definizione colonne

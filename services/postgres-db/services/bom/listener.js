@@ -18,9 +18,9 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/db/getOrdersByMaterialTI", async (req, res) => { 
-        const { plant, material } = req.body;
+        const { plant, material, project } = req.body;
         try {
-            var orders = await postgresdbService.getOrdersByMaterialTI(plant, material);
+            var orders = await postgresdbService.getOrdersByMaterialTI(plant, material, project );
             res.status(200).json(orders);
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });

@@ -28,8 +28,8 @@ async function getMaterialsTI(plant, project) {
     return [...dataMaterialFake, ...data];
 }
 
-async function getOrdersByMaterialTI(plant, material) {
-    const dataOrders = await postgresdbService.executeQuery(queryBom.getOrderByMaterialQuery, [plant, material]);
+async function getOrdersByMaterialTI(plant, material, project) {
+    const dataOrders = await postgresdbService.executeQuery(queryBom.getOrderByMaterialQuery, [plant, material, project]);
     var results = [];
     for (let i = 0; i < dataOrders.length; i++) {
         var childOrder = dataOrders[i].child_order;

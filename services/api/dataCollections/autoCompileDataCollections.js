@@ -281,6 +281,7 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
         }
         totalTime += parseFloat(time);
     });
+    totalTime = totalTime / 60; // Il risultato va diviso per 60, per convertire da minuti a ore
     // Aggiorno il parametro
     for (var i = 0; i < data.length; i++) {
         if (data[i].group === group) {
