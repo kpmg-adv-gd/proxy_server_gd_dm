@@ -20,6 +20,6 @@ const getMaterialsTIQuery = `SELECT DISTINCT child_material as material FROM z_o
 const getMaterialsTIFakeQuery = `SELECT DISTINCT material FROM z_dummy_material WHERE plant = $1`;
 
 const getOrderByMaterialQuery = `SELECT DISTINCT child_order FROM z_orders_link
-                                WHERE plant = $1 AND child_material = $2 and project = $3 AND child_order_type NOT IN ('ZMGF')`;
+                                WHERE plant = $1 AND child_material = $2 and project = $3`;
 
 module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterialQuery, getZOrdersLinkByPlantProjectChildOrderChildMaterialQuery, getZOrderLinkChildOrdersMultipleMaterialQuery, getMaterialsTIQuery, getMaterialsTIFakeQuery, getOrderByMaterialQuery };
