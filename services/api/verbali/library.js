@@ -2099,7 +2099,7 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
             const dateA = parseDateTime(a.datetime);
             const dateB = parseDateTime(b.datetime);
             
-            return dateA - dateB;
+            return dateB - dateA; // Ordine decrescente (dal più recente al più vecchio)
         });
         
         return results;
@@ -2430,7 +2430,7 @@ async function getCollaudoProgressTreeTable(plant, order) {
                     totalTimeDone += time;
                 }
             });
-            const percentage = totalTime === 0 ? 0 : Math.round((totalTimeDone / totalTime) * 100 * 100) / 100;
+            const percentage = totalTime === 0 ? 0 : Math.round((totalTimeDone / totalTime) * 100);
             
             // Calcolo NC livello 1: se almeno un figlio ha NC, il padre è valorizzato
             let hasNC = false;
@@ -2511,17 +2511,28 @@ async function getCollaudoProgressTreeTable(plant, order) {
                         const [datePart, timePart] = formattedStartDate.split(' ');
                         const [day, month, year] = datePart.split('/');
                         const [hours, minutes, seconds] = timePart.split(':');
-                        const startDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+                        const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds || 0));
                         
                         lev2Starts.push({ date: startDate, text: startText });
                         allStarts.push({ date: startDate, text: startText });
                     }
                     if (completeText) {
-                        // Parsing data italiana DD/MM/YYYY HH:mm:ss
+                        // Parsing data - supporta sia formato italiano DD/MM/YYYY che ISO YYYY-MM-DD
                         const [datePart, timePart] = formattedCompleteDate.split(' ');
-                        const [day, month, year] = datePart.split('/');
                         const [hours, minutes, seconds] = timePart.split(':');
-                        const completeDate = new Date(year, month - 1, day, hours, minutes, seconds || 0);
+                        let completeDate;
+                        
+                        if (datePart.includes('/')) {
+                            // Formato italiano DD/MM/YYYY
+                            const [day, month, year] = datePart.split('/');
+                            completeDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds || 0));
+                        } else if (datePart.includes('-')) {
+                            // Formato ISO YYYY-MM-DD
+                            const [year, month, day] = datePart.split('-');
+                            completeDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds || 0));
+                        } else {
+                            completeDate = new Date(0);
+                        }
                         
                         lev2Completes.push({ date: completeDate, text: completeText });
                         allCompletes.push({ date: completeDate, text: completeText });

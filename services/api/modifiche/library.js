@@ -63,9 +63,9 @@ async function getModificheTestingData(plant, project) {
             let materialDescription = "";
             if (modifica.material) {
                 try {
-                    const materialFilter = `(PLANT eq '${plant}' and MATERIAL eq '${modifica.material}')`;
+                    const materialFilter = `(PLANT eq '${plant}' and MATERIAL eq '${modifica.material}' and IS_DELETED eq 'false')`;
                     const mockReqMaterial = {
-                        path: "/mdo/MATERIAL",
+                        path: "/mdo/MATERIAL_TEXT",
                         query: { $apply: `filter(${materialFilter})` },
                         method: "GET"
                     };

@@ -150,7 +150,6 @@ async function createMaterial(material,plant,isMach){
     
     //se il materiale esiste già non lo creo
     if(resultMDOMaterial?.data?.value && resultMDOMaterial?.data?.value.length>0){
-        console.log("Materiale Trovato in MDO= "+JSON.stringify(resultMDOMaterial?.data?.value));
         return;
     } 
 
