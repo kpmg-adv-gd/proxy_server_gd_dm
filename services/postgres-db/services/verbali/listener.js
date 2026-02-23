@@ -149,5 +149,17 @@ module.exports.listenerSetup = (app) => {
         }
     });
 
+    app.post("/db/getZFinalCollaudoTestingSnapshot", async (req, res) => {
+        try {
+            const { plant, project, order, sfc } = req.body;
+            var result = await postgresdbService.getZFinalCollaudoTestingSnapshot(plant, project, order, sfc);
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
 
 };

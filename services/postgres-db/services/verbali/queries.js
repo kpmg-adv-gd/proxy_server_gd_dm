@@ -239,6 +239,12 @@ const insertZStorageQuery = `INSERT INTO z_storage (plant, key, type, format, va
 
 const updateZStorageValueQuery = `UPDATE z_storage SET value = $3 WHERE plant = $1 AND key = $2`;
 
+const insertZFinalCollaudoTestingSnapshotQuery = `INSERT INTO z_final_collaudo_testing_snapshot (plant, project, "order", sfc, snapshot_data) VALUES ($1, $2, $3, $4, $5)`;
+
+const getZFinalCollaudoTestingSnapshotQuery = `SELECT snapshot_data
+    FROM z_final_collaudo_testing_snapshot
+    WHERE plant = $1 AND project = $2 AND "order" = $3 AND sfc = $4`;
+
 module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
     startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, duplicateMarkingTesting, deleteMarkingTestingByStepId, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
-    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue, getZStorageByPlantAndKeyQuery, insertZStorageQuery, updateZStorageValueQuery };
+    updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue, getZStorageByPlantAndKeyQuery, insertZStorageQuery, updateZStorageValueQuery, insertZFinalCollaudoTestingSnapshotQuery, getZFinalCollaudoTestingSnapshotQuery };

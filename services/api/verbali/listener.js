@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo, freezeFinalTestingData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const mdoQueries = require('../../mdo/queries');
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -353,7 +353,7 @@ module.exports.listenerSetup = (app) => {
     // Endpoint unificato per generare pdf report di fine collaudo + aggiornare custom fields + salvare come WI
     app.post("/api/generateFinalCollaudoRelation", async (req, res) => {
         try {
-            const { plant, order, sfc, customFieldsUpdate, pdfData } = req.body;
+            const { plant, order, sfc, project, customFieldsUpdate, pdfData, treeDefects, treeModifiche, treeActivities, mancanti } = req.body;
             
             // Validazione input
             if (!pdfData) {
@@ -364,7 +364,7 @@ module.exports.listenerSetup = (app) => {
                 return res.status(400).json({ error: "Missing required parameters: plant, order, sfc" });
             }
 
-            // Step 1: Aggiorna i custom fields (se presenti)
+            // Step 0: Aggiorna i custom fields
             if (customFieldsUpdate && Array.isArray(customFieldsUpdate) && customFieldsUpdate.length > 0) {
                 // Verifica che ogni elemento dell'array abbia customField e customValue
                 for (const field of customFieldsUpdate) {
@@ -377,6 +377,10 @@ module.exports.listenerSetup = (app) => {
                 await updateCustomField(plant, order, customFieldsUpdate);
                 console.log("Custom fields updated successfully");
             }
+
+            //Step 1: Freezare (salvare nelal tabella custom z_) i dati del verbale di collaudo di testing finale
+            console.log("Freezing final testing data...");
+            await freezeFinalTestingData(plant, project, order, sfc, treeDefects, treeModifiche, treeActivities, mancanti);
 
             // Step 2: Genera il PDF
             console.log("Generating PDF...");
