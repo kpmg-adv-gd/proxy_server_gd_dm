@@ -1,7 +1,7 @@
 const { getPodOperations, getPodOperationsTI } = require("./library");
 const postgresdbService = require("../../postgres-db/services/verbali/library");
 const { callGet } = require("../../../utility/CommonCallApi");
-const { updateCustomField } = require("../../utility/CommonFunction");
+const { updateCustomField } = require("../../../utility/CommonFunction");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
