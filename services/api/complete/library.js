@@ -1,14 +1,16 @@
 const { callGet, callPatch, callPost } = require("../../../utility/CommonCallApi");
 const { getZOrdersLinkByPlantProjectChildOrderChildMaterial, getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
 const { getModificheToDo, updateZModifyByOrder } = require("../../postgres-db/services/modifiche/library");
+const { updateCustomField } = require("../../../utility/CommonFunction");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operation,resource,sfc,checkModificheLastOperation,valueModifica,checkMancantiLastOperation){
+async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operation,resource,sfc,checkModificheLastOperation,valueModifica,checkMancantiLastOperation,checkMachLastOperation){
     if(checkMancantiLastOperation) await hasMancanti(plant,order);
     if(checkModificheLastOperation) await modificheHasDone(plant,project,sfc,order,valueModifica);
     let responseCompleteSfc = await completeSfc(plant,operation,resource,sfc);
     let statusCode = await getSfcStatus(plant,sfc);
+    if(checkMachLastOperation) await updateCustomField(plant, order, { customField: "MACHINE_ASSEMBLY_COMPLETED", customValue: "true" });
     if(statusCode==="405") await manageMancantiCompleteSfc(plant,project,order,orderMaterial);
     return responseCompleteSfc;
 }

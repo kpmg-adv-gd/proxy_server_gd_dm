@@ -1,7 +1,6 @@
 const { getPodOperations, getPodOperationsTI } = require("./library");
 const postgresdbService = require("../../postgres-db/services/verbali/library");
 const { callGet } = require("../../../utility/CommonCallApi");
-const { updateCustomField } = require("../../../utility/CommonFunction");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -85,25 +84,6 @@ module.exports.listenerSetup = (app) => {
             }
 
             res.status(200).json({result: primoLivello});
-        } catch (error) {
-            let status = error.status || 500;
-            let errMessage = error.message || "Internal Server Error";
-            console.error("Error calling external API:", errMessage);
-            res.status(status).json({ error: errMessage });
-        }
-    });
-
-    app.post("/api/updateCustomFieldOrder", async (req, res) => {
-        try {
-            const { plant, order, customField } = req.body;
-            // Verifica che i parametri richiesti siano presenti
-            if (!plant || !order || !customField) {
-                return res.status(400).json({ error: "Missing required parameters: plant/order/customField" });
-            }
-
-            await updateCustomField(plant, order, customField);
-            res.status(200).json({ result: "Custom field updated successfully" });
-            
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
