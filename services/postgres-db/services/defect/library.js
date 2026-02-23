@@ -18,6 +18,13 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
     let sapCode = await getOrderCustomDataDefectType(code, plant);
     
     // Devo pulire i campi -> stringhe vuote devono diventare NULL
+    material = material && material != "" ? material : null;
+    mesOrder = mesOrder && mesOrder != "" ? mesOrder : null;
+    assembly = assembly && assembly != "" ? assembly : null;
+    title = title && title != "" ? title : null;
+    description = description && description != "" ? description : null;
+    priority = priority && priority != "" ? priority : null;
+    variance = variance && variance != "" ? variance : null;
     notificationType = notificationType && notificationType != "" ? notificationType : null;
     coding = coding && coding != "" ? coding : null;
     replaceInAssembly = replaceInAssembly && replaceInAssembly != "" ? replaceInAssembly : null;
