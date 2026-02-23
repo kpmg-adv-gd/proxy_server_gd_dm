@@ -1,4 +1,4 @@
-const { callGet } = require("./CommonCallApi");
+const { callGet, callPatch } = require("./CommonCallApi");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 

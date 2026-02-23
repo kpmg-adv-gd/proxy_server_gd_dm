@@ -9,8 +9,8 @@ async function manageCompleteSfcPhase(plant,project,order,orderMaterial,operatio
     if(checkMancantiLastOperation) await hasMancanti(plant,order);
     if(checkModificheLastOperation) await modificheHasDone(plant,project,sfc,order,valueModifica);
     let responseCompleteSfc = await completeSfc(plant,operation,resource,sfc);
-    let statusCode = await getSfcStatus(plant,sfc);
     if(checkMachLastOperation) await updateCustomField(plant, order, { customField: "MACHINE_ASSEMBLY_COMPLETED", customValue: "true" });
+    let statusCode = await getSfcStatus(plant,sfc);
     if(statusCode==="405") await manageMancantiCompleteSfc(plant,project,order,orderMaterial);
     return responseCompleteSfc;
 }
