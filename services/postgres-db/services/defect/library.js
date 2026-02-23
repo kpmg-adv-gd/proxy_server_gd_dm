@@ -16,7 +16,27 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
     
     // Devo recuperare il campo custom del defect type, per salvarlo nella tabella z_defect
     let sapCode = await getOrderCustomDataDefectType(code, plant);
-    console.log("SAP CODE: " + JSON.stringify(sapCode));
+    
+    // Devo pulire i campi -> stringhe vuote devono diventare NULL
+    notificationType = notificationType && notificationType != "" ? notificationType : null;
+    coding = coding && coding != "" ? coding : null;
+    replaceInAssembly = replaceInAssembly && replaceInAssembly != "" ? replaceInAssembly : null;
+    defectNote = defectNote && defectNote != "" ? defectNote : null;
+    responsible = responsible && responsible != "" ? responsible : null;
+    sfc = sfc && sfc != "" ? sfc : null;
+    operation = operation && operation != "" ? operation : null;
+    wbe = wbe && wbe != "" ? wbe : null;
+    typeOrder = typeOrder && typeOrder != "" ? typeOrder : null;
+    group = group && group != "" ? group : null;
+    code = code && code != "" ? code : null;
+    dmOrder = dmOrder && dmOrder != "" ? dmOrder : null;
+    cause = cause && cause != "" ? cause : null;
+    project = project && project != "" ? project : null;
+    phase = phase && phase != "" ? phase : null;
+    idLev1 = idLev1 && idLev1 != "" ? idLev1 : null;
+    idLev2 = idLev2 && idLev2 != "" ? idLev2 : null;
+    idLev3 = idLev3 && idLev3 != "" ? idLev3 : null;
+
     if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
         sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
     }else{
