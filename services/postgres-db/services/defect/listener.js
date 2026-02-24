@@ -237,7 +237,7 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/db/getFiltersDefectsTI", async (req, res) => {
-        const { } = req.body;
+        const { plant } = req.body;
         try {
             const result = await postgresdbService.getFiltersDefectsTI();
             res.status(200).json(result);

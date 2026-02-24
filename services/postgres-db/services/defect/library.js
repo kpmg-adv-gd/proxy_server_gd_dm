@@ -557,10 +557,10 @@ async function getDefectsFromAdditionalOperationsTI(plant, project, operation, s
     return treeTable;
 }   
 
-async function getFiltersDefectsTI() {
+async function getFiltersDefectsTI(plant) {
     var phase = await postgresdbService.executeQuery(queryDefect.getPhaseDefects, []);
     var status = await postgresdbService.executeQuery(queryDefect.getStatusDefects, []);
-    var priority = await postgresdbService.executeQuery(queryPriority.getZPriorityDataQuery, []);
+    var priority = await postgresdbService.executeQuery(queryPriority.getZPriorityDataQuery, [plant]);
     return { 
         phase: [...[{phase: ""}], ...phase], 
         status: [...[{status: ""}], ...status],

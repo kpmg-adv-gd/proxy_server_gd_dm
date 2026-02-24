@@ -91,7 +91,7 @@ async function elaborateDataCollectionsSupervisoreAssembly(plant, selected, reso
                 }
             }
             // Aggiungo informazione sulla viisbilità del voto sezione
-            var sections = await getReportWeight("Assembly");
+            var sections = await getReportWeight("Assembly", plant);
             if (sections.find(item => item.section === data.group)) {
                 var sharedVoti = await getZSharedMemoryData(plant, "DC_VOTO_SEZIONE");
                 if (sharedVoti.length > 0) {
