@@ -209,7 +209,7 @@ const getReportWeightWithValuesQuery = `SELECT
         AND zwv.project = $2 
         AND zwv."order" = $3 
         AND zwv.report = $4
-    WHERE zrw.report = $4
+    WHERE zrw.report = $4 and zrw.plant = $1
     ORDER BY zrw.id, zrw.section`;
 
 const getActivitiesTestingQuery = `SELECT DISTINCT * 

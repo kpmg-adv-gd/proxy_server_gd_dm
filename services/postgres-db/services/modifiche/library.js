@@ -76,6 +76,24 @@ async function getModificheToTesting(plant, project){
     for (var i=0;i<data.length;i++) {
         var progEcoFormatted = data[i].prog_eco && data[i].prog_eco != null ? String(parseInt(data[i].prog_eco, 10)) : null;
         var processIdFormatted = data[i].process_id && data[i].process_id != null ? String(parseInt(data[i].process_id, 10)) : null;
+
+        if (data[i].material) {
+            try {
+                const materialFilter = `(PLANT eq '${plant}' and MATERIAL eq '${data[i].material}' and IS_DELETED eq 'false')`;
+                const mockReqMaterial = {
+                    path: "/mdo/MATERIAL_TEXT",
+                    query: { $apply: `filter(${materialFilter})` },
+                    method: "GET"
+                };
+                const materialResult = await dispatch(mockReqMaterial);
+                if (materialResult?.data?.value && materialResult.data.value.length > 0) {
+                    data[i].material_description = materialResult.data.value[0].DESCRIPTION || "";
+                }
+            } catch (error) {
+                console.log(`Error fetching material description for ${data[i].material}: ${error.message}`);
+                data[i].material_description = "";
+            }
+        }
         
         var child = {
             level: 2,
@@ -98,6 +116,7 @@ async function getModificheToTesting(plant, project){
                 progEco: progEcoFormatted,
                 processId: processIdFormatted,  
                 material: data[i].material,
+                materialDescription: data[i].material_description,
                 mark: data[i].type == "MT" || data[i].type == "MK",
                 project: data[i].project,
                 machineSection: data[i].machine_section,
