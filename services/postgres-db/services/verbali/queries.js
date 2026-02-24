@@ -106,8 +106,8 @@ const getGroupByPriorityDefects = `with PRIO as (
 	SELECT DISTINCT z_priority.priority, z_priority.description, z_priority.weight,
 	count(*) as quantity, 
 	z_priority.weight * count(*) AS value FROM z_priority
-    INNER JOIN z_defects ON z_defects.priority = z_priority.priority and z_defects.status = 'OPEN'
-    WHERE z_defects.plant = $1 AND z_defects.dm_order = ANY($2)
+    INNER JOIN z_defects ON z_defects.priority = z_priority.priority and z_defects.status = 'OPEN' and z_defects.plant = z_priority.plant
+    WHERE z_priority.plant = $1 AND z_defects.dm_order = ANY($2)
     GROUP BY z_priority.priority, z_priority.description, z_priority.weight
     ORDER BY z_priority.priority)
     select zp.priority, zp.description, zp.weight,
@@ -115,6 +115,7 @@ const getGroupByPriorityDefects = `with PRIO as (
     case when prio.value is null then 0 else prio.value end as value
     from z_priority zp
     left join PRIO prio ON zp.priority = prio.priority
+    where zp.plant = $1
     order by zp.priority`;
 
 const getVotoNCTranscode = `SELECT voto FROM z_report_nc_transcode WHERE $1 BETWEEN min_value AND max_value`;

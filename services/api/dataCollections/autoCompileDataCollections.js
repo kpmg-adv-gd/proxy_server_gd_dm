@@ -272,6 +272,13 @@ async function ruleParameter8(data, group, parameterName, selected, plant, refre
         var mdoData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
         mdoTotal = [...mdoTotal, ...mdoData];
     }
+
+    // LOG DA TOGLIERE
+    for (var i = 0; i < mdoTotal.length; i++) {
+        console.log(`MDO Total - Order: ${mdoTotal[i].MFG_ORDER}, Operation: ${mdoTotal[i].OPERATION_ACTIVITY}, Routing: ${mdoTotal[i].ROUTING}, Duration: ${mdoTotal[i].PLAN_PROCESSING_TIME}`);
+    }
+
+
     var totalTime = 0;
     mdoTotal.forEach(item => {
         var time = item.PLAN_PROCESSING_TIME || "0";

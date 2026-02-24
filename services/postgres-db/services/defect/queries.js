@@ -14,7 +14,7 @@ const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.co
                     z_variance_type.description as variance_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
@@ -27,7 +27,7 @@ const selectZDefectByWBE = `SELECT distinct z_defects.*, z_coding.coding, z_codi
                     z_variance_type.description as variance_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
@@ -39,7 +39,7 @@ const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_c
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     WHERE z_defects.create_qn = TRUE AND z_defects.qn_annullata != TRUE AND z_defects.qn_approvata != TRUE
@@ -69,7 +69,7 @@ const getDefectsTI = `SELECT distinct z_defects.*, z_coding.coding, z_coding.cod
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
@@ -87,7 +87,7 @@ const getDefectsTIOpen = `SELECT distinct z_defects.*, z_coding.coding, z_coding
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
@@ -106,7 +106,7 @@ const getDefectsToVerbale = `SELECT distinct z_defects.*, z_coding.coding, z_cod
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
@@ -123,7 +123,7 @@ const getDefectsFromAdditionalOperationsTI = `SELECT distinct z_defects.*, z_cod
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
-                    left join z_priority on z_defects.priority = z_priority.priority
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause

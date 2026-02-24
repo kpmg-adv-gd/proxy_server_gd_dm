@@ -3,9 +3,9 @@ const postgresdbService = require('./library');
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/getZPriorityData", async (req, res) => {
-        const { } = req.body;
+        const { plant } = req.body;
         try {
-            const priorityData = await postgresdbService.getZPriorityData();
+            const priorityData = await postgresdbService.getZPriorityData(plant);
             res.status(200).json(priorityData); 
         } catch (error) {
             console.log("Error executing query: "+error);
