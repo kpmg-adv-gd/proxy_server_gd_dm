@@ -287,7 +287,7 @@ async function getDefectsTI(plant, project,isOnlyOpenDefects) {
             defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
             // Recupero livello 1 associato al difetto
             if (defects[i].phase == "Testing") {
-                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].dm_order+"&type=SHOP_ORDER";
                 var responseRouting = await callGet(urlRouting);
                 responseRouting[0].routingOperationGroups.forEach(group => {
                     group.routingOperationGroupSteps.forEach(operation => {
@@ -394,7 +394,7 @@ async function getDefectsToVerbale(plant, orders) {
             defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
             // Recupero livello 1 associato al difetto
             if (defects[i].phase == "Testing") {
-                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
+                var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].dm_order+"&type=SHOP_ORDER";
                 var responseRouting = await callGet(urlRouting);
                 responseRouting[0].routingOperationGroups.forEach(group => {
                     group.routingOperationGroupSteps.forEach(operation => {
@@ -494,18 +494,6 @@ async function getDefectsFromAdditionalOperationsTI(plant, project, operation, s
         }
         defects[i].codeDescription = codesTrovati.filter(code => code.code == defects[i].code)[0]?.description || null;
         defects[i].groupDescription = groupResponse.filter(group => group.group == defects[i].group)[0]?.description || null;
-        // Recupero livello 1 associato al difetto
-        if (defects[i].phase == "Testing") {
-            var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+defects[i].mes_order+"&type=SHOP_ORDER";
-            var responseRouting = await callGet(urlRouting);
-            responseRouting[0].routingOperationGroups.forEach(group => {
-                group.routingOperationGroupSteps.forEach(operation => {
-                    if (operation.routingStep.stepId == defects[i].id_lev_1) {
-                        defects[i].lev1 = operation.routingStep.description;
-                    }
-                });
-            });
-        }
         // Altri dati custom
         defects[i].okClose = (!defects[i].create_qn || (defects[i].system_status != null && defects[i].system_status.includes("ATCO")) || defects[i].qn_annullata) && defects[i].status == "OPEN";
     }
