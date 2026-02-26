@@ -10,6 +10,17 @@ const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_t
     AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.active = true 
     ORDER BY l3.id_lev_2, l3.id_lev_3`;
 
+    
+const getVerbaleLev2ByLev1WithNotActive = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_type as machine_type_2, l2.safety, 
+    l2.status_lev_2 as status, l2.time_lev_2, l2.workcenter_lev_2, l2.wbe, l2.date_lev_1, l2.active,
+    l3.id_lev_3, l3.lev_3, l3.status_lev_3, l3.machine_type as machine_type_3, l3.status_lev_3, l3.nonconformances,
+    (select count(*) from z_comments where plant = $1 and sfc = l2.sfc and id_lev_1 = $4 and id_lev_2 = l2.id_lev_2 and id_lev_3 = l3.id_lev_3 and comment_type = 'C') as has_comments
+    FROM z_verbale_lev_2 l2 
+    INNER JOIN z_verbale_lev_3 l3 ON l2.id_lev_2 = l3.id_lev_2 AND l2.sfc = l3.sfc
+    WHERE l2.plant = $1 AND l2."order" = $2 AND l2.sfc = $3
+    AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4
+    ORDER BY l3.id_lev_2, l3.id_lev_3`;
+
 const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and sfc = $2 ORDER BY wbe, machine_type`;
 
 const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, machine_type, status_lev_3, 
@@ -246,6 +257,6 @@ const getZFinalCollaudoTestingSnapshotQuery = `SELECT snapshot_data
     FROM z_final_collaudo_testing_snapshot
     WHERE plant = $1 AND project = $2 AND "order" = $3 AND sfc = $4`;
 
-module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
+module.exports = { getVerbaleLev2NotDoneQuery, getVerbaleLev2ByLev1, getVerbaleLev2ByLev1WithNotActive, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, 
     startSecondoLivello, completeTerzoLivello, completeSecondoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getChildsOrders, getGroupByPriorityDefects, getVotoNCTranscode, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2Fields, duplicateVerbaleLev2ByStepId, duplicateVerbaleLev3ByLev2Ids, duplicateMarkingRecap, deleteVerbaleLev2ByStepId, deleteVerbaleLev3ByStepId, deleteMarkingRecapByOperation, duplicateMarkingTesting, deleteMarkingTestingByStepId, getSfcFromCommentsSafetyApproval, getSafetyApprovalComments, updateCommentApproval, updateCommentCancel, updateVerbaleLev2Unblock, getVerbaleLev2ForUnblocking, getReportWeightSections, getReportWeightByIdAndReport, getActivitiesTestingQuery, updateActivitiesOwnerAndDueDateQuery, getReportWeightWithValuesQuery, upsertWeightValueQuery,
     updateZverbaleLev1TableWithSfcQuery, updateZverbaleLev2TableWithSfcQuery,startOtherTerzoLivelloInQueue,startOtherSecondoLivelloInQueue, getZStorageByPlantAndKeyQuery, insertZStorageQuery, updateZStorageValueQuery, insertZFinalCollaudoTestingSnapshotQuery, getZFinalCollaudoTestingSnapshotQuery };

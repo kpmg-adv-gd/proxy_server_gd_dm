@@ -52,7 +52,8 @@ module.exports.listenerSetup = (app) => {
             var primoLivello = getPodOperationsTI(responseRouting);
             // recupero secondo livello del primo livello
             for (var i=0; i<primoLivello.length; i++){
-                var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1(plant, order, sfc, primoLivello[i].id);
+                var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, primoLivello[i].id);
+                var secondlivelloActive = secondoLivello.filter(el => el.active);
                 var status = responseSfcDetails.steps.filter(step => step.stepId == primoLivello[i].id)[0];
                 if (status.quantityInQueue == 1) { 
                     if (responseSfcDetails.status.code == "401") {
@@ -65,7 +66,7 @@ module.exports.listenerSetup = (app) => {
                 } else if (status.quantityDone == 1) {
                     primoLivello[i].status = 'Done';
                 }
-                primoLivello[i].datetime = secondoLivello.length > 0 ? secondoLivello[0].date_lev_1 : null;
+                primoLivello[i].datetime = secondlivelloActive.length > 0 ? secondlivelloActive[0].date_lev_1 : null;
                 // Calcolo percentuale completamento del primo livello, facendo media ponderata sul time_lev_2
                 var totalTimeDone = 0, totalTime = 0, idsAnalizzati = [];
                 secondoLivello.forEach(element => {
@@ -80,7 +81,7 @@ module.exports.listenerSetup = (app) => {
                 var percent = totalTime == 0 ? 0 : ((totalTimeDone / totalTime) * 100);
                 primoLivello[i].percent = Math.floor(Math.round(percent * 100) / 100);
 
-                primoLivello[i].SecondoLivello = secondoLivello;
+                primoLivello[i].SecondoLivello = secondlivelloActive;
             }
 
             res.status(200).json({result: primoLivello});

@@ -64,6 +64,12 @@ async function getVerbaleLev2ByLev1(plant, order, sfc, id_lev_1) {
     return data;
 }
 
+// Recupero dati per livello 2 e livello 3
+async function getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, id_lev_1) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1]);
+    return data;
+}
+
 // Recupero tutti i machine type
 async function getAllMachineType(plant, sfc) {
     const data = await postgresdbService.executeQuery(queryVerbali.getAllMachineType, [plant, sfc]);
@@ -158,7 +164,7 @@ async function completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, ma
         // secondo livello passa da In Work a Done (se sono completati tutti i task)
         await postgresdbService.executeQuery(queryVerbali.completeSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
         // primo livello passa da In Work a Done (se sono completati tutti i task)
-        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1, [plant, order, sfc, id_lev_1]);
+        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1]);
         if (infoSecondoLivello.filter(item => item.status_lev_3 == 'Done').length == infoSecondoLivello.length) {
             var url = hostname+"/sfc/v1/sfcs/complete";
             var params = {
@@ -407,4 +413,4 @@ async function getZFinalCollaudoTestingSnapshot(plant, project, order, sfc) {
 }
 
 
-module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue, insertZFinalCollaudoTestingSnapshot, getZFinalCollaudoTestingSnapshot };
+module.exports = { getVerbaleLev2NotDone, getVerbaleLev2ByLev1, getVerbaleLev2ByLev1WithNotActive, getAllMachineType, getInfoTerzoLivello, getCommentsVerbale, getCommentsVerbaleForApproval, saveCommentsVerbale, startTerzoLivello, completeTerzoLivello, updateNonConformanceLevel3, insertZVerbaleLev2, insertZVerbaleLev3, getCustomTableNC, ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getReportWeightSectionsData, getReportWeightData, getActivitiesTesting, updateActivitiesOwnerAndDueDate, getReportWeightWithValues, upsertWeightValue,updateZverbaleLev1TableWithSfc, updateZverbaleLev2TableWithSfc, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue, insertZFinalCollaudoTestingSnapshot, getZFinalCollaudoTestingSnapshot };
