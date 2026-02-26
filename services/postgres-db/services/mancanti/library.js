@@ -42,6 +42,13 @@ async function getZMancantiReportData(plant,project,wbe,typeMancante,startDelive
     return data;
 }
 
+async function getZMancantiReportDataToVerbale(plant,project,ordersList){
+    var inOrders = "'" + ordersList.join("','") + "'";
+    var fullQuery = 'select * from z_report_mancanti where plant = $1 and project = $2 and "order" in ('+inOrders+') and active = true';
+    var data = await postgresdbService.executeQuery(fullQuery, [plant, project]);
+    return data;
+}
+
 async function getMancantiInfoData(plant,project,orderGroup){
     const responseQuery = await postgresdbService.executeQuery(queryLoipro.getMancantiInfoDataQuery, [plant,project,orderGroup]);
     let responseBom = await getBomInfoByOrder(plant,orderGroup);
@@ -52,6 +59,11 @@ async function getMancantiInfoData(plant,project,orderGroup){
         numberMancanti: numberMancanti
     }
     return response;
+}
+
+async function getTotalQuantityFromOrders(plant, ordersList){
+    const responseQuery = await postgresdbService.executeQuery(queryLoipro.getTotalQuantityFromOrders, [plant, ordersList]);
+    return responseQuery[0].counter;
 }
 
 // Gestire le date "00000000"
@@ -68,4 +80,13 @@ function formatDate(date) {
     // Se la data è già nel formato corretto, la restituisco così com'è
     return date;
 }
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData }
+
+// Funzione per aggiornare owner e due_date in z_report_mancanti
+async function updateMancantiOwnerAndDueDate(mancante) {
+    const { plant, order, project, material, missing_component, owner, due_date } = mancante;
+    const data = await postgresdbService.executeQuery(queryLoipro.updateMancantiOwnerAndDueDateQuery, 
+        [owner, due_date, plant, order, project, material, missing_component]);
+    return data;
+}
+
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, getZMancantiReportDataToVerbale, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate }

@@ -1,4 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
+const { filteredWorkInstructionsTI } = require("./library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 module.exports.listenerSetup = (app) => {
@@ -15,6 +16,35 @@ module.exports.listenerSetup = (app) => {
 
             var response = await callGet(url);
             res.status(200).json({result: response});
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/workinstruction/v1/attachedworkinstructionsTI", async (req, res) => {
+        try {
+            const { plant, sfc, operation, idLev1, idLev2, idLev3, operationSelected } = req.body;
+            // Verifica che i parametri richiesti siano presenti
+            if (!plant || !sfc) {
+                return res.status(400).json({ error: "Missing required parameters: plant-sfc" });
+            }
+
+            if (operationSelected) {
+                var url = hostname+"/workinstruction/v1/attachedworkinstructions?plant="+plant+"&sfc="+sfc+"&operationactivity="+operation;
+                var response = await callGet(url);
+            }else{
+                var response = [];
+            }
+
+            var urlSFC = hostname+"/workinstruction/v1/attachedworkinstructions?plant="+plant+"&sfc="+sfc;
+            var responseSFC = await callGet(urlSFC);
+            // filtro per le WI con operationActivity "MULTIPLE"
+            responseSFC = responseSFC.filter(wi => wi.operationActivity === "MULTIPLE");
+
+            var dataFiltered = await filteredWorkInstructionsTI(plant, response, responseSFC, idLev1, idLev2, idLev3);
+            res.status(200).json({result: dataFiltered});
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

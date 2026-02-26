@@ -3,7 +3,7 @@ const queryMarking = require("./queries");
 
 
 async function getZOpConfirmationData(plant,project,wbe,userId,startMarkingDate,endMarkingDate){
-    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"'";
+    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"' and testing = false";
     if (!!project) {
         whereCondition += " AND zoc.project = '"+project+"'";
     }
@@ -38,13 +38,9 @@ async function getMarkingData(wbe_machine, mes_order, operation) {
     return data;
 }
 
-// variance labor 11
-// confirmation number 6
-// marked labor 9
-// cancelled confirmation 16
-async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId) {
+async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId, isTesting) {
     let actualDate = new Date();
-    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId]);
+    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId, isTesting && isTesting === true ? true : false]);
     return data;
 }
 
@@ -78,4 +74,24 @@ async function getProjectData(plant) {
     return data;
 }
 
-module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getModificationsByWBEService, updateZUnproductiveWBS, updateMinusZUnproductiveWBS }
+async function getSumMarkedLaborByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getSumMarkedLaborByOrderQuery, [plant, order]);
+    return data && data.length > 0 ? data[0].total_marked_labor : 0;
+}
+
+async function getSumVarianceLaborByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getSumVarianceLaborByOrderQuery, [plant, order]);
+    return data && data.length > 0 ? data[0].total_variance_labor : 0;
+}
+
+async function getMarkingTestingDataByOrder(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getMarkingTestingDataByOrderQuery, [plant, order]);
+    return data || [];
+}
+
+async function getAnalisiOreVarianza(plant, order) {
+    const data = await postgresdbService.executeQuery(queryMarking.getAnalisiOreVarianzaQuery, [plant, order]);
+    return data || [];
+}
+
+module.exports = { getMarkingData, insertOpConfirmation, insertZMarkingRecap, getMarkingByConfirmationNumber,getZOpConfirmationData, updateZMarkingRecap, updateCancelFlagOpConfirmation, getModificationsBySfcService, getProjectData, getSumMarkedLaborByOrder, getSumVarianceLaborByOrder, getMarkingTestingDataByOrder, getAnalisiOreVarianza, updateZUnproductiveWBS, updateMinusZUnproductiveWBS };

@@ -6,9 +6,15 @@ async function manageRouting(plantValue,order,routingRef,bomRef,customValues){
 
     //RouterBO:GD03,DM0000000295,H,ERP001
     var responseGetRouting = await getRoutingResponse(order,plantValue);
-    console.log("responseGetRouting= "+JSON.stringify(responseGetRouting[0]));
+    let phaseField= customValues.find(obj => obj.attribute == "PHASE");
+    let phaseValue = phaseField ? phaseField.value : "";
+    //NEl testing dobbiamo skippare l'aggiornamento del routing
+    if(phaseValue=="TESTING"){
+        return;
+    }
     let orderTypeField= customValues.find(obj => obj.attribute == "ORDER_TYPE");
     let orderTypeValue = orderTypeField.value || "";
+
     let routingSteps = [];
     if(responseGetRouting && responseGetRouting.length>0){
         routingSteps = responseGetRouting[0].routingSteps;
@@ -153,8 +159,16 @@ function getRoutingStepsByMacrofase(macrofase,routingSteps){
 async function updateRoutingSimultaneous(bodyUpdateRouting){
     let url = hostname + "/routing/v1/routings";
     let response = await callPut(url,bodyUpdateRouting);
-    console.log("UPDATE ROUTING: "+response);
     return response;
 }
 
-module.exports = { manageRouting };
+async function updateRoutingForReleaseUtility(plant, routing) {
+    var responseGetRouting = await getRoutingResponse(routing, plant);
+    let routingSteps = [];
+    if (responseGetRouting && responseGetRouting.length > 0) {
+        routingSteps = responseGetRouting[0].routingSteps;
+    }
+    await doUpdateNoMachRouting(responseGetRouting, routingSteps);
+}
+
+module.exports = { manageRouting, updateRoutingForReleaseUtility };

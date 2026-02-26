@@ -37,5 +37,10 @@ async function getMachOrderByComponentOrder(plant,project,orderComponent){
     return data;
 }
 
+async function getChildOrderToTesting(plant,project,order){
+    const data = await postgresdbService.executeQuery(queryOrdersLink.getChildOrderToTestingQuery, [plant,project,order]);
+    return data;
+}
 
-module.exports = { insertZOrdersLink, getZOrdersLinkByPlantProjectOrderType, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getAllMaterialsNoParentAssembly, getMachOrderByComponentOrder }
+
+module.exports = { insertZOrdersLink, getZOrdersLinkByPlantProjectOrderType, getZOrdersLinkMachByPlantProjectOrderTypeMachineSection, getZOrdersLinkByPlantProjectAndParentOrder, getAllMachMaterials, getMachOrderByComponentOrder, getChildOrderToTesting }

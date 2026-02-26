@@ -8,7 +8,7 @@ module.exports.listenerSetup = (app) => {
         try {
             var { plant, order } = req.body;
             await populateZTables(plant,order);
-            res.status(200).send("todo ok"); 
+            res.status(200).send("Servizio completato con successo"); 
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

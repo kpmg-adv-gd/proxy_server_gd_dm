@@ -1,8 +1,8 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
-const { updateCustomDefectOrder } = require("./library");
-const { closeDefect, checkAllDefectClose } = require("../../postgres-db/services/defect/library");
+const { updateCustomDefectOrder, getDefectsTestingData } = require("./library");
+const { closeDefect, checkAllDefectClose, setNonconformanceField } = require("../../postgres-db/services/defect/library");
 
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -116,7 +116,7 @@ module.exports.listenerSetup = (app) => {
     // Chiusura del difetto
     app.post("/api/nonconformance/v1/close", async (req, res) => {
         try {
-            const { id, plant, comments, sfc, order, qnCode } = req.body;
+            const { id, plant, comments, sfc, order, qnCode, isTesting } = req.body;
             var url = hostname + "/nonconformance/v1/close";
 
             var params = {
@@ -135,6 +135,10 @@ module.exports.listenerSetup = (app) => {
                 if (await checkAllDefectClose(sfc)) {
                     // Aggiorno campo custom, sbiancandolo
                     await updateCustomDefectOrder(plant, order, "false");
+                }
+
+                if (isTesting && isTesting == true) {
+                    await setNonconformanceField(id, plant);
                 }
 
                 res.status(200).json(response);
@@ -267,6 +271,29 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per recuperare difetti Testing in formato tree table
+    app.post("/api/getDefectsTesting", async (req, res) => {
+        try {
+            const { plant, project } = req.body;
+            if (!plant || !project) {
+                return res.status(400).json({ error: "Missing required parameters: plant, project" });
+            }
+
+            const result = await getDefectsTestingData(plant, project);
+            
+            if (result === false) {
+                return res.status(500).json({ error: "Error retrieving defects testing data" });
+            }
+
+            res.status(200).json(result);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error in getDefectsTesting:", errMessage);
             res.status(status).json({ error: errMessage });
         }
     });

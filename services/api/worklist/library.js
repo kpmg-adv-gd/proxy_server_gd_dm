@@ -13,6 +13,11 @@ function getWorkListDataFiltered(response,body){
             let machineSectionCondition = true;
             let parentMaterialCondition = true;
 
+            // Se ha campo custom del Testing (PHASE = "Testing"), escludo l'elemento
+            if (obj.customValues.some(customObj => customObj.attribute === "PHASE" && customObj.value === "Testing")) {
+                return false;
+            }
+
             let customValues = obj.customValues;
             if (!!sfc) {
                 sfcCondition = obj.sfc.toUpperCase().includes(sfc.toUpperCase());
@@ -37,6 +42,7 @@ function getWorkListDataFiltered(response,body){
             return sfcCondition && materialCondition && projectCondition && wbsCondition && machineSectionCondition && parentMaterialCondition;
         });
         //Arricchisco tutti gli ordini (sfc) con i campi custom per gestirli da front-end
+        //Arricchisco tutti gli ordini (sfc) con i campi custom per gestirli da front-end
         var managedResponse = filteredResponse.map(function(obj) {
             //aggiungo il workcenter
             obj.WORKCENTER= workcenter;
@@ -56,7 +62,7 @@ function getWorkListDataFiltered(response,body){
 
         //Resituisco solo gli ordini di assembly non inviati al testing
         var filteredResponse = managedResponse.filter(function(obj) {
-            return obj["PHASE"] !== "TESTING" && obj["SENT_TO_TESTING"] !== "true" && obj["SENT_TO_TESTING"] !== true;
+            return obj["PHASE"] !== "TESTING" && obj["SENT_TO_TESTING"] !== "true" && obj["MACHINE_ASSEMBLY_COMPLETED"] !== "true";
         });
 
         return filteredResponse;

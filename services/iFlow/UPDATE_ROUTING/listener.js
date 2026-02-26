@@ -10,7 +10,7 @@ module.exports.listenerSetup = (app) => {
                 const { plant, orderNumber, orderedQuantity, routingRef, bomRef, customValues } = req.body;
                 await manageRouting(plant,orderNumber,routingRef,bomRef,customValues);
 
-                res.status(200).send("sistema contatato - top"); 
+                res.status(200).send("Servizio completato con successo"); 
             } catch (error) {
                 let status = error.status || 500;
                 let errMessage = error.message || "Internal Server Error";

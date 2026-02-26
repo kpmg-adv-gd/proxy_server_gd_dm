@@ -6,8 +6,8 @@ const getMarkingDataQuery = `SELECT *
 const insertOpConfirmationQuery = `INSERT INTO z_op_confirmations (plant,wbe_machine, operation, mes_order,
                                 sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, 
                                 variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,
-                                modification, workcenter, operation_description, project, updated_timestamp, defect_id)
-                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`;   
+                                modification, workcenter, operation_description, project, updated_timestamp, defect_id, testing)
+                               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`;   
                                
 const updateMarkingRecapQuery = `UPDATE z_marking_recap
                                 SET 
@@ -46,6 +46,31 @@ const getModificationsByWBEQuery = `SELECT prog_eco,process_id,flux_type,"type"
 
 const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 
+const getSumMarkedLaborByOrderQuery = `SELECT COALESCE(SUM(marked_labor), 0) as total_marked_labor 
+                                        FROM z_marking_recap 
+                                        WHERE plant = $1 AND mes_order = $2`;
+
+const getSumVarianceLaborByOrderQuery = `SELECT COALESCE(SUM(variance_labor), 0) as total_variance_labor 
+                                          FROM z_marking_recap 
+                                          WHERE plant = $1 AND mes_order = $2`;
+
+const getMarkingTestingDataByOrderQuery = `SELECT * 
+                                             FROM z_marking_testing 
+                                             WHERE plant = $1 AND "order" = $2`;
+
+const getAnalisiOreVarianzaQuery = `SELECT 
+                                        SUBSTRING(zoc.reason_for_variance, 1, 2) as variance_cluster,
+                                        SUM(zoc.variance_labor) as total_variance_labor
+                                    FROM z_op_confirmations zoc
+                                    INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant AND zoc.operation = zmt.id_lev_1
+                                    WHERE zoc.plant = $1
+                                        --AND zmt."type" != 'M'
+                                        AND zmt."order" = $2 
+                                        AND zoc.reason_for_variance IS NOT NULL 
+                                        AND zoc.cancellation_flag = false
+                                        AND zoc.testing = true
+                                    GROUP BY SUBSTRING(zoc.reason_for_variance, 1, 2)`;
+
 const updateZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
                                SET marked_labor = marked_labor + $3,
                                    variance_labor = variance_labor + $4
@@ -56,4 +81,4 @@ const updateMinusZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
                                    variance_labor = variance_labor - $4
                                WHERE plant = $1 AND confirmation_number = $2 and coordination_activity = true`;
 
-module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsByWBEQuery, getModificationsBySfcQuery, getProjectDataQuery, updateZUnproductiveWBSQuery, updateMinusZUnproductiveWBSQuery };
+module.exports = { getMarkingDataQuery, updateMarkingRecapQuery, insertOpConfirmationQuery, insertMarkingRecapQuery, getMarkingByConfirmationNumberQuery, getZOpConfirmationDataByFilterQuery, updateCancelFlagOpConfirmationQuery, getModificationsBySfcQuery, getProjectDataQuery, getSumMarkedLaborByOrderQuery, getSumVarianceLaborByOrderQuery, getMarkingTestingDataByOrderQuery, getAnalisiOreVarianzaQuery, updateZUnproductiveWBSQuery, updateMinusZUnproductiveWBSQuery };
