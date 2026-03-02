@@ -502,9 +502,10 @@ async function getIncompleteOperations(plant, selected, ordersList) {
         var selectedOrder = await callGet(url);
         if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+selectedOrder.sfcs[0];
-            var response = await callGet(url);
-            var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
-            stepNotDone.forEach(element => {
+            var response = await callGet(url);            
+            var routingVersion = response.routing.version;
+            var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion) || [];
+            stepNotDoneAndActual.forEach(element => {
                 optDaConsiderare.push({
                     order: ordersList[i],
                     operation: element.operation.operation,
