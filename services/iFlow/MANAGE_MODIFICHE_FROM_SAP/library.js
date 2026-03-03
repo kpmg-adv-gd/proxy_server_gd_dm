@@ -37,6 +37,8 @@ async function manageModifica(objModifica){
     var qty = objModifica?.Qty?.[0] || "";
     var fluxType = objModifica?.FluxType?.[0] || "";
     var status = objModifica?.Status?.[0] || "";
+    var variance = objModifica?.Variance?.[0] || "";
+    var progressive = objModifica?.Progressive?.[0] || "";
     var isCO2 = await isOrderCO2(plant,order);
 
     // Recupero campi custom ordine
@@ -60,7 +62,7 @@ async function manageModifica(objModifica){
     else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
     else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
 
-    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase)
+    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive);
 
     if(!modificaValue){
         modificaValue = modificaType;

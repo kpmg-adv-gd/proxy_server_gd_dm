@@ -2,13 +2,19 @@ const postgresdbService = require('../../connection');
 const queryModifiche = require("./queries");
 const { dispatch } = require("../../../mdo/library");
 
-async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase) {
+async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase, variance, progressive){
     let dateNow = new Date();
     if(!prog_eco) prog_eco="";
     if(!process_id) process_id="";
     if(!qty) qty=0;
     if(!status) status=0;
-    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project, phase]);
+
+    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project, phase, variance, progressive]);
+    return data;
+}
+
+async function getModificaDetail(plant, process_id, material){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificaDetailQuery, [plant, process_id, material]);
     return data;
 }
 
@@ -248,4 +254,4 @@ async function updateModifyOwnerAndDueDate(plant,modifica) {
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate };
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate, getModificaDetail };

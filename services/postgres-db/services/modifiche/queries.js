@@ -1,6 +1,6 @@
 
-const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project, phase) 
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, $21); `;
+const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project, phase, variance, progressive) 
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, $21, $22, $23); `;
 
 const getModificheDataQuery = `SELECT *
                                 FROM z_modify
@@ -111,4 +111,8 @@ const getModificheTestingByOrdersQuery = `SELECT zm.*,
 
 const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery };
+const getModificaDetailQuery = `SELECT zm.*
+                                FROM z_modify zm
+                                WHERE zm.plant = $1 AND zm.process_id = $2 AND zm.material = $3`;
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery, getModificaDetailQuery };
