@@ -418,9 +418,10 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                 // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
                 var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
                 var response = await callGet(url);
-                var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
-                for (var j = 0; j < stepNotDone.length; j++) {
-                    var item = stepNotDone[j];
+                var routingVersion = response.routing.version;
+                var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion) || [];
+                for (var j = 0; j < stepNotDoneAndActual.length; j++) {
+                    var item = stepNotDoneAndActual[j];
                     var opt = {
                         stepId: item.stepId,
                         operation: item.operation.operation,
