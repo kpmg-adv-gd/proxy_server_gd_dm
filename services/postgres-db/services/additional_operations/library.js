@@ -18,9 +18,9 @@ async function getAdditionalOperations(plant, order) {
     for (let i = 0; i < data.length; i++) {
         if (orderMancantiMap[data[i].order] !== undefined) {
             data[i].mancanti = orderMancantiMap[data[i].order];
-        }else{
+        } else {
             try {
-                await hasMancanti(plant,data[i].order);
+                await hasMancanti(plant, data[i].order);
                 data[i].mancanti = false;
             } catch (error) {
                 data[i].mancanti = true;
@@ -45,14 +45,14 @@ async function startAdditionalOperation(plant, sfc, operation, phase) {
             return { result: false, message: "Operation already done." };
         }
         // start standard operation
-        var url = hostname+"/sfc/v1/sfcs/start";
+        var url = hostname + "/sfc/v1/sfcs/start";
         var params = {
             "plant": plant,
             "operation": operation,
             "resource": "DEFAULT",
             "sfcs": [sfc]
         };
-        await callPost(url,params);
+        await callPost(url, params);
         console.log("STANDARD START FATTO")
         await postgresdbService.executeQuery(queryAdditionalOperations.startAdditionalOperation, [plant, sfc, operation, phase]);
         console.log("CUSTOM START FATTO")
@@ -73,8 +73,8 @@ async function completeAdditionalOperation(plant, sfc, operation, project, phase
         // Check difetti bloccanti (solo se sto mettendo in DONE ultima operazione)
         var operationsNotDone = await postgresdbService.executeQuery(queryAdditionalOperations.checkDefectCompleteOperation, [plant, order, operation]);
         if (operationsNotDone.length == 0) {
-            await hasMancanti(plant,order);
-            if(checkModificheLastOperation) await modificheHasDone(plant,project,sfc,order,valueModifica);
+            await hasMancanti(plant, order);
+            if (checkModificheLastOperation) await modificheHasDone(plant, project, sfc, order, valueModifica);
             var defects = await postgresdbService.executeQuery(`SELECT DISTINCT operation FROM z_defects where plant = $1 and sfc = $2 and status = 'OPEN' and blocking = true`, [plant, sfc]);
             // mostro lista operazioni con difetti bloccanti aperti
             var defectList = defects.map(defect => defect.operation).join(", ");
@@ -83,18 +83,18 @@ async function completeAdditionalOperation(plant, sfc, operation, project, phase
             }
         }
         // complete standard operation (prima recupero risorsa su cui è stato fatto start)
-        var url = hostname + "/sfc/v1/sfcdetail?plant="+plant+"&sfc="+sfc;
+        var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfc;
         let responseGetSfc = await callGet(url);
         var resource = responseGetSfc?.steps?.find(step => step.operation.operation == operation)?.resource || "DEFAULT";
-        console.log("Risorsa trovata: "+resource);
-        var url = hostname+"/sfc/v1/sfcs/complete";
+        console.log("Risorsa trovata: " + resource);
+        var url = hostname + "/sfc/v1/sfcs/complete";
         var params = {
             "plant": plant,
             "operation": operation,
             "resource": resource,
             "sfcs": [sfc]
         };
-        await callPost(url,params);
+        await callPost(url, params);
         await postgresdbService.executeQuery(queryAdditionalOperations.completeAdditionalOperation, [plant, sfc, operation, phase]);
         return { result: true, message: "Operation completed successfully." };
     } catch (error) {
@@ -111,8 +111,8 @@ async function insertZAddtionalOperations(rows) {
             var opt = rows[i].operations[j];
             try {
                 await postgresdbService.executeQuery(queryAdditionalOperations.insertZAddtionalOperationsQuery, [
-                    row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription, 
-                    opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter, opt.DURATION
+                    row.plant, row.project, row.section, row.sfc, row.order, row.material, opt.groupCode, opt.groupDescription, opt.operation, opt.operationDescription,
+                    opt.phase, opt.operationStatus, opt.stepId, opt.MES_ORDER, opt.workCenter
                 ]);
             } catch (error) {
                 console.log("Error inserting additional operation for SFC " + row.sfc + " operation " + opt.operation + ": " + error);
@@ -121,4 +121,26 @@ async function insertZAddtionalOperations(rows) {
     }
 }
 
-module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, getAdditionalOperationsToVerbale, insertZAddtionalOperations };
+async function getMarkingDataForAddOpt(plant, wbe, order, markOperation) {
+    try {
+        // passo 1: sfcDetail
+        var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + markOperation.sfc;
+        var response = await callGet(url);
+        var routing = response.routing;
+        // passo 2: routing get
+        var typeRouting = routing.type == "SHOPORDER_SPECIFIC" ? "SHOP_ORDER" : routing.type;
+        var routingUrl = hostname + "/routing/v1/routings?plant=" + plant + "&routing=" + routing.routing + "&type=" + typeRouting + "&version=" + routing.version;
+        var routingResponse = await callGet(routingUrl);
+        var routingElement = routingResponse[0].routingSteps.filter(step => step.routingOperation.operationActivity.operationActivity == markOperation.operation);
+        if (routingElement.length == 0) return [];
+        var confirmationNumber = routingElement[0].customValues.filter(item => item.attribute == "CONFIRMATION_NUMBER")[0]?.value || "";
+        if (confirmationNumber == "") return [];
+        // passo 3: get confirmation detail
+        var execute = await postgresdbService.executeQuery(queryAdditionalOperations.getMarkingDataForAddOptQuery, [plant, wbe, order, confirmationNumber]);
+        return execute;
+    } catch (error) {
+        return [];
+    }
+}
+
+module.exports = { getAdditionalOperations, startAdditionalOperation, completeAdditionalOperation, getAdditionalOperationsToVerbale, insertZAddtionalOperations, getMarkingDataForAddOpt };
