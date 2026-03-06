@@ -306,7 +306,7 @@ async function ruleParameter9(data, group, parameterName, selected, plant, refre
     // Verifico quante operazioni di rodaggio sono presenti in optDaConsiderare
     var rigaTrovata = false;
     for (var i = 0; i < optDaConsiderare.length; i++) {
-        if (operazioniRodaggio.includes(optDaConsiderare[i].operation)) {
+        if (operazioniRodaggio.includes(optDaConsiderare[i].operation.slice(0, 5))) {
             rigaTrovata = true;
             break;
         }
@@ -500,18 +500,20 @@ async function getIncompleteOperations(plant, selected, ordersList) {
     for (var i = 0; i < ordersList.length; i++) {
         var url = hostname + "/order/v1/orders?order=" + ordersList[i] + "&plant=" + plant;
         var selectedOrder = await callGet(url);
-        if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
+        if (selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+selectedOrder.sfcs[0];
             var response = await callGet(url);            
-            var routingVersion = response.routing.version;
-            var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion) || [];
-            stepNotDoneAndActual.forEach(element => {
-                optDaConsiderare.push({
-                    order: ordersList[i],
-                    operation: element.operation.operation,
-                    routing: element.stepRouting.routing
+            if (response.status.code == "401" || response.status.code == "402" || response.status.code == "403") {
+                var routingVersion = response.routing.version, routing = response.routing.routing, routingType = response.routing.type; // estraggo routing da ramo principale
+                var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion && step.stepRouting.routing == routing && step.stepRouting.type == routingType) || [];
+                stepNotDoneAndActual.forEach(element => {
+                    optDaConsiderare.push({
+                        order: ordersList[i],
+                        operation: element.operation.operation,
+                        routing: element.stepRouting.routing
+                    });
                 });
-            });
+            }
         }         
     }
     return optDaConsiderare;

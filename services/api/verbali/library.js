@@ -396,62 +396,66 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
         // Check sullo stato degli ordini sul valore "executionStatus"
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
         var selectedOrder = await callGet(url); 
-        if (selectedOrder.executionStatus != 'COMPLETED' && selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
+        if (selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
             var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
             if (ecoType == "MA" && (orderType == "ZPA1" || orderType == "ZPA2" || orderType == "ZPF1" || orderType == "ZPF2" || orderType == "GRPF" || orderType == "ZMGF")) {
                 // escludo l'ordine
             }else {
                 // Check superato
-                var sfcOrder = {
-                    plant: childOrders[index].plant,
-                    project: childOrders[index].project,
-                    section: childOrders[index].machine_section,
-                    order: childOrders[index].child_order,
-                    material: childOrders[index].child_material,
-                    sfc: selectedOrder.sfcs[0],
-                    routing: selectedOrder.routing.routing,
-                    routingType: selectedOrder.routing.routingType,
-                    routingVersion: selectedOrder.routing.version,
-                    operations: []
-                };
                 // Se ho aggiunto l'elemento, allora estraggo le operazioni partendo dall'sfc
-                var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcOrder.sfc;
+                var url = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + selectedOrder.sfcs[0];
                 var response = await callGet(url);
-                var stepNotDone = response?.steps?.filter(step => step.stepDone == false) || [];
-                for (var j = 0; j < stepNotDone.length; j++) {
-                    var item = stepNotDone[j];
-                    var opt = {
-                        stepId: item.stepId,
-                        operation: item.operation.operation,
-                        operationDescription: item.operation.description,
-                        operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
-                        workCenter: item.plannedWorkCenter
+                if (response.status.code == "401" || response.status.code == "402" || response.status.code == "403") {
+                    var routing = response.routing.routing;
+                    var routingVersion = response.routing.version;
+                    var typeRouting = response.routing.type == "SHOPORDER_SPECIFIC" ? "SHOP_ORDER" : response.routing.type;
+                    var sfcOrder = {
+                        plant: childOrders[index].plant,
+                        project: childOrders[index].project,
+                        section: childOrders[index].machine_section,
+                        order: childOrders[index].child_order,
+                        material: childOrders[index].child_material,
+                        sfc: selectedOrder.sfcs[0],
+                        routing: routing,
+                        routingType: typeRouting,
+                        routingVersion: routingVersion,
+                        operations: []
+                    };
+                    var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion && step.stepRouting.routing == routing && step.stepRouting.type == response.routing.type) || [];
+                    for (var j = 0; j < stepNotDoneAndActual.length; j++) {
+                        var item = stepNotDoneAndActual[j];
+                        var opt = {
+                            stepId: item.stepId,
+                            operation: item.operation.operation,
+                            operationDescription: item.operation.description,
+                            operationStatus: item.quantityInQueue == 1 ? "In Queue" : item.quantityInWork == 1 ? "In Work" : null,
+                            workCenter: item.plannedWorkCenter
+                        }
+                        // Recupero campi custom
+                        var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + routing + "&type=" + typeRouting + "&version=" + routingVersion;
+                        var responseRouting = await callGet(url);
+                        var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
+                            ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
+                        if (selectedOpt != null) {
+                            opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
+                            opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                        }
+                        // Recupero ulteriori dettagli, dai campi custom
+                        if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
+                            var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
+                            var mesOrder = await callGet(urlMesOrder);
+                            opt.groupCode = mesOrder?.material?.material;
+                            opt.groupDescription = mesOrder?.material?.description;
+                        }
+                        if (opt.MF != null && opt.MF != "") {
+                            var productionPhase = await getMappingPhase(plant, opt.MF);
+                            opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
+                        }
+                        sfcOrder.operations.push(opt);
                     }
-                    // Recupero campi custom
-                    var url = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + sfcOrder.routing + "&type=SHOP_ORDER";
-                    var responseRouting = await callGet(url);
-                    var selectedOpt = responseRouting?.routingSteps?.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation).length > 0
-                        ? responseRouting.routingSteps.filter(item => item.routingOperation.operationActivity.operationActivity == opt.operation)[0] : null;
-                    if (selectedOpt != null) {
-                        opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
-                        opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
-                        opt.DURATION = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : null;
-                    }
-                    // Recupero ulteriori dettagli, dai campi custom
-                    if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
-                        var urlMesOrder = hostname + "/order/v1/orders?order=" + opt.MES_ORDER + "&plant=" + sfcOrder.plant;
-                        var mesOrder = await callGet(urlMesOrder);
-                        opt.groupCode = mesOrder?.material?.material;
-                        opt.groupDescription = mesOrder?.material?.description;
-                    }
-                    if (opt.MF != null && opt.MF != "") {
-                        var productionPhase = await getMappingPhase(plant, opt.MF);
-                        opt.phase = productionPhase.length > 0 ? productionPhase[0].production_phase : null;
-                    }
-                    sfcOrder.operations.push(opt);
+                    resultOrders.push(sfcOrder);
                 }
-                resultOrders.push(sfcOrder);
             }
         }
         // Aggiungo i figli/nipoti
@@ -1166,7 +1170,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_description: 80,
                     operation: 60,
                     operation_description: 80,
-                    duration: 50
                 };
                 const colPositionsOp = {
                     section: 50,
@@ -1176,7 +1179,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     group_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + 8,
                     operation: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + 10,
                     operation_description: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + 12,
-                    duration: 50 + colWidthsOp.section + colWidthsOp.material + colWidthsOp.order + colWidthsOp.group_code + colWidthsOp.group_description + colWidthsOp.operation + colWidthsOp.operation_description + 14
                 };
 
                 // Intestazione tabella
@@ -1188,7 +1190,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.rect(colPositionsOp.group_description, doc.y, colWidthsOp.group_description, 20).stroke();
                 doc.rect(colPositionsOp.operation, doc.y, colWidthsOp.operation, 20).stroke();
                 doc.rect(colPositionsOp.operation_description, doc.y, colWidthsOp.operation_description, 20).stroke();
-                doc.rect(colPositionsOp.duration, doc.y, colWidthsOp.duration, 20).stroke();
 
                 const headerYOp = doc.y + 6;
                 doc.text('Machine', colPositionsOp.section + 2, headerYOp, { width: colWidthsOp.section - 4, align: 'left' });
@@ -1198,7 +1199,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                 doc.text('Group Description', colPositionsOp.group_description + 2, headerYOp, { width: colWidthsOp.group_description - 4, align: 'left' });
                 doc.text('Operation', colPositionsOp.operation + 2, headerYOp, { width: colWidthsOp.operation - 4, align: 'left' });
                 doc.text('Operation Description', colPositionsOp.operation_description + 2, headerYOp, { width: colWidthsOp.operation_description - 4, align: 'left' });
-                doc.text('Duration', colPositionsOp.duration + 2, headerYOp, { width: colWidthsOp.duration - 4, align: 'left' });
 
                 doc.y += 20;
 
@@ -1211,7 +1211,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const group_description = op.group_description || 'N/A';
                     const operation = op.operation || 'N/A';
                     const operation_description = op.operation_description || 'N/A';
-                    const duration = op.duration || 'N/A';
 
                     // Calcola altezza riga
                     const sectionHeight = doc.heightOfString(section, { width: colWidthsOp.section - 4 });
@@ -1221,8 +1220,7 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     const groupDescHeight = doc.heightOfString(group_description, { width: colWidthsOp.group_description - 4 });
                     const operationHeight = doc.heightOfString(operation, { width: colWidthsOp.operation - 4 });
                     const opDescHeight = doc.heightOfString(operation_description, { width: colWidthsOp.operation_description - 4 });
-                    const durationHeight = doc.heightOfString(duration, { width: colWidthsOp.duration - 4 });
-                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight, durationHeight) + 8;
+                    const rowHeight = Math.max(sectionHeight, materialHeight, orderHeight, groupCodeHeight, groupDescHeight, operationHeight, opDescHeight) + 8;
 
                     // Nuova pagina se necessario
                     if (doc.y + rowHeight > doc.page.height - 100) {
@@ -1239,7 +1237,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.rect(colPositionsOp.group_description, rowY, colWidthsOp.group_description, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation, rowY, colWidthsOp.operation, rowHeight).stroke();
                     doc.rect(colPositionsOp.operation_description, rowY, colWidthsOp.operation_description, rowHeight).stroke();
-                    doc.rect(colPositionsOp.duration, rowY, colWidthsOp.duration, rowHeight).stroke();
 
                     doc.fontSize(6).font('Helvetica');
                     const textY = rowY + 4;
@@ -1250,7 +1247,6 @@ async function generateInspectionPDF(plant, dataCollections, ncCustomTable, resu
                     doc.text(group_description, colPositionsOp.group_description + 2, textY, { width: colWidthsOp.group_description - 4, align: 'left', lineBreak: true });
                     doc.text(operation, colPositionsOp.operation + 2, textY, { width: colWidthsOp.operation - 4, align: 'left', lineBreak: true });
                     doc.text(operation_description, colPositionsOp.operation_description + 2, textY, { width: colWidthsOp.operation_description - 4, align: 'left', lineBreak: true });
-                    doc.text(duration, colPositionsOp.duration + 2, textY, { width: colWidthsOp.duration - 4, align: 'left', lineBreak: true });
 
                     doc.y = rowY + rowHeight;
                 });
