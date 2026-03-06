@@ -135,7 +135,7 @@ async function getMarkingDataForAddOpt(plant, wbe, order, markOperation) {
         if (routingElement.length == 0) return [];
         var confirmationNumber = routingElement[0].routingOperation.customValues.filter(item => item.attribute == "CONFIRMATION_NUMBER")[0]?.value || "";
         if (confirmationNumber == "") return [];
-        // passo 3: get confirmation detail
+        // passo 3: get with confirmation number
         var execute = await postgresdbService.executeQuery(queryAdditionalOperations.getMarkingDataForAddOptQuery, [plant, wbe, order, confirmationNumber]);
         return execute;
     } catch (error) {
