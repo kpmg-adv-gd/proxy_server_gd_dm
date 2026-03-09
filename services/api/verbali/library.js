@@ -15,7 +15,7 @@ const { PDFDocument: PDFLib, StandardFonts, rgb } = require("pdf-lib");
 const fetch = require("node-fetch");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
-const { getVerbaliTileSupervisoreTestingData } = require('../../mdo/queriesSQL/custom_data/library');
+const { getVerbaliTileSupervisoreTestingData, getFilterVerbalManagementData, getFilterFinalCollaudoData, getFilterSafetyApprovalData, getFinalCollaudoDataSql, getVerbalManagementTableData } = require('../../mdo/queriesSQL/custom_data/library');
 
 // Funzione per ottenere i verbali del supervisore assembly
 async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
@@ -1378,112 +1378,31 @@ function generateTreeTable(data) {
 // Funzione per recuperare tutti i filtri per Verbal Management (Home)
 async function getFilterVerbalManagement(plant) {
     try {
-        // Step 1: Recupero tutti i verbali con PHASE='TEST'
-        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
-        const mockReqPhase = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterPhase})` },
-            method: "GET"
-        };
-        const outMockPhase = await dispatch(mockReqPhase);
-        const ordersPhase = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
-        
-        if (ordersPhase.length === 0) {
-            return {
-                projects: [],
-                cos: [],
-                orders: [],
-                customers: []
-            };
+        // Singola query SQL HANA: ordini TESTING attivi con COMMESSA, CO, CUSTOMER
+        const rows = await getFilterVerbalManagementData(plant);
+
+        if (!rows || rows.length === 0) {
+            return { projects: [], cos: [], orders: [], customers: [], workcenters: [] };
         }
 
-        // Step 2: Filtrare per verbali attivi (EXECUTION_STATUS = 'ACTIVE' OR 'NOT_IN_EXECUTION')
-        const ordersList = ordersPhase.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
-        const filterActive = `(PLANT eq '${plant}' AND (EXECUTION_STATUS eq 'ACTIVE' or EXECUTION_STATUS eq 'NOT_IN_EXECUTION') AND (${ordersList}))`;
-        const mockReqActive = {
-            path: "/mdo/ORDER",
-            query: { $apply: `filter(${filterActive})` },
-            method: "GET"
-        };
-        const outMockActive = await dispatch(mockReqActive);
-        const activeOrders = outMockActive?.data?.value?.length > 0 ? outMockActive.data.value : [];
-        
-        if (activeOrders.length === 0) {
-            return {
-                projects: [],
-                cos: [],
-                orders: [],
-                customers: []
-            };
-        }
+        const projects   = [...new Set(rows.map(r => r.PROJECT).filter(Boolean))];
+        const cos        = [...new Set(rows.map(r => r.CO).filter(Boolean))];
+        const orders     = [...new Set(rows.map(r => r.MFG_ORDER).filter(Boolean))];
+        const customers  = [...new Set(rows.map(r => r.CUSTOMER).filter(Boolean))];
 
-        // Creo la lista degli ordini attivi
-        const activeOrdersList = activeOrders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
-        
-        // Step 3: Recupero i progetti (COMMESSA)
-        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
-        const mockReqProject = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterProject})` },
-            method: "GET"
-        };
-        const outMockProject = await dispatch(mockReqProject);
-        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
-        
-        // Estraggo valori distinti per progetti
-        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        // Step 4: Recupero i CO
-        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
-        const mockReqCO = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCO})` },
-            method: "GET"
-        };
-        const outMockCO = await dispatch(mockReqCO);
-        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
-        
-        // Estraggo valori distinti per CO
-        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        // Step 5: Recupero gli ordini (MFG_ORDER)
-        const orders = activeOrders.map(item => item.MFG_ORDER);
-        
-        // Step 6: Recupero i Customer
-        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${activeOrdersList}))`;
-        const mockReqCustomer = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCustomer})` },
-            method: "GET"
-        };
-        const outMockCustomer = await dispatch(mockReqCustomer);
-        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
-        
-        // Estraggo valori distinti per Customer
-        const customers = [...new Set(customersData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-
-
-         // Step 7: Recupero i Workcenters dalla tabella SAP_MDO_WORKCENTER_V (mi servono dopo per la tree table dei verbali)
+        // Workcenter: tabella separata, rimane OData
         const filterWorkcenter = `(PLANT eq '${plant}' AND STATUS eq 'ENABLED' AND IS_DELETED eq 'false')`;
-        const mockReqWorkcenter = {
+        const outMockWorkcenter = await dispatch({
             path: "/mdo/WORKCENTER",
             query: { $apply: `filter(${filterWorkcenter})` },
             method: "GET"
-        };
-        const outMockWorkcenter = await dispatch(mockReqWorkcenter);
-        const workcentersData = outMockWorkcenter?.data?.value?.length > 0 ? outMockWorkcenter.data.value : [];
-        // Estraggo i workcenters con codice e descrizione
-        const workcenters = workcentersData.map(item => ({
+        });
+        const workcenters = (outMockWorkcenter?.data?.value || []).map(item => ({
             workcenter: item.WORKCENTER,
             description: item.DESCRIPTION
         }));
-        return {
-            projects: projects,
-            cos: cos,
-            orders: orders,
-            customers: customers,
-            workcenters: workcenters
-        };
+
+        return { projects, cos, orders, customers, workcenters };
     } catch (error) {
         console.error("Error in getFilterVerbalManagement:", error);
         return false;
@@ -1493,92 +1412,29 @@ async function getFilterVerbalManagement(plant) {
 // Funzione per recuperare tutti i filtri per Safety Approval
 async function getFilterSafetyApproval(plant) {
     try {
-        // Step 1: Recupero tutti gli SFC dalla tabella Z_COMMENTS con comment_type='M'
+        // Step 1: SFC dalla tabella postgres Z_COMMENTS (non HANA, rimane invariato)
         const sfcsFromComments = await getSfcFromComments(plant);
-        
+
         if (!sfcsFromComments || sfcsFromComments.length === 0) {
-            return {
-                projects: [],
-                sfcs: [],
-                cos: []
-            };
+            return { projects: [], sfcs: [], cos: [] };
         }
-        
-        // Estraggo la lista degli SFC
-        const sfcList = sfcsFromComments.map(item => item.sfc).filter(sfc => sfc);
-        
+
+        const sfcList = sfcsFromComments.map(item => item.sfc).filter(Boolean);
         if (sfcList.length === 0) {
-            return {
-                projects: [],
-                sfcs: [],
-                cos: []
-            };
+            return { projects: [], sfcs: [], cos: [] };
         }
-        
-        // Step 2: Recupero gli MFG_ORDER dalla tabella SAP_MDO_SFC_V con gli SFC trovati
-        const sfcFilter = sfcList.map(sfc => `SFC eq '${sfc}'`).join(' or ');
-        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${sfcFilter}))`;
-        const mockReqSFC = {
-            path: "/mdo/SFC",
-            query: { $apply: `filter(${filterSFC})` },
-            method: "GET"
-        };
-        const outMockSFC = await dispatch(mockReqSFC);
-        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
-        
-        if (sfcData.length === 0) {
-            return {
-                projects: [],
-                sfcs: sfcList,
-                cos: []
-            };
+
+        // Step 2: Singola query SQL HANA: SFC → MFG_ORDER + COMMESSA + CO_PREV
+        const rows = await getFilterSafetyApprovalData(plant, sfcList);
+
+        if (!rows || rows.length === 0) {
+            return { projects: [], sfcs: sfcList, cos: [] };
         }
-        
-        // Estraggo gli MFG_ORDER
-        const ordersList = sfcData.map(item => item.MFG_ORDER).filter(order => order);
-        
-        if (ordersList.length === 0) {
-            return {
-                projects: [],
-                sfcs: sfcList,
-                cos: []
-            };
-        }
-        
-        // Creo il filtro per gli ordini
-        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
-        
-        // Step 3: Recupero i progetti (COMMESSA) dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqProject = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterProject})` },
-            method: "GET"
-        };
-        const outMockProject = await dispatch(mockReqProject);
-        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
-        
-        // Estraggo valori distinti per progetti
-        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        // Step 4: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCO = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCO})` },
-            method: "GET"
-        };
-        const outMockCO = await dispatch(mockReqCO);
-        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
-        
-        // Estraggo valori distinti per CO
-        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        return {
-            projects: projects,
-            sfcs: sfcList,
-            cos: cos
-        };
+
+        const projects = [...new Set(rows.map(r => r.PROJECT).filter(Boolean))];
+        const cos      = [...new Set(rows.map(r => r.CO).filter(Boolean))];
+
+        return { projects, sfcs: sfcList, cos };
     } catch (error) {
         console.error("Error in getFilterSafetyApproval:", error);
         return false;
@@ -1588,98 +1444,19 @@ async function getFilterSafetyApproval(plant) {
 // Funzione per ottenere i filtri per Final Collaudo
 async function getFilterFinalCollaudo(plant) {
     try {
-        // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
-        const mockReqPhase = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterPhase})` },
-            method: "GET"
-        };
-        const outMockPhase = await dispatch(mockReqPhase);
-        const phaseData = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
-        
-        if (phaseData.length === 0) {
-            return {
-                projects: [],
-                sfcs: [],
-                cos: [],
-                customers: []
-            };
+        // Singola query SQL HANA: ordini TESTING con SFC, COMMESSA, CO, CUSTOMER
+        const rows = await getFilterFinalCollaudoData(plant);
+
+        if (!rows || rows.length === 0) {
+            return { projects: [], sfcs: [], cos: [], customers: [] };
         }
-        
-        // Estraggo gli MFG_ORDER di tipo TESTING
-        const ordersList = phaseData.map(item => item.MFG_ORDER).filter(order => order);
-        
-        if (ordersList.length === 0) {
-            return {
-                projects: [],
-                sfcs: [],
-                cos: [],
-                customers: []
-            };
-        }
-        
-        // Creo il filtro per gli ordini
-        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
-        
-        // Step 2: Recupero i progetti (COMMESSA) dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqProject = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterProject})` },
-            method: "GET"
-        };
-        const outMockProject = await dispatch(mockReqProject);
-        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
-        
-        // Estraggo valori distinti per progetti
-        const projects = [...new Set(projectsData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        // Step 3: Recupero i CO dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCO = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCO})` },
-            method: "GET"
-        };
-        const outMockCO = await dispatch(mockReqCO);
-        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
-        
-        // Estraggo valori distinti per CO
-        const cos = [...new Set(cosData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        // Step 4: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
-        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${ordersFilter}))`;
-        const mockReqSFC = {
-            path: "/mdo/SFC",
-            query: { $apply: `filter(${filterSFC})` },
-            method: "GET"
-        };
-        const outMockSFC = await dispatch(mockReqSFC);
-        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
-        
-        // Estraggo valori distinti per SFC
-        const sfcs = [...new Set(sfcData.map(item => item.SFC).filter(val => val))];
-        
-        // Step 5: Recupero i Customer dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCustomer = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCustomer})` },
-            method: "GET"
-        };
-        const outMockCustomer = await dispatch(mockReqCustomer);
-        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
-        
-        // Estraggo valori distinti per Customer
-        const customers = [...new Set(customersData.map(item => item.DATA_FIELD_VALUE).filter(val => val))];
-        
-        return {
-            projects: projects,
-            sfcs: sfcs,
-            cos: cos,
-            customers: customers
-        };
+
+        const projects  = [...new Set(rows.map(r => r.PROJECT).filter(Boolean))];
+        const sfcs      = [...new Set(rows.map(r => r.SFC).filter(Boolean))];
+        const cos       = [...new Set(rows.map(r => r.CO).filter(Boolean))];
+        const customers = [...new Set(rows.map(r => r.CUSTOMER).filter(Boolean))];
+
+        return { projects, sfcs, cos, customers };
     } catch (error) {
         console.error("Error in getFilterFinalCollaudo:", error);
         return false;
@@ -1689,163 +1466,50 @@ async function getFilterFinalCollaudo(plant) {
 // Funzione per popolare la tabella Final Collaudo con filtri opzionali
 async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, sentToInstallation, showAllSfcStatus, tab) {
     try {
-        // Step 1: Recupero tutti gli ordini TESTING dalla tabella SAP_MDO_ORDER_CUSTOM_DATA_V
-        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
-        const mockReqPhase = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterPhase})` },
-            method: "GET"
-        };
-        const outMockPhase = await dispatch(mockReqPhase);
-        const phaseData = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
-        
-        if (phaseData.length === 0) {
+        // Singola query SQL HANA: ordini TESTING con SFC, COMMESSA, CO, CUSTOMER, TESTING_REPORT_STATUS, SENT_TO_INSTALLATION
+        const rows = await getFinalCollaudoDataSql(plant);
+
+        if (!rows || rows.length === 0) {
             return [];
         }
-        
-        // Estraggo gli MFG_ORDER di tipo TESTING
-        let ordersList = phaseData.map(item => item.MFG_ORDER).filter(order => order);
-        
-        if (ordersList.length === 0) {
-            return [];
-        }
-        
-        // Step 2: Creo il filtro per gli ordini
-        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
-        
-        // Step 3: Recupero i progetti (COMMESSA)
-        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqProject = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterProject})` },
-            method: "GET"
-        };
-        const outMockProject = await dispatch(mockReqProject);
-        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> COMMESSA
-        const orderToProjectMap = {};
-        projectsData.forEach(item => {
-            orderToProjectMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 4: Recupero i CO
-        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCO = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCO})` },
-            method: "GET"
-        };
-        const outMockCO = await dispatch(mockReqCO);
-        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> CO
-        const orderToCoMap = {};
-        cosData.forEach(item => {
-            orderToCoMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 5: Recupero i Customer
-        const filterCustomer = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCustomer = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCustomer})` },
-            method: "GET"
-        };
-        const outMockCustomer = await dispatch(mockReqCustomer);
-        const customersData = outMockCustomer?.data?.value?.length > 0 ? outMockCustomer.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> CUSTOMER
-        const orderToCustomerMap = {};
-        customersData.forEach(item => {
-            orderToCustomerMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 6: Recupero gli SFC dalla tabella SAP_MDO_SFC_V
-        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${ordersFilter}))`;
-        const mockReqSFC = {
-            path: "/mdo/SFC",
-            query: { $apply: `filter(${filterSFC})` },
-            method: "GET"
-        };
-        const outMockSFC = await dispatch(mockReqSFC);
-        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
-        
-        if (sfcData.length === 0) {
-            return [];
-        }
-        
-        // Step 7: Recupero TESTING_REPORT_STATUS per tutti gli ordini
-        const filterReportStatus = `(DATA_FIELD eq 'TESTING_REPORT_STATUS' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqReportStatus = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterReportStatus})` },
-            method: "GET"
-        };
-        const outMockReportStatus = await dispatch(mockReqReportStatus);
-        const reportStatusData = outMockReportStatus?.data?.value?.length > 0 ? outMockReportStatus.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> TESTING_REPORT_STATUS
-        const orderToReportStatusMap = {};
-        reportStatusData.forEach(item => {
-            orderToReportStatusMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 8: Recupero SENT_TO_INSTALLATION per tutti gli ordini
-        const filterSentToInstallation = `(DATA_FIELD eq 'SENT_TO_INSTALLATION' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqSentToInstallation = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterSentToInstallation})` },
-            method: "GET"
-        };
-        const outMockSentToInstallation = await dispatch(mockReqSentToInstallation);
-        const sentToInstallationData = outMockSentToInstallation?.data?.value?.length > 0 ? outMockSentToInstallation.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> SENT_TO_INSTALLATION
-        const orderToSentToInstallationMap = {};
-        sentToInstallationData.forEach(item => {
-            orderToSentToInstallationMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 9: Costruisco i risultati finali
+
         const results = [];
-        
-        for (const sfcItem of sfcData) {
-            const order = sfcItem.MFG_ORDER;
-            const sfcValue = sfcItem.SFC || '';
-            const projectValue = orderToProjectMap[order] || '';
-            const coValue = orderToCoMap[order] || '';
-            const customerValue = orderToCustomerMap[order] || '';
-            const sfcStatus = sfcItem.STATUS || '';
-            const reportStatusValue = orderToReportStatusMap[order] || '';
-            const sentToInstallationValue = orderToSentToInstallationMap[order] || '';
-            
+
+        for (const row of rows) {
+            const orderVal            = row.MFG_ORDER;
+            const sfcValue           = row.SFC || '';
+            const sfcStatus          = row.SFC_STATUS || '';
+            const projectValue       = row.PROJECT || '';
+            const coValue            = row.CO || '';
+            const customerValue      = row.CUSTOMER || '';
+            const reportStatusValue  = row.REPORT_STATUS || '';
+            const sentToInstallationValue = row.SENT_TO_INSTALLATION || '';
+
             // Applico i filtri dell'utente
-            if (project && project !== '' && projectValue !== project) continue;
-            if (sfc && sfc !== '' && sfcValue !== sfc) continue;
-            if (co && co !== '' && coValue !== co) continue;
+            if (project  && project  !== '' && projectValue  !== project)  continue;
+            if (sfc      && sfc      !== '' && sfcValue      !== sfc)      continue;
+            if (co       && co       !== '' && coValue       !== co)       continue;
             if (customer && customer !== '' && customerValue !== customer) continue;
-            
-            // Filtro per sentToInstallation (se specificato)
+
+            // Filtro per sentToInstallation
             if (sentToInstallation === true) {
-                if (sentToInstallationValue === 'true' || sentToInstallationValue === true) {} else continue;
+                if (sentToInstallationValue !== 'true' && sentToInstallationValue !== true) continue;
             } else {
                 if (tab == "progressCollaudo" && (sentToInstallationValue === 'true' || sentToInstallationValue === true)) continue;
             }
-            
+
             // Filtro per showAll (TESTING_REPORT_STATUS)
             if (tab !== "progressCollaudo") {
                 if (showAll === false || showAll === 'false') {
                     if (reportStatusValue === 'DONE') continue;
                 }
             }
-            
-            // Filtro per showAllSfcStatus (se false, esclude SFC con status DONE)
+
+            // Filtro per showAllSfcStatus
             if (showAllSfcStatus === false || showAllSfcStatus === 'false') {
                 if (sfcStatus === 'DONE') continue;
             }
-            
-            // Aggiungo la riga al risultato
+
             results.push({
                 project: projectValue,
                 sfc: sfcValue,
@@ -1854,10 +1518,10 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
                 sfcStatus: sfcStatus,
                 sentToInstallation: sentToInstallationValue === 'true' || sentToInstallationValue === true,
                 reportStatus: reportStatusValue,
-                order: order
+                order: orderVal
             });
         }
-        
+
         return results;
     } catch (error) {
         console.error("Error in getFinalCollaudoData:", error);
@@ -1868,141 +1532,78 @@ async function getFinalCollaudoData(plant, project, sfc, co, customer, showAll, 
 // Funzione per popolare la tabella Safety Approval con filtri opzionali
 async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate, showAll) {
     try {
-        // Step 1: Recupero tutti i commenti di tipo 'M' dalla tabella Z_COMMENTS
+        // Step 1: Recupero tutti i commenti dalla tabella Z_COMMENTS (Postgres)
         const commentsData = await getSafetyApprovalCommentsData(plant);
-        
+
         if (!commentsData || commentsData.length === 0) {
             return [];
         }
-        
+
         // Step 2: Filtro per status se showAll è false
         let filteredComments = [...commentsData];
         if (showAll === false || showAll === 'false') {
             filteredComments = filteredComments.filter(comment => comment.status === 'Waiting');
         }
-        
+
         if (filteredComments.length === 0) {
             return [];
         }
-        
+
         // Step 3: Filtro per SFC se presente
         if (sfc && sfc !== '') {
             filteredComments = filteredComments.filter(comment => comment.sfc === sfc);
         }
-        
+
         if (filteredComments.length === 0) {
             return [];
         }
-        
-        // Step 4: Filtro per date range se presente con gestione fuso orario italiano
+
+        // Step 4: Filtro per date range (DST-aware via italianDateStrToUTC)
         if (startDate && startDate !== '') {
+            const start = new Date(startDate);
             filteredComments = filteredComments.filter(comment => {
                 if (!comment.datetime) return false;
-                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
-                const [datePart, timePart] = comment.datetime.split(' ');
-                const [day, month, year] = datePart.split('/');
-                const [hours, minutes, seconds] = timePart.split(':');
-                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
-                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
-                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
-                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
-                const start = new Date(startDate);
-                return commentDate >= start;
+                return italianDateStrToUTC(comment.datetime) >= start;
             });
         }
-        
+
         if (endDate && endDate !== '') {
+            const end = new Date(endDate);
             filteredComments = filteredComments.filter(comment => {
                 if (!comment.datetime) return false;
-                // Parsing DD/MM/YYYY HH24:MI:SS format (orario italiano)
-                const [datePart, timePart] = comment.datetime.split(' ');
-                const [day, month, year] = datePart.split('/');
-                const [hours, minutes, seconds] = timePart.split(':');
-                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
-                const commentDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
-                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
-                const commentDate = new Date(commentDateLocal.getTime() - italianOffset);
-                const end = new Date(endDate);
-                return commentDate <= end;
+                return italianDateStrToUTC(comment.datetime) <= end;
             });
         }
-        
+
         if (filteredComments.length === 0) {
             return [];
         }
-        
-        // Step 5: Recupero gli MFG_ORDER per gli SFC dei commenti filtrati
+
+        // Step 5: Singola query SQL HANA: SFC → MFG_ORDER + COMMESSA + CO_PREV
         const sfcList = [...new Set(filteredComments.map(c => c.sfc).filter(s => s))];
-        const sfcFilter = sfcList.map(s => `SFC eq '${s}'`).join(' or ');
-        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${sfcFilter}))`;
-        const mockReqSFC = {
-            path: "/mdo/SFC",
-            query: { $apply: `filter(${filterSFC})` },
-            method: "GET"
-        };
-        const outMockSFC = await dispatch(mockReqSFC);
-        const sfcData = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
-        
-        // Creo una mappa SFC -> MFG_ORDER
-        const sfcToOrderMap = {};
-        sfcData.forEach(item => {
-            sfcToOrderMap[item.SFC] = item.MFG_ORDER;
-        });
-        
-        // Step 6: Recupero COMMESSA e CO per tutti gli ordini
-        const ordersList = [...new Set(sfcData.map(item => item.MFG_ORDER).filter(order => order))];
-        
-        if (ordersList.length === 0) {
+        if (sfcList.length === 0) {
             return [];
         }
-        
-        const ordersFilter = ordersList.map(order => `MFG_ORDER eq '${order}'`).join(' or ');
-        
-        // Recupero COMMESSA
-        const filterProject = `(DATA_FIELD eq 'COMMESSA' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqProject = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterProject})` },
-            method: "GET"
-        };
-        const outMockProject = await dispatch(mockReqProject);
-        const projectsData = outMockProject?.data?.value?.length > 0 ? outMockProject.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> COMMESSA
-        const orderToProjectMap = {};
-        projectsData.forEach(item => {
-            orderToProjectMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
+
+        const sqlRows = await getFilterSafetyApprovalData(plant, sfcList);
+
+        // Mappa SFC -> { project, co }
+        const sfcMap = {};
+        (sqlRows || []).forEach(r => {
+            sfcMap[r.SFC] = { project: r.PROJECT || '', co: r.CO || '' };
         });
-        
-        // Recupero CO
-        const filterCO = `(DATA_FIELD eq 'CO_PREV' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersFilter}))`;
-        const mockReqCO = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCO})` },
-            method: "GET"
-        };
-        const outMockCO = await dispatch(mockReqCO);
-        const cosData = outMockCO?.data?.value?.length > 0 ? outMockCO.data.value : [];
-        
-        // Creo mappa MFG_ORDER -> CO
-        const orderToCoMap = {};
-        cosData.forEach(item => {
-            orderToCoMap[item.MFG_ORDER] = item.DATA_FIELD_VALUE;
-        });
-        
-        // Step 7: Costruisco i risultati finali
+
+        // Step 6: Costruisco i risultati finali
         const results = [];
-        
+
         for (const comment of filteredComments) {
-            const order = sfcToOrderMap[comment.sfc] || '';
-            const projectValue = orderToProjectMap[order] || '';
-            const coValue = orderToCoMap[order] || '';
-            
-            // Applico i filtri rimanenti
+            const entry = sfcMap[comment.sfc] || {};
+            const projectValue = entry.project || '';
+            const coValue = entry.co || '';
+
             if (project && project !== '' && projectValue !== project) continue;
             if (co && co !== '' && coValue !== co) continue;
-            
-            // Aggiungo la riga al risultato
+
             results.push({
                 project: projectValue,
                 sfc: comment.sfc || '',
@@ -2017,27 +1618,21 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
                 approval_comment: comment.approval_comment || ''
             });
         }
-        
-        // Ordino i risultati per datetime crescente
+
+        // Ordino i risultati per datetime decrescente
         results.sort((a, b) => {
             if (!a.datetime && !b.datetime) return 0;
             if (!a.datetime) return 1;
             if (!b.datetime) return -1;
-            
-            // Parsing DD/MM/YYYY HH:MM:SS format
-            const parseDateTime = (dateTimeStr) => {
-                const [datePart, timePart] = dateTimeStr.split(' ');
+            const parseDateTime = (s) => {
+                const [datePart, timePart] = s.split(' ');
                 const [day, month, year] = datePart.split('/');
                 const [hours, minutes, seconds] = timePart.split(':');
                 return new Date(year, month - 1, day, hours, minutes, seconds);
             };
-            
-            const dateA = parseDateTime(a.datetime);
-            const dateB = parseDateTime(b.datetime);
-            
-            return dateB - dateA; // Ordine decrescente (dal più recente al più vecchio)
+            return parseDateTime(b.datetime) - parseDateTime(a.datetime);
         });
-        
+
         return results;
     } catch (error) {
         console.error("Error in getSafetyApprovalData:", error);
@@ -2048,111 +1643,46 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
 // Funzione per popolare la tabella del Verbal Management con filtri opzionali
 async function getVerbalManagementTable(plant, project, co, order, customer, showAll) {
     try {
-        // Step 1: Recupero tutti i verbali di collaudo con PHASE='TESTING'
-        const filterPhase = `(DATA_FIELD eq 'PHASE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'TESTING')`;
-        const mockReqPhase = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterPhase})` },
-            method: "GET"
-        };
-        const outMockPhase = await dispatch(mockReqPhase);
-        const ordersPhase = outMockPhase?.data?.value?.length > 0 ? outMockPhase.data.value : [];
-        
-        if (ordersPhase.length === 0) {
+        // Singola query SQL HANA: ordini TESTING attivi con RELEASE_STATUS, SFC, COMMESSA, CO, CUSTOMER
+        const rows = await getVerbalManagementTableData(plant);
+
+        if (!rows || rows.length === 0) {
             return [];
         }
 
-        // Step 2: Filtrare per verbali attivi e applicare filtro showAll
-        const ordersList = ordersPhase.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
-        
-        // Costruisco il filtro per RELEASE_STATUS in base a showAll
-        let releaseStatusFilter = '';
-        if (showAll === false || showAll === 'false') {
-            releaseStatusFilter = `RELEASE_STATUS eq 'RELEASABLE'`;
-        } else {
-            releaseStatusFilter = `(RELEASE_STATUS eq 'RELEASABLE' or RELEASE_STATUS eq 'RELEASED')`;
-        }
-        
-        const filterActive = `(PLANT eq '${plant}' AND (EXECUTION_STATUS eq 'ACTIVE' or EXECUTION_STATUS eq 'NOT_IN_EXECUTION') AND ${releaseStatusFilter} AND (${ordersList}))`;
-        const mockReqActive = {
-            path: "/mdo/ORDER",
-            query: { $apply: `filter(${filterActive})` },
-            method: "GET"
-        };
-        const outMockActive = await dispatch(mockReqActive);
-        let activeOrders = outMockActive?.data?.value?.length > 0 ? outMockActive.data.value : [];
-        
-        if (activeOrders.length === 0) {
-            return [];
-        }
-
-        // Step 3: Applicare i filtri opzionali dell'utente
-        // Creo un array di ordini filtrati
-        let filteredOrders = [...activeOrders];
-        
-        // Filtro per Order specifico se presente (contains)
-        if (order && order !== '') {
-            filteredOrders = filteredOrders.filter(o => o.MFG_ORDER && o.MFG_ORDER.toUpperCase().includes(order.toUpperCase()));
-        }
-        
-        if (filteredOrders.length === 0) {
-            return [];
-        }
-
-        // Recupero tutti i custom data per gli ordini filtrati
-        const filteredOrdersList = filteredOrders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
-        
-        // Recupero i dati custom (COMMESSA, CO, CUSTOMER) per tutti gli ordini
-        const filterCustomData = `(PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (DATA_FIELD eq 'COMMESSA' or DATA_FIELD eq 'CO_PREV' or DATA_FIELD eq 'CUSTOMER') AND (${filteredOrdersList}))`;
-        const mockReqCustomData = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filterCustomData})` },
-            method: "GET"
-        };
-        const outMockCustomData = await dispatch(mockReqCustomData);
-        const customDataList = outMockCustomData?.data?.value?.length > 0 ? outMockCustomData.data.value : [];
-        
-        // Recupero gli SFC per tutti gli ordini
-        const filterSFC = `(PLANT eq '${plant}' AND STATUS ne 'DELETED' AND STATUS ne 'INVALID' AND STATUS ne 'HOLD' AND (${filteredOrdersList}))`;
-        const mockReqSFC = {
-            path: "/mdo/SFC",
-            query: { $apply: `filter(${filterSFC})` },
-            method: "GET"
-        };
-        const outMockSFC = await dispatch(mockReqSFC);
-        const sfcList = outMockSFC?.data?.value?.length > 0 ? outMockSFC.data.value : [];
-        
-        // Step 4: Costruisco i risultati finali
         const results = [];
-        
-        for (const orderData of filteredOrders) {
-            const mfgOrder = orderData.MFG_ORDER;
-            
-            // Estraggo i custom data per questo ordine
-            const orderCustomData = customDataList.filter(cd => cd.MFG_ORDER === mfgOrder);
-            const projectValue = orderCustomData.find(cd => cd.DATA_FIELD === 'COMMESSA')?.DATA_FIELD_VALUE || '';
-            const coValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CO_PREV')?.DATA_FIELD_VALUE || '';
-            const customerValue = orderCustomData.find(cd => cd.DATA_FIELD === 'CUSTOMER')?.DATA_FIELD_VALUE || '';
-            
-            // Applico i filtri opzionali (contains, case-insensitive)
-            if (project && project !== '' && !projectValue.toUpperCase().includes(project.toUpperCase())) continue;
-            if (co && co !== '' && !coValue.toUpperCase().includes(co.toUpperCase())) continue;
+
+        for (const row of rows) {
+            const mfgOrder      = row.MFG_ORDER;
+            const releaseStatus = row.RELEASE_STATUS || '';
+            const sfcValue      = row.SFC || '';
+            const projectValue  = row.PROJECT || '';
+            const coValue       = row.CO || '';
+            const customerValue = row.CUSTOMER || '';
+
+            // Filtro RELEASE_STATUS in base a showAll
+            if (showAll === false || showAll === 'false') {
+                if (releaseStatus !== 'RELEASABLE') continue;
+            } else {
+                if (releaseStatus !== 'RELEASABLE' && releaseStatus !== 'RELEASED') continue;
+            }
+
+            // Filtri opzionali (contains, case-insensitive)
+            if (order    && order    !== '' && !mfgOrder.toUpperCase().includes(order.toUpperCase()))         continue;
+            if (project  && project  !== '' && !projectValue.toUpperCase().includes(project.toUpperCase()))  continue;
+            if (co       && co       !== '' && !coValue.toUpperCase().includes(co.toUpperCase()))             continue;
             if (customer && customer !== '' && !customerValue.toUpperCase().includes(customer.toUpperCase())) continue;
-            
-            // Estraggo l'SFC per questo ordine
-            const sfcValue = sfcList.find(sfc => sfc.MFG_ORDER === mfgOrder)?.SFC || '';
-            
-            // Aggiungo la riga al risultato
+
             results.push({
                 project: projectValue,
                 sfc: sfcValue,
                 order: mfgOrder,
                 co: coValue,
                 customer: customerValue,
-                status: orderData.RELEASE_STATUS || ''
+                status: releaseStatus
             });
         }
-        
+
         return results;
     } catch (error) {
         console.error("Error in getVerbalManagementTable:", error);

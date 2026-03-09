@@ -35,7 +35,7 @@ const GET_VERBALI_TILE_SUPERVISORE_TESTING = `
                 OR (DATA_FIELD = 'ASSEMBLY_REPORT_STATUS' AND DATA_FIELD_VALUE = 'DONE')
             )
         )
-            
+
         SELECT
             ord.MFG_ORDER,
             MAX(sfc.SFC)    AS SFC,
@@ -57,12 +57,123 @@ const GET_VERBALI_TILE_SUPERVISORE_TESTING = `
         INNER JOIN SAP_MDO_SFC_V sfc
             ON sfc.MFG_ORDER = ord.MFG_ORDER
             AND sfc.PLANT = ord.PLANT
-            AND sfc.STATUS != 'INVALID'
+            AND sfc.STATUS NOT IN ('DELETED', 'INVALID', 'HOLD')
 
         GROUP BY ord.MFG_ORDER
+`;
+
+// Recupera progetti, CO, customer e ordini attivi TESTING per Verbal Management
+const GET_FILTER_VERBAL_MANAGEMENT = `
+    SELECT
+        ord.MFG_ORDER,
+        MAX(CASE WHEN cd.DATA_FIELD = 'COMMESSA' THEN cd.DATA_FIELD_VALUE END) AS PROJECT,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CO_PREV'  THEN cd.DATA_FIELD_VALUE END) AS CO,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CUSTOMER' THEN cd.DATA_FIELD_VALUE END) AS CUSTOMER
+    FROM SAP_MDO_ORDER_V ord
+    INNER JOIN SAP_MDO_ORDER_CUSTOM_DATA_V phase
+        ON phase.MFG_ORDER = ord.MFG_ORDER
+        AND phase.PLANT = ord.PLANT
+        AND phase.DATA_FIELD = 'PHASE'
+        AND phase.DATA_FIELD_VALUE = 'TESTING'
+        AND phase.IS_DELETED = 'false'
+    LEFT JOIN SAP_MDO_ORDER_CUSTOM_DATA_V cd
+        ON cd.MFG_ORDER = ord.MFG_ORDER
+        AND cd.PLANT = ord.PLANT
+        AND cd.DATA_FIELD IN ('COMMESSA', 'CO_PREV', 'CUSTOMER')
+        AND cd.IS_DELETED = 'false'
+    WHERE ord.PLANT = ?
+      AND ord.EXECUTION_STATUS IN ('ACTIVE', 'NOT_IN_EXECUTION')
+    GROUP BY ord.MFG_ORDER
+`;
+
+// Recupera MFG_ORDER, SFC, progetti, CO e customer per ordini TESTING (Final Collaudo)
+const GET_FILTER_FINAL_COLLAUDO = `
+    SELECT
+        phase.MFG_ORDER,
+        sfc.SFC,
+        MAX(CASE WHEN cd.DATA_FIELD = 'COMMESSA' THEN cd.DATA_FIELD_VALUE END) AS PROJECT,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CO_PREV'  THEN cd.DATA_FIELD_VALUE END) AS CO,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CUSTOMER' THEN cd.DATA_FIELD_VALUE END) AS CUSTOMER
+    FROM SAP_MDO_ORDER_CUSTOM_DATA_V phase
+    INNER JOIN SAP_MDO_SFC_V sfc
+        ON sfc.MFG_ORDER = phase.MFG_ORDER
+        AND sfc.PLANT = phase.PLANT
+        AND sfc.STATUS NOT IN ('DELETED', 'INVALID', 'HOLD')
+    LEFT JOIN SAP_MDO_ORDER_CUSTOM_DATA_V cd
+        ON cd.MFG_ORDER = phase.MFG_ORDER
+        AND cd.PLANT = phase.PLANT
+        AND cd.DATA_FIELD IN ('COMMESSA', 'CO_PREV', 'CUSTOMER')
+        AND cd.IS_DELETED = 'false'
+    WHERE phase.PLANT = ?
+      AND phase.DATA_FIELD = 'PHASE'
+      AND phase.DATA_FIELD_VALUE = 'TESTING'
+      AND phase.IS_DELETED = 'false'
+    GROUP BY phase.MFG_ORDER, sfc.SFC
+`;
+
+// Recupera tutti i dati per Final Collaudo (con SFC_STATUS, TESTING_REPORT_STATUS, SENT_TO_INSTALLATION)
+const GET_FINAL_COLLAUDO_DATA = `
+    SELECT
+        phase.MFG_ORDER,
+        sfc.SFC,
+        sfc.STATUS AS SFC_STATUS,
+        MAX(CASE WHEN cd.DATA_FIELD = 'COMMESSA'              THEN cd.DATA_FIELD_VALUE END) AS PROJECT,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CO_PREV'               THEN cd.DATA_FIELD_VALUE END) AS CO,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CUSTOMER'              THEN cd.DATA_FIELD_VALUE END) AS CUSTOMER,
+        MAX(CASE WHEN cd.DATA_FIELD = 'TESTING_REPORT_STATUS' THEN cd.DATA_FIELD_VALUE END) AS REPORT_STATUS,
+        MAX(CASE WHEN cd.DATA_FIELD = 'SENT_TO_INSTALLATION'  THEN cd.DATA_FIELD_VALUE END) AS SENT_TO_INSTALLATION
+    FROM SAP_MDO_ORDER_CUSTOM_DATA_V phase
+    INNER JOIN SAP_MDO_SFC_V sfc
+        ON sfc.MFG_ORDER = phase.MFG_ORDER
+        AND sfc.PLANT = phase.PLANT
+        AND sfc.STATUS NOT IN ('DELETED', 'INVALID', 'HOLD')
+    LEFT JOIN SAP_MDO_ORDER_CUSTOM_DATA_V cd
+        ON cd.MFG_ORDER = phase.MFG_ORDER
+        AND cd.PLANT = phase.PLANT
+        AND cd.DATA_FIELD IN ('COMMESSA', 'CO_PREV', 'CUSTOMER', 'TESTING_REPORT_STATUS', 'SENT_TO_INSTALLATION')
+        AND cd.IS_DELETED = 'false'
+    WHERE phase.PLANT = ?
+      AND phase.DATA_FIELD = 'PHASE'
+      AND phase.DATA_FIELD_VALUE = 'TESTING'
+      AND phase.IS_DELETED = 'false'
+    GROUP BY phase.MFG_ORDER, sfc.SFC, sfc.STATUS
+`;
+
+// Recupera tutti i dati per la tabella Verbal Management (con RELEASE_STATUS e SFC)
+const GET_VERBAL_MANAGEMENT_TABLE = `
+    SELECT
+        ord.MFG_ORDER,
+        ord.RELEASE_STATUS,
+        MAX(sfc.SFC) AS SFC,
+        MAX(CASE WHEN cd.DATA_FIELD = 'COMMESSA' THEN cd.DATA_FIELD_VALUE END) AS PROJECT,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CO_PREV'  THEN cd.DATA_FIELD_VALUE END) AS CO,
+        MAX(CASE WHEN cd.DATA_FIELD = 'CUSTOMER' THEN cd.DATA_FIELD_VALUE END) AS CUSTOMER
+    FROM SAP_MDO_ORDER_V ord
+    INNER JOIN SAP_MDO_ORDER_CUSTOM_DATA_V phase
+        ON phase.MFG_ORDER = ord.MFG_ORDER
+        AND phase.PLANT = ord.PLANT
+        AND phase.DATA_FIELD = 'PHASE'
+        AND phase.DATA_FIELD_VALUE = 'TESTING'
+        AND phase.IS_DELETED = 'false'
+    LEFT JOIN SAP_MDO_ORDER_CUSTOM_DATA_V cd
+        ON cd.MFG_ORDER = ord.MFG_ORDER
+        AND cd.PLANT = ord.PLANT
+        AND cd.DATA_FIELD IN ('COMMESSA', 'CO_PREV', 'CUSTOMER')
+        AND cd.IS_DELETED = 'false'
+    LEFT JOIN SAP_MDO_SFC_V sfc
+        ON sfc.MFG_ORDER = ord.MFG_ORDER
+        AND sfc.PLANT = ord.PLANT
+        AND sfc.STATUS NOT IN ('DELETED', 'INVALID', 'HOLD')
+    WHERE ord.PLANT = ?
+      AND ord.EXECUTION_STATUS IN ('ACTIVE', 'NOT_IN_EXECUTION')
+    GROUP BY ord.MFG_ORDER, ord.RELEASE_STATUS
 `;
 
 module.exports = {
     GET_PROJECTS_VERBALI_TESTING,
     GET_VERBALI_TILE_SUPERVISORE_TESTING,
+    GET_FILTER_VERBAL_MANAGEMENT,
+    GET_FILTER_FINAL_COLLAUDO,
+    GET_FINAL_COLLAUDO_DATA,
+    GET_VERBAL_MANAGEMENT_TABLE,
 };
