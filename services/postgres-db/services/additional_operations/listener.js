@@ -39,5 +39,15 @@ module.exports.listenerSetup = (app) => {
             res.status(500).json({ error: "Error while executing query" });
         }
     });
+    
+    app.post("/db/getMarkingDataForAddOpt", async (req, res) => {
+        const { plant, markOperation, wbe, order } = req.body;
+        try {
+            var execute = await postgresdbService.getMarkingDataForAddOpt(plant, wbe, order, markOperation);
+            res.status(200).json(execute);
+        } catch (error) {
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    });
 
 };
