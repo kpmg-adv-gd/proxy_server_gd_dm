@@ -1,4 +1,5 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
+const { italianDateStrToUTC } = require("../../../utility/CommonFunction");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue, insertZFinalCollaudoTestingSnapshot } = require("../../postgres-db/services/verbali/library");
 const { getDefectsToVerbale, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
@@ -14,6 +15,7 @@ const { PDFDocument: PDFLib, StandardFonts, rgb } = require("pdf-lib");
 const fetch = require("node-fetch");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
+const { getVerbaliTileSupervisoreTestingData } = require('../../mdo/queriesSQL/custom_data/library');
 
 // Funzione per ottenere i verbali del supervisore assembly
 async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
@@ -118,114 +120,47 @@ async function getWBEVerbaliSupervisoreAssembly(plant) {
     }
 }
 
+
 async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, endDate) {
     var results = [];
     try {
-        const filter = `(DATA_FIELD eq 'ORDER_TYPE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND DATA_FIELD_VALUE eq 'MACH')`;
-        const mockReq = {
-            path: "/mdo/ORDER_CUSTOM_DATA",
-            query: { $apply: `filter(${filter})` },
-            method: "GET"
-        };
-        var outMock = await dispatch(mockReq);
-        var orders = outMock?.data?.value.length>0 ? outMock.data.value : [];
-        // rientro nella MDO con la lista degli ordini trovati (creo lista di OR)
-        var ordersList = orders.map(item => `MFG_ORDER eq '${item.MFG_ORDER}'`).join(' or ');
-        if (project != "") {
-            const filter2 = `(DATA_FIELD eq 'COMMESSA' and DATA_FIELD_VALUE eq '${project}' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND (${ordersList}))`;
-            const mockReq2 = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${filter2})` },
-                method: "GET"
+        // Singola query SQL HANA: recupera tutti gli ordini MACH con verbale DONE per il plant
+        const rows = await getVerbaliTileSupervisoreTestingData(plant);
+
+        for (const row of rows) {
+            const data = {
+                order:              row.MFG_ORDER,
+                sfc:                row.SFC                   ?? '',
+                status:             row.STATUS                ?? '',
+                project:            row.PROJECT              ?? '',
+                wbs:                row.WBS                  ?? '',
+                material:           row.MATERIAL             ?? '',
+                assemblyReportDate: row.ASSEMBLY_REPORT_DATE ?? '',
+                user:               row.ASSEMBLY_REPORT_USER ?? '',
+                idReportWeight:     row.ID_REPORT_WEIGHT     ?? '',
+                reportStatus:       'DONE',
             };
-            var outMock2 = await dispatch(mockReq2);
-            var orders = outMock2?.data?.value.length>0 ? outMock2.data.value : [];
-        }
-        // Ciclo gli ordini trovati
-        for (var i = 0; i < orders.length; i++) {
-            var mfg_order = orders[i].MFG_ORDER;
-            var data = { order: mfg_order };
-            var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
-            var orderResponse = await callGet(url);
-            data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
-            data.material  = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
-            data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
-            data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
-            data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
-            if (data.reportStatus !== "DONE") continue;
-            data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
-            if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
-            
-            // Recupero data ASSEMBLY_REPORT_DATE
-            var dateFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_DATE' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqDate = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${dateFilter})` },
-                method: "GET"
-            };
-            var outMockDate = await dispatch(mockReqDate);
-            var dateData = outMockDate?.data?.value.length>0 ? outMockDate.data.value : [];
-            data.assemblyReportDate = dateData.length > 0 ? dateData[0].DATA_FIELD_VALUE : "";
-            
-            // Recupero user ASSEMBLY_REPORT_USER
-            var userFilter = `(DATA_FIELD eq 'ASSEMBLY_REPORT_USER' and PLANT eq '${plant}' AND IS_DELETED eq 'false' AND MFG_ORDER eq '${mfg_order}')`;
-            var mockReqUser = {
-                path: "/mdo/ORDER_CUSTOM_DATA",
-                query: { $apply: `filter(${userFilter})` },
-                method: "GET"
-            };
-            var outMockUser = await dispatch(mockReqUser);
-            var userData = outMockUser?.data?.value.length>0 ? outMockUser.data.value : [];
-            data.user = userData.length > 0 ? userData[0].DATA_FIELD_VALUE : "";
-            
-            // Recupero status con api sfcdetail
-            try {
-                var urlStatus = hostname + "/sfc/v1/sfcdetail?plant="+plant+"&sfc="+data.sfc;
-                let responseGetSfc = await callGet(urlStatus);
-                data.status = responseGetSfc.status.description;
-            } catch (error) {
-                continue;
-            }
+
+            if (!data.wbs || !data.material || !data.project) continue;
+
             // Filtri su progetto e wbs
-            if (project != "" && data.project != project) continue;
-            if (wbs != "" && data.wbs != wbs) continue;
-            
-            // Filtro su date - conversione formati con gestione fuso orario italiano
-            if (startDate != "" ) {
-                if(!data.assemblyReportDate) continue;
-                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
-                const [datePart, timePart] = data.assemblyReportDate.split(' ');
-                const [day, month, year] = datePart.split('/');
-                const [hours, minutes, seconds] = timePart.split(':');
-                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
-                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
-                // Calcolo offset italiano in millisecondi (differenza tra locale e UTC)
-                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
-                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
-                const startDateObj = new Date(startDate);
-                if (assemblyDate < startDateObj) continue;
+            if (project !== '' && data.project !== project) continue;
+            if (wbs !== ''    && data.wbs     !== wbs)     continue;
+
+            // Filtro su date: stored = "DD/MM/YYYY HH:MM:SS" (Europe/Rome), input = ISO UTC
+            if (startDate !== '' || endDate !== '') {
+                if (!data.assemblyReportDate) continue;
+                const assemblyDateUTC = italianDateStrToUTC(data.assemblyReportDate);
+                if (startDate !== '' && assemblyDateUTC < new Date(startDate)) continue;
+                if (endDate   !== '' && assemblyDateUTC > new Date(endDate))   continue;
             }
-            if (endDate != "") {
-                if(!data.assemblyReportDate) continue;
-                // Parsing assemblyReportDate da formato italiano "DD/MM/YYYY HH:MM:SS" (orario italiano)
-                const [datePart, timePart] = data.assemblyReportDate.split(' ');
-                const [day, month, year] = datePart.split('/');
-                const [hours, minutes, seconds] = timePart.split(':');
-                // Creo la data in UTC sottraendo 1 ora (UTC+1 in inverno) o 2 ore (UTC+2 in estate)
-                const assemblyDateLocal = new Date(year, month - 1, day, hours, minutes, seconds);
-                const italianOffset = 60 * 60 * 1000; // 1 ora in millisecondi per orario invernale
-                const assemblyDate = new Date(assemblyDateLocal.getTime() - italianOffset);
-                const endDateObj = new Date(endDate);
-                if (assemblyDate > endDateObj) continue;
-            }
-            
-            // Aggiungo elemento
+
             results.push(data);
         }
-        // Una volta estratti i dati, genero la TreeTable
+
         return generateTreeTable(results);
     } catch (error) {
-        return false
+        return false;
     }
 }
 

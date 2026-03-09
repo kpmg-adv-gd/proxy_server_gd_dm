@@ -14,5 +14,6 @@ applications:
         WHITELIST: '["https://sap-dmc-prod-gm0mzuut.execution.eu20-prod.web.dmc.cloud.sap"]',
         DB_CONNECTIONS: '[{"name":"MDO","type":"SAPHANACLOUD","connectionOption":{"serverNode":"d5cbafbf-f74b-4666-9a37-87d967a72347.hna1.prod-eu20.hanacloud.ondemand.com:443","UID":"D94A237F1D474E67ACCE0D970DB5D4F6_2NQCK2NVT7JBFHJZXVNT7ZSQQ_RT","PWD":"Lw4Qh64ch0lmJmq5jHihtnWzL5DfizeqxEO7v1A-EvakWws8GVH2SH7l38BcNHUmVviynjEsHylJ4DOnKOXcO2jO6a_4TqftYqlEoeQ5riFxPHI4E3NZrHCvkotKX5hI","sslValidateCertificate":"false"}}]',
         POSTGRES_DB_CONNECTION: '{"DB_NAME":"EGRvxIWjzFVD","DB_HOST":"postgres-9805f001-d537-41ba-8eb2-7e0bda0c91ad.postgres.database.azure.com","DB_PORT":"5432","DB_USER":"33e12f112b2a","DB_PASSWORD":"4aeb517ef2c88015ea2a8fba"}',
-        CPI_CRED: '{"USERNAME":"CPI_TEC_USER", "PASSWORD":"PROD1234!"}'
+        CPI_CRED: '{"USERNAME":"CPI_TEC_USER", "PASSWORD":"PROD1234!"}',
+        HANA_DB_CONNECTION_MDO: '{"DB_HOST":"d5cbafbf-f74b-4666-9a37-87d967a72347.hna1.prod-eu20.hanacloud.ondemand.com", "DB_PORT":"443", "DB_USER":"D94A237F1D474E67ACCE0D970DB5D4F6_2NQCK2NVT7JBFHJZXVNT7ZSQQ_RT", "DB_PASSWORD":"Lw4Qh64ch0lmJmq5jHihtnWzL5DfizeqxEO7v1A-EvakWws8GVH2SH7l38BcNHUmVviynjEsHylJ4DOnKOXcO2jO6a_4TqftYqlEoeQ5riFxPHI4E3NZrHCvkotKX5hI", "DB_SCHEMA":"USR_EEJ0MKAI9Y95GHMT77NHG3KKY", "QUERY_TIMEOUT_MS": "30000"}'
       }

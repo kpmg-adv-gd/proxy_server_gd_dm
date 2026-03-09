@@ -55,6 +55,7 @@ const bomDbService = require("./services/postgres-db/services/bom/listener");
 const additionalOperationsService = require("./services/postgres-db/services/additional_operations/listener");
 const markgingTestingService = require("./services/postgres-db/services/marking_testing/listener");
 const apiServiceReportWeight = require("./services/postgres-db/services/report_weights/listener");
+const mdoCustomDataService = require("./services/mdo/queriesSQL/custom_data/listener");
 
 
 const app = express();
@@ -129,6 +130,7 @@ bomDbService.listenerSetup(app);
 additionalOperationsService.listenerSetup(app);
 markgingTestingService.listenerSetup(app);
 apiServiceReportWeight.listenerSetup(app);
+mdoCustomDataService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {

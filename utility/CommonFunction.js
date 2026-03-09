@@ -52,4 +52,21 @@ async function updateCustomField(plant, order, customFieldsUpdate) {
     }
 }
 
-module.exports = { getBomInfoByOrder, getOrderInfoByOrder, getBomInfoByBom, getMaterial, updateCustomField }
+// Converte una stringa "DD/MM/YYYY HH:MM:SS" (ora locale Europe/Rome) in un oggetto Date UTC
+// Gestisce correttamente sia l'ora solare (CET, UTC+1) che quella legale (CEST, UTC+2)
+function italianDateStrToUTC(str) {
+    const [datePart, timePart] = str.split(' ');
+    const [dd, mm, yyyy] = datePart.split('/');
+    const [hh, mi, ss]   = timePart.split(':');
+    // Costruiamo un Date UTC trattando i valori memorizzati come se fossero UTC (approssimazione)
+    const approx = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss));
+    // Ricaviamo che ora mostra l'Italia per quel candidato UTC, così otteniamo l'offset reale
+    const italianHour = +(new Intl.DateTimeFormat('en', {
+        timeZone: 'Europe/Rome', hour: 'numeric', hour12: false
+    }).format(approx));
+    // offset Italy-UTC in ore (1 in inverno, 2 in estate)
+    const italyUTCOffsetH = italianHour - +hh;
+    return new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh - italyUTCOffsetH, +mi, +ss));
+}
+
+module.exports = { getBomInfoByOrder, getOrderInfoByOrder, getBomInfoByBom, getMaterial, updateCustomField, italianDateStrToUTC }
