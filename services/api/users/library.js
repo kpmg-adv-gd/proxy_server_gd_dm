@@ -16,6 +16,18 @@ async function getPersonnelNumber(plant, userId) {
     }
 }
 
+async function checkUserCertification(plant, userId, certification) {
+    try {
+        var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+        const response = await callGet(url);
+        const certifications = response.userCertifications || [];
+        return certifications.some(cert => cert.certification === certification);
+    } catch (error) {
+        let errorMessage = error.message || "Error service checkUserCertification";
+        throw { status: 500, message: errorMessage }
+    }   
+}
+
 async function getUserGroup(plant, userId) {
     try {
         var url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
@@ -47,4 +59,4 @@ async function getUserPhase(plant, userId) {
     }
 }
 
-module.exports = { getPersonnelNumber, getUserGroup, getUserPhase };
+module.exports = { getPersonnelNumber, getUserGroup, getUserPhase, checkUserCertification };
