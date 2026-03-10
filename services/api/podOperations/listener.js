@@ -72,9 +72,10 @@ module.exports.listenerSetup = (app) => {
                 secondoLivello.forEach(element => {
                     if (!idsAnalizzati.includes(element.id_lev_2)) {
                         if (element.status == 'Done') {
-                            totalTimeDone += element.time_lev_2;
+                            // Sommo se è un numero, altrimenti come fosse "0"
+                            totalTimeDone += isNaN(element.time_lev_2) || element.time_lev_2 == null ? 0 : element.time_lev_2;
                         }
-                        totalTime += element.time_lev_2;
+                        totalTime += isNaN(element.time_lev_2) || element.time_lev_2 == null ? 0 : element.time_lev_2;
                         idsAnalizzati.push(element.id_lev_2);
                     }
                 });

@@ -1,4 +1,4 @@
-const { getPersonnelNumber, getUserGroup ,getUserPhase} = require("./library");
+const { getPersonnelNumber, getUserGroup ,getUserPhase, checkUserCertification} = require("./library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -11,6 +11,22 @@ module.exports.listenerSetup = (app) => {
             
             const apiResponsePersonnelNumber = await getPersonnelNumber(plant, userId);
             res.status(200).json(apiResponsePersonnelNumber); 
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/checkUserCertification", async (req, res) => {
+        try {
+            const { plant, userId, certification } = req.body;
+            if (!plant || !userId || !certification) {
+                return res.status(400).json({ error: "Missing required query parameter: plant or userId or certification" });
+            }
+            const apiResponseCheckUserCertification = await checkUserCertification(plant, userId, certification);
+            res.status(200).json(apiResponseCheckUserCertification); 
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
