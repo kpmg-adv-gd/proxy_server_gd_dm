@@ -3,7 +3,7 @@ const FormData = require('form-data');
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
-async function filteredWorkInstructionsTI(plant, response, responseSFC, idLev1, idLev2, idLev3) {
+async function filteredWorkInstructionsTI(plant, workcenter, response, responseSFC, idLev1, idLev2, idLev3) {
 
     var consolidatedData = [];
     try{
@@ -13,11 +13,28 @@ async function filteredWorkInstructionsTI(plant, response, responseSFC, idLev1, 
             var dataWI = await callGet(url);
             if (dataWI && dataWI.length > 0 && dataWI[0].customValues.some(cv => cv.attribute == "ACTIVITY_ID" && cv.value.split(";").includes(idLev2))) {
                 if (dataWI[0].customValues.some(cv => cv.attribute == "TASK_ID" && cv.value.split(";").includes(idLev3))) {
-                    consolidatedData.push(response[i]);
+                    // Check workcenter
+                    var attachedPoints = dataWI[0].attachedPoints;
+                    if (attachedPoints.filter(item => item.workCenter == null).length == attachedPoints.length || attachedPoints.some(item => item.workCenter == workcenter)) {
+                        consolidatedData.push(response[i]);
+                    }
                 }
             }
         }
-        return [...consolidatedData, ...responseSFC];
+        // Filtro anche responseSFC per workcenter
+        var responseSFCFiltered = [];
+        for (var j = 0; j < responseSFC.length; j++) {
+            var urlSFC = hostname + "/workinstruction/v1/workinstructions?plant=" + plant + "&workinstruction=" + responseSFC[j].workInstruction;
+            var dataWISFC = await callGet(urlSFC);
+            if (dataWISFC && dataWISFC.length > 0) {
+                // Check workcenter
+                var attachedPointsSFC = dataWISFC[0].attachedPoints;
+                if (attachedPointsSFC.filter(item => item.workCenter == null).length == attachedPointsSFC.length || attachedPointsSFC.some(item => item.workCenter == workcenter)) {
+                    responseSFCFiltered.push(responseSFC[j]);
+                }
+            }
+        }
+        return [...consolidatedData, ...responseSFCFiltered];
     } catch(e){
         console.error("Errore in getFilterPOD: "+ e);
         throw new Error("Errore in getFilterPOD:"+e);
