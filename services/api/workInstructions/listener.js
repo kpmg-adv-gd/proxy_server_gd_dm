@@ -25,7 +25,7 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/workinstruction/v1/attachedworkinstructionsTI", async (req, res) => {
         try {
-            const { plant, sfc, operation, idLev1, idLev2, idLev3, operationSelected } = req.body;
+            const { plant, sfc, workcenter, operation, idLev1, idLev2, idLev3, operationSelected } = req.body;
             // Verifica che i parametri richiesti siano presenti
             if (!plant || !sfc) {
                 return res.status(400).json({ error: "Missing required parameters: plant-sfc" });
@@ -43,7 +43,7 @@ module.exports.listenerSetup = (app) => {
             // filtro per le WI con operationActivity "MULTIPLE"
             responseSFC = responseSFC.filter(wi => wi.operationActivity === "MULTIPLE");
 
-            var dataFiltered = await filteredWorkInstructionsTI(plant, response, responseSFC, idLev1, idLev2, idLev3);
+            var dataFiltered = await filteredWorkInstructionsTI(plant, workcenter, response, responseSFC, idLev1, idLev2, idLev3);
             res.status(200).json({result: dataFiltered});
         } catch (error) {
             let status = error.status || 500;
