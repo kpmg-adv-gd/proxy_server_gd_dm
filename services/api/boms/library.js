@@ -1,5 +1,5 @@
 const { callGet } = require("../../../utility/CommonCallApi");
-const { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery } = require("../../postgres-db/services/bom/library");
+const { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getMissingPartsDate } = require("../../postgres-db/services/bom/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -88,6 +88,11 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const mapped = comps.map(comp => {
                 const { descr, missingParts, fluxType } = extractComponentFields(comp);
 
+                // Ricavo la data
+                if (missingParts) {
+
+                }
+
                 return {
                     Material: comp.material.material,
                     MaterialDescription: descr,
@@ -145,6 +150,20 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     comp.material.material
                 );
 
+                if (missingParts) {
+                    var MissingPartsDate = await getMissingPartsDate(plant, order, bomInfo.material, comp.material.material);
+                }else{
+                    var MissingPartsDate = "";
+                }
+
+                for (var i = 0; i < children.length; i++){
+                    if (children[i].MissingParts === "X") {
+                        children[i].MissingPartsDate = await getMissingPartsDate(plant, order, comp.material.material, children[i].Material);
+                    }else{
+                        children[i].MissingPartsDate = "";
+                    }
+                }
+
                 return {
                     Material: comp.material.material,
                     MaterialDescription: descr,
@@ -152,6 +171,7 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     Sequence: comp.sequence,
                     MissingParts: missingParts,
                     FluxType: fluxType,
+                    MissingPartsDate: MissingPartsDate,
                     Children: children
                 };
             })

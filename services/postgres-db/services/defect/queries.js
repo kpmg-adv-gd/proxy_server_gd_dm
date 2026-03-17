@@ -156,4 +156,20 @@ const setNonconformanceField = `update z_verbale_lev_3 set nonconformances = fal
 
 const getDatiDifetto = `SELECT id_lev_1, id_lev_2, id_lev_3, sfc FROM z_defect_testing WHERE defect_id = $1 and plant = $2`;
 
-module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, getDefectsToVerbale, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting, getDefectsTestingQuery, updateDefectsOwnerAndDueDateQuery, getDefectsTIOpen, checkNonconformanceField, setNonconformanceField, getDatiDifetto, selectZDefectByWBE };
+const getInfoDefectToPDFQuery = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
+                    z_notification_type.description as notification_type_description, 
+                    zvl2.id_lev_1, zvl2.lev_2, zvl3.lev_3,  
+                    z_variance_type.description as variance_description,
+                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
+                    FROM z_defects
+                    left join z_coding on z_defects.coding_id = z_coding.id
+                    left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
+                    left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
+                    left join z_responsible on z_defects.responsible = z_responsible.id
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_defect_testing zdt on zdt.defect_id = z_defects.id
+                    left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
+                    left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
+                    WHERE z_defects.id = $1`;
+
+module.exports = { insertZDefect, updateZDefect, insertZDefectNoQN, selectZDefect, selectDefectToApprove, cancelDefectQN, getDefectsToVerbale, sendApproveDefectQN, closeDefect, checkAllDefectClose, receiveStatusDefectQN, assignQNCode, receiveStatusByQNCode, receiveQNCode, updateStatusCloseDefect, getDefectsWBE, getDefectsTI, getDefectsFromAdditionalOperationsTI, getPhaseDefects, getStatusDefects, insertZDefectTesting, updateDefectsToTesting, getDefectsTestingQuery, updateDefectsOwnerAndDueDateQuery, getDefectsTIOpen, checkNonconformanceField, setNonconformanceField, getDatiDifetto, selectZDefectByWBE, getInfoDefectToPDFQuery };

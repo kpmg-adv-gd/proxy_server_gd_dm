@@ -1,4 +1,5 @@
 const { callPost } = require("../../../utility/CommonCallApi");
+const { logStartOperation } = require("../../postgres-db/services/logs_start_complete/library");
 // Carica le credenziali da variabili d'ambiente
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -7,7 +8,7 @@ module.exports.listenerSetup = (app) => {
 
     app.post("/api/sfc/v1/sfcs/start", async (req, res) => {
         try {
-            const { plant, operation, resource, sfc  } = req.body;
+            const { plant, operation, resource, sfc, userId, order, routing, routingVersion, material, parentMaterial, stepId, workCenter, project, wbe, machineSection } = req.body;
             // Verifica che i parametri richiesti siano presenti
             if (!plant || !operation || !resource || !sfc) {
                 return res.status(400).json({ error: "Missing required parameters: plant-operation-resource-sfc" });
@@ -21,6 +22,9 @@ module.exports.listenerSetup = (app) => {
                 "sfcs": [sfc]
             };
             var response = await callPost(url,params);
+
+            await logStartOperation(plant, sfc, operation, userId, order, routing, routingVersion, material, parentMaterial, stepId, workCenter, project, wbe, machineSection);
+
             res.status(200).json(response);
         } catch (error) {
             let status = error.status || 500;

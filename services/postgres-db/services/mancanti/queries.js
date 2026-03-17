@@ -135,4 +135,67 @@ const getTotalQuantityFromOrders = `select count(*) as counter
 
 const updateMancantiOwnerAndDueDateQuery = `UPDATE z_report_mancanti SET owner = $1, due_date = $2 WHERE plant = $3 AND "order" = $4 AND project = $5 AND material = $6 AND missing_component = $7 AND active = true`;
 
-module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDateQuery };
+const getMissingPartsDateQuery = `WITH MANCANTI_REPORT as ( SELECT 
+                                    plant,
+                                    project,
+                                    wbs_element,
+                                    "order",
+                                    material,
+                                    missing_component,
+                                    component_description,
+                                    cast(missing_quantity as integer),
+                                    CASE 
+	                                    WHEN cover_element IN (
+											'RECEIVING STOCK', 'PRJ STOCK', 'STOCK', 'STO'
+                                        ) THEN (
+                                            CASE 
+                                                WHEN storage_location IN ('PLT5') THEN 'IN ATTESA DI PRELIEVO'
+                                                ELSE 'CARICATO MA NON PRELEVABILE'
+                                            END
+                                        )
+                                        WHEN cover_element IN (
+											'INSPECTED STOCK', 'PRJ STOCK INSP'
+                                        ) THEN (
+                                            CASE 
+                                                WHEN storage_location IN ('RCP2','RCP5') THEN 'RICEVUTO IN ATTESA DI CARICO'
+                                                WHEN storage_location IN ('RCP1') or  storage_location like 'QI%' THEN 'COLLAUDO PEZZI'
+                                                ELSE ''
+                                            END
+                                        )
+                                        WHEN cover_element IN ('PURCHASE REQUISITION', 'PURCHASE ORDER', 'PURCHASE ORDER SUBCO', 'PLANNED ORDER', 'PROD') THEN 'PRODUTTIVO'
+                                        ELSE ''
+                                    END AS type_mancante,
+                                    cover_element as type_cover_element,
+                                    case when cover_element IN ( --Ordine di Acuisto
+                                            'PURCHASE REQUISITION', 'PURCHASE ORDER','PURCHASE ORDER SUBCO'
+                                        ) then (case when receipt_expected_date is not null then TO_CHAR(receipt_expected_date, 'DD/MM/YYYY')
+                                                when first_conf_date is not null then TO_CHAR(first_conf_date, 'DD/MM/YYYY')
+                                                when mrp_date is not null then TO_CHAR(mrp_date, 'DD/MM/YYYY')
+                                                else NULL
+                                                end)
+                                        when cover_element IN ( --Ordine Produttivo
+                                            'PROD', 'PLANNED ORDER'
+                                        ) then (case when date_from_workshop is not null then TO_CHAR(date_from_workshop, 'DD/MM/YYYY')
+                                                when mrp_date is not null then TO_CHAR(mrp_date, 'DD/MM/YYYY')
+                                                else NULL
+                                                end)
+                                    end as delivery_date,
+                                    cover_element,
+                                    storage_location,
+                                    component_order,
+                                    receipt_expected_date,
+                                    first_conf_date,
+                                    mrp_date,
+                                    date_from_workshop,
+                                    active,
+                                    owner,
+                                    due_date
+                                FROM z_report_mancanti
+                                WHERE active = true
+                                ) 
+                                select mr.* ,zol.parent_material,TO_DATE(mr.delivery_date, 'DD/MM/YYYY') AS delivery_date_sort
+                                from MANCANTI_REPORT mr
+                                left join z_orders_link zol ON zol.child_order = mr."order" and zol.plant =  $1
+                                WHERE mr.plant = $1 and mr."order" = $2 and mr.material = $3 and mr.missing_component = $4 `;
+
+module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDateQuery, getMissingPartsDateQuery };

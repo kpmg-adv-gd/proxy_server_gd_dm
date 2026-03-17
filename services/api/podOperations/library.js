@@ -45,7 +45,7 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
         })
 
         //Nel caso degli ordini macchina ordino per Macrofase le operazioni ed escludo quelle con macrofase 6
-        if(orderType=="MACH"){
+        if (orderType=="MACH") {
             enrichedResponseData.sort((objA, objB) => {
                 let customValuesA = objA?.routingOperation?.customValues;
                 let customValuesB = objB?.routingOperation?.customValues;
@@ -61,6 +61,17 @@ function getPodOperations(responseRouting, responseSfcDetails, responseWorkCente
                 let macrofaseField = customValues.find(obj => obj.attribute == "MF");
                 let macrofase = macrofaseField?.value;
                 return macrofase !== "MF6";
+            });
+
+        } else if (orderType=="AGGR"){
+            enrichedResponseData.sort((objA, objB) => {
+                let customValuesA = objA?.routingOperation?.customValues;
+                let customValuesB = objB?.routingOperation?.customValues;
+                let orderFieldA = customValuesA.find(obj => obj.attribute == "ORDER");
+                let orderFieldB = customValuesB.find(obj => obj.attribute == "ORDER");
+                let orderValueA = orderFieldA?.value || "";
+                let orderValueB = orderFieldB?.value || "";
+                return orderValueA.localeCompare(orderValueB);
             });
 
         }

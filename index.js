@@ -56,6 +56,7 @@ const additionalOperationsService = require("./services/postgres-db/services/add
 const markgingTestingService = require("./services/postgres-db/services/marking_testing/listener");
 const apiServiceReportWeight = require("./services/postgres-db/services/report_weights/listener");
 const macrophaseDbService = require("./services/postgres-db/services/macrophase/listener");
+const logStartCompleteDbService = require("./services/postgres-db/services/logs_start_complete/listener");
 
 const app = express();
 
@@ -130,6 +131,7 @@ additionalOperationsService.listenerSetup(app);
 markgingTestingService.listenerSetup(app);
 apiServiceReportWeight.listenerSetup(app);
 macrophaseDbService.listenerSetup(app);
+logStartCompleteDbService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {

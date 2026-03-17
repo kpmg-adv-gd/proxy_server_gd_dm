@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { dispatch } = require("../../mdo/library");
 const { callGet, callPost, callGetFile } = require("../../../utility/CommonCallApi");
-const { updateCustomDefectOrder, getDefectsTestingData } = require("./library");
+const { updateCustomDefectOrder, getDefectsTestingData, getInfoDefectPDF } = require("./library");
 const { closeDefect, checkAllDefectClose, setNonconformanceField } = require("../../postgres-db/services/defect/library");
 
 // Carica le credenziali da variabili d'ambiente
@@ -294,6 +294,18 @@ module.exports.listenerSetup = (app) => {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";
             console.error("Error in getDefectsTesting:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/downloadInfoDefect", async (req, res) => {
+        try {
+            const { info, sfc, wbe, workCenter } = req.body;
+            var base64 = await getInfoDefectPDF(info);
+            res.status(200).json({ base64: base64 });
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
             res.status(status).json({ error: errMessage });
         }
     });
