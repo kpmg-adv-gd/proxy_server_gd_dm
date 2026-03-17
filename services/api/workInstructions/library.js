@@ -34,7 +34,15 @@ async function filteredWorkInstructionsTI(plant, workcenter, response, responseS
                 }
             }
         }
-        return [...consolidatedData, ...responseSFCFiltered];
+        var response = [...consolidatedData, ...responseSFCFiltered];
+        // filtro response per eliminare duplicati
+        var uniqueResponse = [];
+        for (var k = 0; k < response.length; k++) {
+            if (!uniqueResponse.some(item => item.workInstruction === response[k].workInstruction)) {
+                uniqueResponse.push(response[k]);
+            }
+        }
+        return uniqueResponse;
     } catch(e){
         console.error("Errore in getFilterPOD: "+ e);
         throw new Error("Errore in getFilterPOD:"+e);
