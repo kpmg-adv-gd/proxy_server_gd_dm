@@ -57,6 +57,7 @@ const markgingTestingService = require("./services/postgres-db/services/marking_
 const apiServiceReportWeight = require("./services/postgres-db/services/report_weights/listener");
 const macrophaseDbService = require("./services/postgres-db/services/macrophase/listener");
 const logStartCompleteDbService = require("./services/postgres-db/services/logs_start_complete/listener");
+const iFlowManageUserStatusUnloadPointService = require("./services/iFlow/MANAGE_USER_STATUS_UNLOAD_POINT/listener");
 
 const app = express();
 
@@ -132,6 +133,7 @@ markgingTestingService.listenerSetup(app);
 apiServiceReportWeight.listenerSetup(app);
 macrophaseDbService.listenerSetup(app);
 logStartCompleteDbService.listenerSetup(app);
+iFlowManageUserStatusUnloadPointService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {

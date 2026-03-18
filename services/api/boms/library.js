@@ -85,23 +85,26 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const bomInfo = await getBom(row.child_order, plant);
             const comps = await getBomComponents(plant, bomInfo.bom, bomInfo.bomType);
 
-            const mapped = comps.map(comp => {
+            const mapped = await Promise.all(comps.map(async comp => {
                 const { descr, missingParts, fluxType } = extractComponentFields(comp);
 
-                // Ricavo la data
-                if (missingParts) {
-
+                if (missingParts === "X") {
+                    var MissingPartsDate = await getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
+                }else{
+                    var MissingPartsDate = "";
                 }
-
+                
                 return {
                     Material: comp.material.material,
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
                     MissingParts: missingParts,
-                    FluxType: fluxType
+                    FluxType: fluxType,
+                    MissingPartsDate: MissingPartsDate,
+                    ChildOrder: row.child_order
                 };
-            });
+            }));
 
             // se ha nipoti
             if (bomInfo.parentAssembly === "true" || bomInfo.parentAssembly === "X") {
@@ -158,7 +161,7 @@ async function getBomMultilivelloTreeTableData(order, plant) {
 
                 for (var i = 0; i < children.length; i++){
                     if (children[i].MissingParts === "X") {
-                        children[i].MissingPartsDate = await getMissingPartsDate(plant, order, comp.material.material, children[i].Material);
+                        children[i].MissingPartsDate = await getMissingPartsDate(plant, children[i].ChildOrder, comp.material.material, children[i].Material);
                     }else{
                         children[i].MissingPartsDate = "";
                     }
