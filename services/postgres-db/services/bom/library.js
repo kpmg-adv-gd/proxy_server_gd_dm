@@ -25,6 +25,12 @@ async function getZOrderLinkChildOrdersMultipleMaterial(plant, order, material, 
 async function getMaterialsTI(plant, project) {
     const dataMaterialFake = await postgresdbService.executeQuery(queryBom.getMaterialsTIFakeQuery, [plant]);
     const data = await postgresdbService.executeQuery(queryBom.getMaterialsTIQuery, [plant, project]);
+    dataMaterialFake.forEach(fake => {
+        fake.isFake = true;
+    });
+    data.forEach(real => {
+        real.isFake = false;
+    });
     return [...dataMaterialFake, ...data];
 }
 
