@@ -79,7 +79,7 @@ async function mangeConfirmationMarking(plant,personalNumber,wbe_machine,operati
         await updateZMarkingRecap(confirmation_number,cancelled_confirmation,marked_labor, variance_labor);
     } else {
         // Testing
-        await sendZDMConfirmationsTesting(plant, sfc, mes_order, operation, personalNumber, data[0].network, data[0].activity_id, cancellation, "", "", confirmation_number, marking_date, (marked_labor + variance_labor).toString(), uom_marked_labor, reason_for_variance, "", "X", { wbe: wbe_machine, wbs_description: operation, wbs: mes_order }, user_id);
+        await sendZDMConfirmationsTesting(plant, sfc, mes_order, operation, personalNumber, data[0].network, data[0].activity_id, cancellation, "", "", confirmation_number, marking_date, (marked_labor + variance_labor).toString(), uom_marked_labor, reason_for_variance, "", "X", { wbe: wbe_machine, wbs_description: operation, wbs: mes_order }, user_id, modification, defectId);
     }
     if(cancellation=="X"){
         await updateCancelFlagOpConfirmation(confirmation_number,cancelled_confirmation,user_id);
@@ -126,7 +126,7 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
 }
 
 
-async function sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification) {
+async function sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification, defect) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -160,7 +160,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, operation, persona
             var durationMarked = 0;
             var durationVariance = Number(duration);
         }
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, null, true);
+        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, null, null, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defect, true);
         await updateZMarkingTesting(plant, operation, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
