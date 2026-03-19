@@ -164,7 +164,7 @@ const getInfoDefectToPDFQuery = `SELECT distinct z_defects.id as "ID Defect", z_
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as "Responsible", z_defects.responsible as "Responsible Code", z_defects.qn_code as "QN Code",
                     z_defects.status as "Status", z_defects.system_status as "System Status", z_defects.user_status as "User Status", 
                     z_defects.approval_user as "Approval User", z_defects."user" as "Opened By",
-                    TO_CHAR((z_defects.creation_date::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as "Creation Date", '' as "End Date"
+                    TO_CHAR((z_defects.creation_date::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY, HH24:MI:SS') as "Creation Date", '' as "End Date"
 					FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
