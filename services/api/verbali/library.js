@@ -482,21 +482,19 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
         var row = listOperations[i];
         for (let j = 0; j < listOperations[i].operations.length; j++) {
             var opt = listOperations[i].operations[j];
-            try {
-                dataForSap.operations.push({
-                    plant: plant,
-                    projet: row.project,
-                    wbe: row.wbe,
-                    sfc: row.sfc,
-                    order: row.order,
-                    material: row.material,
-                    operationSAP: opt.operation.length > 5 ? opt.operation.substring(0, 5) : opt.operation,
-                    operationDM: opt.operation, 
-                    groupMaterial: opt.groupCode
-                });
-            } catch (error) {
-                console.log("Error inserting additional operation for SFC " + row.sfc + " operation " + opt.operation + ": " + error);
-            }
+            // Controllo che confirmation number non c'è
+            if (opt.CONFIRMATION_NUMBER != null && opt.CONFIRMATION_NUMBER != "") continue;
+            dataForSap.operations.push({
+                plant: plant,
+                projet: row.project,
+                wbe: row.wbe,
+                sfc: row.sfc,
+                order: row.order,
+                material: row.material,
+                operationSAP: opt.operation.length > 5 ? opt.operation.substring(0, 5) : opt.operation,
+                operationDM: opt.operation, 
+                groupMaterial: opt.groupCode
+            });
         }
     }
 
