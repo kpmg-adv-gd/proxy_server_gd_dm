@@ -7,7 +7,7 @@ const { getAdditionalOperationsToVerbale, insertZAddtionalOperations } = require
 const { getZOrdersLinkByPlantProjectAndParentOrder } = require("../../postgres-db/services/orders_link/library");
 const { getZMancantiReportDataToVerbale } = require("../../postgres-db/services/mancanti/library");
 const { getMappingPhase } = require("../../postgres-db/services/mapping_phases/library");
-const { manageRelease } = require("../../iFlow/RELEASE_ORDER_SFC/library");
+const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const PDFDocument = require("pdfkit");
 const bodyParser = require("body-parser");
 const { PDFDocument: PDFLib, StandardFonts, rgb } = require("pdf-lib");
@@ -443,6 +443,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                             opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
                             opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
                             opt.CONFIRMATION_NUMBER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "CONFIRMATION_NUMBER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "CONFIRMATION_NUMBER").value : null;
+                            opt.DURATION = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "DURATION").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "DURATION").value : null;
                         }
                         // Recupero ulteriori dettagli, dai campi custom
                         if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
@@ -493,7 +494,9 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
                 material: row.material,
                 operationSAP: opt.operation.length > 5 ? opt.operation.substring(0, 5) : opt.operation,
                 operationDM: opt.operation, 
-                groupMaterial: opt.groupCode
+                groupMaterial: opt.groupCode,
+                duration: opt.DURATION,
+                groupOrder: opt.MES_ORDER
             });
         }
     }

@@ -141,9 +141,39 @@ async function getInfoDefectPDF(info, sfc, wbe, workCenter) {
 // Funzione per generare e scaricare il PDF info difetti
 async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
 
-    // Svolgo una query per il recuper delle informazioni necessarie
+    // Svolgo una query per il recupero delle informazioni necessarie
     dataForPDF = await getInfoDefectToPDF(info);
-
+    // Aggiungo dati standard
+    dataForPDF["Workcenter"] = workCenter || null;
+    dataForPDF["N° of Defect"] = info.numDefect || null;
+    dataForPDF["Code Group"] = info.groupDesc || null;
+    dataForPDF["Defect Type"] = info.codeDesc || null;
+    dataForPDF["Code Group Code"] = info.group || null;
+    dataForPDF["Defect Type Code"] = info.code || null;
+    dataForPDF["End Date"] = info.modifiedDateTime || null;
+    // Formatto data di fine in formato corretto
+    dataForPDF["End Date"] = dataForPDF["End Date"] != null ? new Date(dataForPDF["End Date"]).toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }) : null;
+    dataForPDF["Attachments"] = info.attachments.length > 0 ? "YES" : "NO";
+    // Riordino l'oggetto per inserire "typeOrder" subito dopo "Creation Phase"
+    const orderedDataForPDF = {};
+    for (const key of Object.keys(dataForPDF)) {
+        if (key === "MES_ORDER") continue; // Salto MES_ORDER originale
+        orderedDataForPDF[key] = dataForPDF[key];
+        if (key === "Creation Phase") {
+            orderedDataForPDF[info.typeOrder] = dataForPDF["MES_ORDER"] || null;
+        }
+    }
+    dataForPDF = orderedDataForPDF;
+    
     return new Promise((resolve, reject) => {
         try {
 
@@ -152,15 +182,21 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
             /**
              * Disegna il piè di pagina con la data in basso a destra
              */
-            const footerDate = new Date().toLocaleDateString('it-IT', {
+            const footerDate = new Date().toLocaleString('it-IT', {
                 timeZone: 'Europe/Rome',
                 day: '2-digit',
                 month: '2-digit',
-                year: 'numeric'
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
             });
             const drawFooter = () => {
                 const pageWidth = doc.page.width;
                 const footerText = footerDate;
+                const savedY = doc.y;
+                const savedX = doc.x;
                 
                 doc.fontSize(8).font('Helvetica')
                    .fillColor('#808080')
@@ -168,8 +204,10 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
                        width: 50,
                        align: 'right'
                    });
-                // Ripristina il colore nero per il testo successivo
+                // Ripristina il colore nero e la posizione per il testo successivo
                 doc.fillColor('#000000');
+                doc.x = savedX;
+                doc.y = savedY;
             };
 
             const chunks = [];
@@ -183,25 +221,15 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
             });
             doc.on('error', reject);
 
+            // Disegna footer sulla prima pagina
+            drawFooter();
+
             // TESTATA - Header del documento
-            doc.fontSize(20).font('Helvetica-Bold').text('INFORMAZIONI DIFETTO', { align: 'center' });
+            doc.fontSize(20).font('Helvetica-Bold').text('DEFECT DETAILS', { align: 'center' });
             doc.moveDown(1);
 
             // Informazioni dalla testata (selectedData)
             doc.fontSize(12).font('Helvetica-Bold');
-
-            if (sfc) {
-                doc.text(`SFC: `, 50, doc.y, { continued: true }).font('Helvetica').text(sfc);
-                doc.moveDown(0.5);
-            }
-            if (wbe) {
-                doc.font('Helvetica-Bold').text(`WBE: `, 50, doc.y, { continued: true }).font('Helvetica').text(wbe);
-                doc.moveDown(0.5);
-            }
-            if (workCenter) {
-                doc.font('Helvetica-Bold').text(`Work Center: `, 50, doc.y, { continued: true }).font('Helvetica').text(workCenter);
-                doc.moveDown(0.5);
-            }
 
             // Data e ora di generazione (fuso orario CET/CEST)
             const now = new Date();
@@ -236,8 +264,8 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
                 doc.rect(tableStartX + colKeyWidth, currentY, colValueWidth, rowHeight).fillAndStroke('#e0e0e0', '#000000');
                 
                 doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold');
-                doc.text('Chiave', tableStartX + cellPadding, currentY + cellPadding, { width: colKeyWidth - cellPadding * 2 });
-                doc.text('Valore', tableStartX + colKeyWidth + cellPadding, currentY + cellPadding, { width: colValueWidth - cellPadding * 2 });
+                doc.text('Description', tableStartX + cellPadding, currentY + cellPadding, { width: colKeyWidth - cellPadding * 2 });
+                doc.text('Value', tableStartX + colKeyWidth + cellPadding, currentY + cellPadding, { width: colValueWidth - cellPadding * 2 });
 
                 currentY += rowHeight;
 
@@ -259,6 +287,7 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
                     if (currentY + dynamicRowHeight > doc.page.height - 50) {
                         doc.addPage();
                         drawFooter();
+                        doc.font('Helvetica').fontSize(9); // Ripristina font per le righe
                         currentY = 50;
                     }
 

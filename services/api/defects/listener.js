@@ -301,7 +301,7 @@ module.exports.listenerSetup = (app) => {
     app.post("/api/downloadInfoDefect", async (req, res) => {
         try {
             const { info, sfc, wbe, workCenter } = req.body;
-            var base64 = await getInfoDefectPDF(info);
+            var base64 = await getInfoDefectPDF(info, sfc, wbe, workCenter);
             res.status(200).json({ base64: base64 });
         } catch (error) {
             let status = error.status || 500;
