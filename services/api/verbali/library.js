@@ -399,6 +399,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
         if (selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
             var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
+            var wbe = selectedOrder?.customValues?.find(obj => obj.attribute == "WBE")?.value || "";
             if (ecoType == "MA" && (orderType == "ZPA1" || orderType == "ZPA2" || orderType == "ZPF1" || orderType == "ZPF2" || orderType == "GRPF" || orderType == "ZMGF")) {
                 // escludo l'ordine
             }else {
@@ -417,6 +418,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                         order: childOrders[index].child_order,
                         material: childOrders[index].child_material,
                         sfc: selectedOrder.sfcs[0],
+                        wbe: wbe,
                         routing: routing,
                         routingType: typeRouting,
                         routingVersion: routingVersion,
@@ -440,6 +442,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                         if (selectedOpt != null) {
                             opt.MF = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "MF").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "MF").value : null;
                             opt.MES_ORDER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "ORDER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "ORDER").value : null;
+                            opt.CONFIRMATION_NUMBER = selectedOpt?.routingOperation?.customValues?.filter(obj => obj.attribute == "CONFIRMATION_NUMBER").length > 0 ? selectedOpt.routingOperation.customValues.find(obj => obj.attribute == "CONFIRMATION_NUMBER").value : null;
                         }
                         // Recupero ulteriori dettagli, dai campi custom
                         if (opt.MES_ORDER != null && opt.MES_ORDER != "") {
@@ -465,7 +468,54 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
     }
     // Creazione dei dati estratti nel Testing
     await insertZAddtionalOperations(resultOrders);
-    return true;
+    return { status: true, operations: resultOrders };
+}
+
+// Funzione per invio a SAP delle operazioni non completate, senza confirmation number
+async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperations) {
+    var pathRequestConfirmationNumber = await getZSharedMemoryData(plant,"REQUEST_CONFIRMATION_NUMBER");
+    if(pathRequestConfirmationNumber.length>0) pathRequestConfirmationNumber = pathRequestConfirmationNumber[0].value;
+    var url = hostname + pathRequestConfirmationNumber;
+    
+    var dataForSap = { operations: [] };
+    for (let i = 0; i < listOperations.length; i++) {
+        var row = listOperations[i];
+        for (let j = 0; j < listOperations[i].operations.length; j++) {
+            var opt = listOperations[i].operations[j];
+            try {
+                dataForSap.operations.push({
+                    plant: plant,
+                    projet: row.project,
+                    wbe: row.wbe,
+                    sfc: row.sfc,
+                    order: row.order,
+                    material: row.material,
+                    operationSAP: opt.operation.length > 5 ? opt.operation.substring(0, 5) : opt.operation,
+                    operationDM: opt.operation, 
+                    groupMaterial: opt.groupCode
+                });
+            } catch (error) {
+                console.log("Error inserting additional operation for SFC " + row.sfc + " operation " + opt.operation + ": " + error);
+            }
+        }
+    }
+
+    try {
+        // Divido dataForSap in più richieste da max 20 operazioni ciascuna
+        var chunkSize = 20;
+        for (var i = 0; i < dataForSap.operations.length; i += chunkSize) {
+            var chunk = dataForSap.operations.slice(i, i + chunkSize);
+            var chunkDataForSap = { operations: chunk };
+            console.log("SAP body: "+JSON.stringify(chunkDataForSap));
+            var response = await callPost(url, chunkDataForSap);
+            console.log("RESPONSE SAP: "+JSON.stringify(response));
+            if (response.OUTPUT.esito == "OK") {
+                // Logica con output di SAP
+            }
+        }
+    } catch (error) {
+        console.log("Error sending operations to SAP: " + error);
+    }
 }
 
 
@@ -4176,4 +4226,4 @@ async function freezeFinalTestingData(plant, project, order, sfc, treeDefects, t
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };
