@@ -150,7 +150,7 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
     dataForPDF["Defect Type"] = info.codeDesc || null;
     dataForPDF["Code Group Code"] = info.group || null;
     dataForPDF["Defect Type Code"] = info.code || null;
-    dataForPDF["End Date"] = info.modifiedDateTime || null;
+    dataForPDF["End Date"] = dataForPDF.Status == "CLOSED" ? (info.modifiedDateTime || null) : null;
     // Formatto data di fine in formato corretto
     dataForPDF["End Date"] = dataForPDF["End Date"] != null ? new Date(dataForPDF["End Date"]).toLocaleString('it-IT', {
         timeZone: 'Europe/Rome',
@@ -163,13 +163,14 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
         hour12: false
     }) : null;
     dataForPDF["Attachments"] = info.attachments.length > 0 ? "YES" : "NO";
-    // Riordino l'oggetto per inserire "typeOrder" subito dopo "Creation Phase"
+    // Riordino l'oggetto per inserire "typeOrder" subito dopo "Material"
     const orderedDataForPDF = {};
+    var typeOrder = info.type_order || info.typeOrder || null;
     for (const key of Object.keys(dataForPDF)) {
         if (key === "MES_ORDER") continue; // Salto MES_ORDER originale
         orderedDataForPDF[key] = dataForPDF[key];
-        if (key === "Creation Phase") {
-            orderedDataForPDF[info.typeOrder] = dataForPDF["MES_ORDER"] || null;
+        if (key === "Material" && typeOrder !== null) {
+            orderedDataForPDF[typeOrder] = dataForPDF["MES_ORDER"] || null;
         }
     }
     dataForPDF = orderedDataForPDF;
