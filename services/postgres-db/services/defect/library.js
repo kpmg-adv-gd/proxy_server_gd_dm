@@ -12,7 +12,7 @@ const hostname = credentials.DM_API_URL;
 
 
 async function insertZDefect(idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN,
-    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3) {
+    notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, cause, project, phase, idLev1, idLev2, idLev3, sfcOrder) {
     
     // Devo recuperare il campo custom del defect type, per salvarlo nella tabella z_defect
     let sapCode = await getOrderCustomDataDefectType(code, plant);
@@ -43,11 +43,20 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
     idLev1 = idLev1 && idLev1 != "" ? idLev1 : null;
     idLev2 = idLev2 && idLev2 != "" ? idLev2 : null;
     idLev3 = idLev3 && idLev3 != "" ? idLev3 : null;
+    
 
     if (sapCode && sapCode.data && sapCode.data.value && sapCode.data.value.length > 0) {
         sapCode = sapCode.data.value[0].DATA_FIELD_VALUE;
     }else{
         sapCode = null;
+    }
+
+    if (phase == "Testing") { 
+        // modifico valore della WBE salvata in z_defects, recuperandola dal campo custom dell'ordine
+        const url = `${hostname}/order/v1/orders?order=${sfcOrder}&plant=${plant}`;
+        const orderResponse = await callGet(url);
+        const newWBE = orderResponse?.customValues?.find(o => o.attribute === "WBE")?.value || null;
+        wbe = newWBE;
     }
 
     if (createQN) {
@@ -61,6 +70,7 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
 
     if (phase == "Testing") {
         await postgresdbService.executeQuery(queryDefect.insertZDefectTesting, [idDefect, plant, sfc, idLev1, idLev2, idLev3]); 
+
     }
 
     return data;
@@ -85,6 +95,11 @@ async function selectZDefectByWBE(plant, wbe) {
 
 async function selectDefectToApprove(plant) {
     const data = await postgresdbService.executeQuery(queryDefect.selectDefectToApprove, [plant]);
+    data.forEach(defect => {
+        if(defect.correct_wbe){
+            defect.wbe = defect.correct_wbe;
+        }
+    });
     return data;
 }   
 
@@ -261,6 +276,11 @@ async function getDefectsTI(plant, project,isOnlyOpenDefects) {
     }else{ 
         defects = await postgresdbService.executeQuery(queryDefect.getDefectsTI, [plant, project]);
     }   
+    defects.forEach(defect => {
+        if(defect.correct_wbe){
+            defect.wbe = defect.correct_wbe;
+        }
+    });
     var difettiStandard = [], codesTrovati = [], url = hostname;
     // prima di mandare a FE, recuperare dati STD
     url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
@@ -368,6 +388,11 @@ async function getDefectsTI(plant, project,isOnlyOpenDefects) {
 // Per il verbale
 async function getDefectsToVerbale(plant, orders) {
     const defects = await postgresdbService.executeQuery(queryDefect.getDefectsToVerbale, [plant, orders]);
+    defects.forEach(defect => {
+        if(defect.correct_wbe){
+            defect.wbe = defect.correct_wbe;
+        }
+    });
     var difettiStandard = [], codesTrovati = [], url = hostname;
     // prima di mandare a FE, recuperare dati STD
     url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
@@ -473,6 +498,11 @@ async function getDefectsToVerbale(plant, orders) {
 
 async function getDefectsFromAdditionalOperationsTI(plant, project, operation, sfc) {
     const defects = await postgresdbService.executeQuery(queryDefect.getDefectsFromAdditionalOperationsTI, [plant, project, operation, sfc]);
+    defects.forEach(defect => {
+        if(defect.correct_wbe){
+            defect.wbe = defect.correct_wbe;
+        }
+    });
     var difettiStandard = [], codesTrovati = [], url = hostname;
     // prima di mandare a FE, recuperare dati STD
     url = hostname + "/nonconformancegroup/v1/nonconformancegroups?plant=" + plant;
