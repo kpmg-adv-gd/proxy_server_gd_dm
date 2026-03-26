@@ -400,6 +400,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
             var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
             var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
             var wbe = selectedOrder?.customValues?.find(obj => obj.attribute == "WBE")?.value || "";
+            var wbeAssembly = selectedOrder?.customValues?.find(obj => obj.attribute == "WBE_ASSEMBLY")?.value || "";
             if (ecoType == "MA" && (orderType == "ZPA1" || orderType == "ZPA2" || orderType == "ZPF1" || orderType == "ZPF2" || orderType == "GRPF" || orderType == "ZMGF")) {
                 // escludo l'ordine
             }else {
@@ -419,6 +420,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
                         material: childOrders[index].child_material,
                         sfc: selectedOrder.sfcs[0],
                         wbe: wbe,
+                        wbeAssembly: wbeAssembly,
                         routing: routing,
                         routingType: typeRouting,
                         routingVersion: routingVersion,
@@ -473,7 +475,7 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
 }
 
 // Funzione per invio a SAP delle operazioni non completate, senza confirmation number
-async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperations) {
+async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperations, workcenter) {
     var pathRequestConfirmationNumber = await getZSharedMemoryData(plant,"REQUEST_CONFIRMATION_NUMBER");
     if(pathRequestConfirmationNumber.length>0) pathRequestConfirmationNumber = pathRequestConfirmationNumber[0].value;
     var url = hostname + pathRequestConfirmationNumber;
@@ -488,15 +490,17 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             dataForSap.operations.push({
                 plant: plant,
                 projet: row.project,
-                wbe: row.wbe,
+                wbe: row.wbeAssembly,
                 sfc: row.sfc,
                 order: row.order,
                 material: row.material,
                 operationSAP: opt.operation.length > 5 ? opt.operation.substring(0, 5) : opt.operation,
                 operationDM: opt.operation, 
+                operationDescription: opt.operationDescription,
                 groupMaterial: opt.groupCode,
                 duration: opt.DURATION,
-                groupOrder: opt.MES_ORDER
+                groupOrder: opt.MES_ORDER,
+                workcenter: workcenter
             });
         }
     }
@@ -512,6 +516,41 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             console.log("RESPONSE SAP: "+JSON.stringify(response));
             if (response.OUTPUT.esito == "OK") {
                 // Logica con output di SAP
+                var jsonResponse = response.OUTPUT.message;
+                for (let k = 0; k < jsonResponse.Orders.length; k++) {
+                    var operations = jsonResponse.Orders[k].operations;
+                    // Step 1. chiamo api sfcdetails
+                    var urlSfcDetail = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + jsonResponse.Orders[k].sfc;
+                    var responseGetSfc = await callGet(urlSfcDetail);
+                    var routing = responseGetSfc.routing.routing;
+                    var routingVersion = responseGetSfc.routing.version;
+                    var typeRouting = responseGetSfc.routing.type == "SHOPORDER_SPECIFIC" ? "SHOP_ORDER" : responseGetSfc.routing.type;
+                    // Step 2. chiamo api get routing - salvo il JSON a cui dovrò modificare i campi custom
+                    var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+routing+"&type="+typeRouting+"&version="+routingVersion;
+                    var responseRouting = await callGet(urlRouting);
+                    // Step 3. Nel JSON recuperato, va aggiornato il campo custom ‘CONFIRMATION NUMBER’ per tutte le operazioni dell’SFC recuperate prima dello STEP 1
+                    var routingData = responseRouting.routing;
+                    var steps = routingData.routingSteps;
+                    for (let n = 0; n < operations.length; n++) {
+                        var currentOperation = operations[n];
+                        for (let m = 0; m < steps.length; m++) {
+                            if (steps[m].routingOperation.operationActivity.operationActivity == currentOperation.operation) {
+                                var customValues = steps[m].routingOperation.customValues;
+                                var confirmationNumberIndex = customValues.findIndex(obj => obj.attribute == "CONFIRMATION_NUMBER");
+                                if (confirmationNumberIndex != -1) {
+                                    customValues[confirmationNumberIndex].value = currentOperation.confirmationNumber;
+                                } else {
+                                    customValues.push({ attribute: "CONFIRMATION_NUMBER", value: currentOperation.confirmationNumber });
+                                }
+                            }
+                        }
+                    }
+                    // Step 4. aggiorno routing
+                    var urlUpdateRouting = hostname + "/routing/v1/routings";
+                    await callPut(urlUpdateRouting, responseRouting);
+
+
+                }
             }
         }
     } catch (error) {

@@ -92,14 +92,14 @@ module.exports.listenerSetup = (app) => {
     // Chusura del verbale di ispezione
     app.post("/api/generateInspection", async (req, res) => {
         try {
-            const { plant, user, selectedData, dataCollections, ncCustomTable, resultCustomTable } = req.body;
+            const { plant, user, selectedData, dataCollections, ncCustomTable, resultCustomTable, workcenter } = req.body;
             // Logica di dettaglio per il passaggio al testing
             var sentAddOpt = await sendToTestingAdditionalOperations(plant, selectedData);
             if (!sentAddOpt.status) {
                 throw { status: 500, message: "Error during sending to Testing process" };
             }
             // Se ci sono operazioni aggiuntive da inviare a SAP, le invio
-            await sendToSAPConfirmationNumberAdditionalOperations(plant, sentAddOpt.operations);
+            await sendToSAPConfirmationNumberAdditionalOperations(plant, sentAddOpt.operations, workcenter);
             // Salvo campi custom ASSEMBLY_REPORT_STATUS e ASSEMBLY_REPORT_USER
             await updateCustomAssemblyReportStatusOrderDone(plant, selectedData.order, user);
             // Salvo campo custom SENT_TO_TESTING su ordine e su figli/nipoti...

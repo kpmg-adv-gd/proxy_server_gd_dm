@@ -46,6 +46,7 @@ const markingDbService = require("./services/postgres-db/services/marking/listen
 const varianceDbService = require("./services/postgres-db/services/variance/listener");
 const priorityDbService = require("./services/postgres-db/services/priority/listener");
 const codingDbService = require("./services/postgres-db/services/coding/listener");
+const workcentersDbService = require("./services/postgres-db/services/workcenters/listener");
 const responsibleDbService = require("./services/postgres-db/services/responsible/listener");
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 const defectDbService = require("./services/postgres-db/services/defect/listener");
@@ -122,6 +123,7 @@ priorityDbService.listenerSetup(app);
 priorityDbService.listenerSetup(app);
 priorityDbService.listenerSetup(app);
 codingDbService.listenerSetup(app);
+workcentersDbService.listenerSetup(app);
 responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
 defectDbService.listenerSetup(app);
