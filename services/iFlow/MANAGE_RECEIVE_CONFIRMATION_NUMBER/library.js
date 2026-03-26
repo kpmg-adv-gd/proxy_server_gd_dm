@@ -1,4 +1,5 @@
 const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
+const { callGet, callPut } = require("../../../utility/CommonCallApi");
 const { insertZMarkingRecap } = require("../../postgres-db/services/marking/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -17,12 +18,11 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
         var urlRouting = hostname + "/routing/v1/routings?plant=" + plant + "&routing=" + routing + "&type=" + typeRouting + "&version=" + routingVersion;
         var responseRouting = await callGet(urlRouting);
         // Step 3. Nel JSON recuperato, va aggiornato il campo custom ‘CONFIRMATION NUMBER’ per tutte le operazioni dell’SFC recuperate prima dello STEP 1
-        var routingData = responseRouting.routing;
-        var steps = routingData.routingSteps;
+        var steps = responseRouting[0].routingSteps;
         for (let n = 0; n < operations.length; n++) {
             var currentOperation = operations[n];
             for (let m = 0; m < steps.length; m++) {
-                if (steps[m].routingOperation.operationActivity.operationActivity == currentOperation.operation) {
+                if (steps[m].routingOperation && steps[m].routingOperation.operationActivity.operationActivity == currentOperation.operation) {
                     var customValues = steps[m].routingOperation.customValues;
                     var confirmationNumberIndex = customValues.findIndex(obj => obj.attribute == "CONFIRMATION_NUMBER");
                     if (confirmationNumberIndex != -1) {
@@ -34,7 +34,7 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
             }
             // Scrivo in z_marking_recap per ogni operazione
             await insertZMarkingRecap(plant, jsonResponse.Orders[k].project, jsonResponse.Orders[k].wbe, currentOperation.operation, jsonResponse.Orders[k].order, currentOperation.confirmationNumber, currentOperation.duration, 
-                currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.duration, currentOperation.uomDuration, 0, currentOperation.uomDuration, null, false)
+                currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.duration, currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.operationDescription, false)
         }
         // Step 4. aggiorno routing
         var urlUpdateRouting = hostname + "/routing/v1/routings";
