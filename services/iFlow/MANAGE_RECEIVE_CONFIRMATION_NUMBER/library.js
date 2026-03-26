@@ -1,12 +1,10 @@
-const { json } = require("express");
-const { dispatch } = require("../../mdo/library");
-const { callPatch } = require("../../../utility/CommonCallApi");
-const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
+const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
+const { insertZMarkingRecap } = require("../../postgres-db/services/marking/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
-const plantMappingCache = new Map();
 
 async function manageReceiveConfirmationNumber(jsonResponse) {
+    var plant = await getPlantFromERPPlant(jsonResponse.plant);
     for (let k = 0; k < jsonResponse.Orders.length; k++) {
         var operations = jsonResponse.Orders[k].operations;
         // Step 1. chiamo api sfcdetails
@@ -34,6 +32,9 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
                     }
                 }
             }
+            // Scrivo in z_marking_recap per ogni operazione
+            await insertZMarkingRecap(plant, jsonResponse.Orders[k].project, jsonResponse.Orders[k].wbe, currentOperation.operation, jsonResponse.Orders[k].order, currentOperation.confirmationNumber, currentOperation.duration, 
+                currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.duration, currentOperation.uomDuration, 0, currentOperation.uomDuration, null, false)
         }
         // Step 4. aggiorno routing
         var urlUpdateRouting = hostname + "/routing/v1/routings";
