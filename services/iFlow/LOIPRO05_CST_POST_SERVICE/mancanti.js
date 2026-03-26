@@ -16,7 +16,7 @@ async function manageMancanti(docXml){
     var projectNode = xpath.select("//*[local-name()='ManufacturingOrder']/*[local-name()='CustomFieldList']/*[local-name()='CustomField'][*[local-name()='Attribute' and text()='COMMESSA']]/*[local-name()='Value']", docXml);
     var projectValue = projectNode.length > 0 ? projectNode[0]?.textContent : null;
 
-    if(orderTypeValue.slice(0, 3)=="GRP" || orderTypeValue.slice(0, 3)=="ZPA" || orderTypeValue.slice(0, 4)=="TOOL"){
+    if(orderTypeValue.slice(0, 3)=="GRP" || orderTypeValue.slice(0, 3)=="ZPA" || orderTypeValue.slice(0, 4)=="TOOL" || orderTypeValue.slice(0, 3)=="ZPF"){
         await manageMancantiGruppi(plantValue,orderValue);
     } else {
         await manageMancantiAggr(plantValue,orderValue,projectValue);
@@ -57,14 +57,19 @@ async function getBomDetailUpdated(plant,bom){
             "attribute": "COMPONENTE MANCANTE", 
             "value": "false" 
         };
+    let customValueOrdineMancanti = 
+        { 
+            "attribute": "ORDINE MANCANTE", 
+            "value": "false" 
+        };
     for(comp of bomComponentsResponse[0]?.components){
         comp.customValues.push(customValueMancanti);
+        comp.customValues.push(customValueOrdineMancanti);
     }
     return bomComponentsResponse;
 }
 
 async function updateBomCompCustomValues(bodyUpdatedBomCompCustomValues){
-    console.log("LUDO BODY PATCH BOM + "+JSON.stringify(bodyUpdatedBomCompCustomValues));
     var url = hostname + "/bom/v1/boms";
     var responseUpdateBomCompCustomValues = await callPatch(url,bodyUpdatedBomCompCustomValues);
 }
@@ -103,6 +108,10 @@ async function getUpdateBomComponentAggr(bomDetailBody, project, order,plantOrde
             el.customValues.push({
                 "attribute": "COMPONENTE MANCANTE",
                 "value": mancante
+            }); 
+            el.customValues.push({
+                "attribute": "ORDINE MANCANTE",
+                "value": mancante === "true" ? "false" : "true"
             });
         }
     }));
@@ -116,10 +125,14 @@ async function updateCustomMancanteOrder(plant,order){
         "attribute":"MANCANTI",
         "value": "true"
     };
+    let customValueComponenti={
+        "attribute":"COMPONENTI_MANCANTI",
+        "value": "false"
+    };
     let body={
         "plant":plant,
         "order":order,
-        "customValues": [customValue]
+        "customValues": [customValue, customValueComponenti]
     };
     let response = await callPatch(url,body);
 

@@ -110,7 +110,7 @@ async function updateBomComponentParentOrder(plant, parentOrder,parentMaterial, 
     for(let obj of bomDetailBodyParentOrder[0]?.components){
         if (obj?.material && obj.material.plant === plant && obj.material.material === childMaterial) {
             for(let customValueObj of obj.customValues){
-                if (!componentFound && customValueObj.attribute === "COMPONENTE MANCANTE" && customValueObj.value == "true" ) {
+                if (!componentFound && customValueObj.attribute === "ORDINE MANCANTE" && customValueObj.value == "true" ) {
                     componentFound = true;
                     if(obj.quantity > 1){
                         let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,childOrder);
@@ -147,7 +147,7 @@ async function checkQuantityDoneComponent(quantity,plant,material,order,childOrd
 async function updateCustomMancanteOrder(plant,order,value){
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
-        "attribute":"MANCANTI",
+        "attribute":"ORDINI_MANCANTI",
         "value": value
     };
     let body={
@@ -182,7 +182,7 @@ async function updateCustomModificaOrder(plant,order,ecoType,value){
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>
-            cv.attribute === "COMPONENTE MANCANTE" && cv.value === "true"
+            cv.attribute === "ORDINE MANCANTE" && cv.value === "true"
         )
     );
 }

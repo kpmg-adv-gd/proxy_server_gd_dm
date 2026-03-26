@@ -102,7 +102,7 @@ async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, chi
     const updatedBomBody = await updateBodyBomComponentMaterials(parentOrder,orderNumber,bomDetailBody, materialsArray, plant, doUpdateZSpecialGroupElaborated); 
     await updateBomComponent(updatedBomBody);
 
-    //Aggiorno il campo custom dell'ordine in base alla sua BOM ha ancora mancanti oppure no
+    //Aggiorno il campo custom dell'ordine in base alla sua BOM se ha ancora mancanti oppure no
     const orderHasMancanti = hasComponentMancante(updatedBomBody[0].components);
     await updateCustomMancanteOrder(plant, orderNumber, orderHasMancanti);
 
@@ -180,6 +180,7 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
                 if (customValueObj.attribute === "COMPONENTE MANCANTE") {
                     customValueObj.value = missingMaterial;
                 }
+
             }
         }
     }
@@ -195,7 +196,7 @@ async function updateBomComponent(body){
 async function updateCustomMancanteOrder(plant,order,value){
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
-        "attribute":"MANCANTI",
+        "attribute":"COMPONENTI_MANCANTI",
         "value": value
     };
     let body={
@@ -234,7 +235,7 @@ async function manageSpecialGroups(projectsArray) {
 
     // // Creiamo un array di Promesse
     // const updatePromises = mancantiNotElabroated.map(row => {
-    //     return updateCustomFieldsOrderAndOrderComponent(row.plant, row.wbe, row.project, row.order, row.parent_order, [{
+    //     return updateCustomFieldsOrderAndOrderComponent(row.plant, row.wbe, row.prject, row.order, row.parent_order, [{
     //         "Missing": [false],
     //         "MissingMaterial": [row.child_material],
     //         "MissingQuantity": [""]
