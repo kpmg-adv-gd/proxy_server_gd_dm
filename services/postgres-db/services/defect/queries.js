@@ -156,11 +156,11 @@ const setNonconformanceField = `update z_verbale_lev_3 set nonconformances = fal
 
 const getDatiDifetto = `SELECT id_lev_1, id_lev_2, id_lev_3, sfc FROM z_defect_testing WHERE defect_id = $1 and plant = $2`;
 
-const getInfoDefectToPDFQuery = `SELECT distinct z_defects.id as "ID Defect", z_defects.project as "Project", z_defects.wbe as "WBE", z_defects.sfc as "SFC", '' as "Workcenter", z_defects.phase as "Creation Phase", z_defects.mes_order as "MES_ORDER",
+const getInfoDefectToPDFQuery = `SELECT distinct z_defects.project as "Project", z_defects.wbe as "WBE", z_defects.sfc as "SFC", '' as "Workcenter", z_defects.phase as "Creation Phase", z_defects.mes_order as "MES_ORDER",
                     z_defects.operation as "Operation", z_defects.material as "Material", z_defects.assembly as "Assembly", '' as "N° of Defect" , z_defects.title as "Title",
-                    z_defects.description as "Description", '' as "Code Group", '' as "Defect Type", '' as "Code Group Code", '' as "Defect Type Code", z_defects.sap_code as "Defect Type sent to SAP", z_priority.description as "Priority", z_priority.priority as "Piority Code",  z_variance_type.description as "Variance", z_defects.variance as "Variance Code",
+                    z_defects.description as "Description", '' as "Code Group", '' as "Defect Type", z_priority.description as "Priority", z_priority.priority as "Piority Code",  z_variance_type.description as "Variance", z_defects.variance as "Variance Code",
                     '' as "Attachments", z_defects.blocking as "Blocking", z_defects.create_qn as "Create QN", z_notification_type.description as "Notification Type", z_coding.coding_group_description as "Coding Group",z_coding.coding_description as "Coding",
-                    z_coding.coding_group as "Coding Group Code", z_coding.coding as "Coding Code", case when z_defects.replaced_in_assembly = true then 'YES' else 'NO' end as "Replaced in Assembly", z_defects.defect_note as "Defect Note", 
+                    case when z_defects.replaced_in_assembly = true then 'YES' else 'NO' end as "Replaced in Assembly", z_defects.defect_note as "Defect Note", 
                     COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as "Responsible", z_defects.responsible as "Responsible Code", z_defects.qn_code as "QN Code",
                     z_defects.status as "Status", z_defects.system_status as "System Status", z_defects.user_status as "User Status", 
                     z_defects.approval_user as "Approval User", z_defects."user" as "Opened By",

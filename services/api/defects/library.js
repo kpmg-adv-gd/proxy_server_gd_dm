@@ -148,8 +148,6 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
     dataForPDF["N° of Defect"] = info.numDefect || null;
     dataForPDF["Code Group"] = info.groupDesc || null;
     dataForPDF["Defect Type"] = info.codeDesc || null;
-    dataForPDF["Code Group Code"] = info.group || null;
-    dataForPDF["Defect Type Code"] = info.code || null;
     dataForPDF["End Date"] = dataForPDF.Status == "CLOSED" ? (info.modifiedDateTime || null) : null;
     // Formatto data di fine in formato corretto
     dataForPDF["End Date"] = dataForPDF["End Date"] != null ? new Date(dataForPDF["End Date"]).toLocaleString('it-IT', {
@@ -165,7 +163,7 @@ async function generateInfoDefectPDF(info, sfc, wbe, workCenter) {
     dataForPDF["Attachments"] = info.attachments.length > 0 ? "YES" : "NO";
     // Riordino l'oggetto per inserire "typeOrder" subito dopo "Material"
     const orderedDataForPDF = {};
-    var typeOrder = info.type_order || info.typeOrder || null;
+    var typeOrder = info.typeOrder || null;
     for (const key of Object.keys(dataForPDF)) {
         if (key === "MES_ORDER") continue; // Salto MES_ORDER originale
         orderedDataForPDF[key] = dataForPDF[key];
