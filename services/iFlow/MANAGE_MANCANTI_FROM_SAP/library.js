@@ -81,7 +81,7 @@ async function getOrderObjectsToElaborate(jsonMancanti) {
             const orderMaterial = order?.OrderMaterial?.[0] || "";
             const materialsArray = order?.Material || [];
             try{
-                await updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, null, orderNumber, materialsArray,false);
+                await updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, null, orderNumber, materialsArray,false,null);
                 await manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,materialsArray);
             } catch(e){
                 console.error("Error updateCustomFieldsOrderAndOrderComponent: "+e);
@@ -92,14 +92,14 @@ async function getOrderObjectsToElaborate(jsonMancanti) {
     return orderObjectsPromises;
 }
 
-async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, child_order, orderNumber, materialsArray, doUpdateZSpecialGroupElaborated) {
+async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, child_order, orderNumber, materialsArray, doUpdateZSpecialGroupElaborated, grand_child_order) {
     //Eseguo questa funzione per ogni ordine che mi arriva dall'xml/gruppo che ho nella Z_Special_groups
     const firstOrderData = await getBomByOrderAndPlant(plant, orderNumber); //Ottengo info sull'ordine
     const { bom, type, isParentAssembly, parentOrder, orderMaterial } = firstOrderData;
     const bomDetailBody = await getBomDetail(plant, bom, type); //Ottengo le info sulla bom dell'ordine
 
     //Aggiorno i campi custom dei BOM Component dell'orderNumber con i mancancti dei materiali che mi arrivano dall'xml
-    const updatedBomBody = await updateBodyBomComponentMaterials(parentOrder,orderNumber,bomDetailBody, materialsArray, plant, doUpdateZSpecialGroupElaborated); 
+    const updatedBomBody = await updateBodyBomComponentMaterials(parentOrder,orderNumber,bomDetailBody, materialsArray, plant, doUpdateZSpecialGroupElaborated, grand_child_order); 
     await updateBomComponent(updatedBomBody);
 
     //Aggiorno il campo custom dell'ordine in base alla sua BOM ha ancora mancanti oppure no
@@ -117,7 +117,7 @@ async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, chi
             "Missing": [orderHasMancanti],
             "MissingMaterial": [firstOrderData.orderMaterial],
             "MissingQuantity": [""]
-        }], plant, true);
+        }], plant, true, null);
         await updateBomComponent(updatedParentBomBody);
         const parentOrderHasMancanti = hasComponentMancante(updatedParentBomBody[0].components);
         await updateCustomMancanteOrder(plant, parentOrder, parentOrderHasMancanti);
@@ -133,7 +133,7 @@ async function updateCustomFieldsOrderAndOrderComponent(plant, wbe, project, chi
                 "Missing": [parentOrderHasMancanti],
                 "MissingMaterial": [parentOrderData.orderMaterial],
                 "MissingQuantity": [""]
-            }], plant, true);
+            }], plant, true, null);
             await updateBomComponent(updatedGrandParentBomBody);
             const grandParentOrderHasMancanti = hasComponentMancante(updatedGrandParentBomBody[0].components);
             await updateCustomMancanteOrder(plant, parentOrderData.parentOrder, grandParentOrderHasMancanti);
@@ -166,17 +166,19 @@ async function getBomDetail(plant,bom,type){
     return bomComponentsResponse;
 }
 
-async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetailBody,materialsArray,plant,checkMissingQuantityParentAssembly){
+async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetailBody,materialsArray,plant,checkMissingQuantityParentAssembly,grand_child_order){
     if(bomDetailBody.length == 0) return;
     for(let obj of bomDetailBody[0]?.components){
-        console.log("ARCH10 - "+"parentOrder: "+parentOrder+" - child_order: "+child_order+" - material: "+obj?.material?.material);
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
         var missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && !!foundMaterial ) {
-            console.log("ARCH11 - "+"checkMissingQuantityParentAssembly: "+checkMissingQuantityParentAssembly+ " - obj.quantity: "+obj.quantity+" - missingMaterial: "+missingMaterial);
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
-                console.log("ARCH12 - checkQuantityDoneComponent "+ checkQuantityDoneComponent);
-                let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
+                let checkQuantityComponentResponse = false;
+                if(!grand_child_order) {
+                    checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
+                } else {
+                    checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,child_order,grand_child_order);
+                }
                 missingMaterial = checkQuantityComponentResponse ? "false" : "true";
             }
             for(let customValueObj of obj.customValues){
@@ -227,7 +229,7 @@ async function manageSpecialGroups(projectsArray) {
                 "Missing": ["false"],
                 "MissingMaterial": [el.child_material],
                 "MissingQuantity": [""]
-            }],true);
+            }],true,el.child_order);
         } catch(e){
             console.log("updateCustomFieldsOrderAndOrderComponent error - "+e);
         }
