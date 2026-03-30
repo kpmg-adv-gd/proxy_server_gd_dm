@@ -169,10 +169,13 @@ async function getBomDetail(plant,bom,type){
 async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetailBody,materialsArray,plant,checkMissingQuantityParentAssembly){
     if(bomDetailBody.length == 0) return;
     for(let obj of bomDetailBody[0]?.components){
+        console.log("ARCH10 - "+"parentOrder: "+parentOrder+" - child_order: "+child_order+" - material: "+obj?.material?.material);
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
         var missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && !!foundMaterial ) {
+            console.log("ARCH11 - "+"checkMissingQuantityParentAssembly: "+checkMissingQuantityParentAssembly+ " - obj.quantity: "+obj.quantity+" - missingMaterial: "+missingMaterial);
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
+                console.log("ARCH12 - checkQuantityDoneComponent "+ checkQuantityDoneComponent);
                 let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,child_order);
                 missingMaterial = checkQuantityComponentResponse ? "false" : "true";
             }
