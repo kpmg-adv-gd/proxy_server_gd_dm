@@ -284,8 +284,8 @@ async function createOrder(plant, jsonOrderTesting) {
 	    "baseUnit": "ST",
         "customValues": [
             { "attribute": "COMMESSA", "value": jsonOrderTesting.wbs },
-            { "attribute": "MANCANTI", "value": false},
-            { "attribute": "COMPONENTI_MANCANTI", "value": false},
+            { "attribute": "MANCANTI", "value": true},
+            { "attribute": "COMPONENTI MANCANTI", "value": false},
             { "attribute": "DEFECTS", "value": false },
             { "attribute": "CO_PREV", "value": jsonOrderTesting.coPrev },
             { "attribute": "CUSTOMER", "value": jsonOrderTesting.customer },

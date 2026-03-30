@@ -196,7 +196,7 @@ async function updateBomComponent(body){
 async function updateCustomMancanteOrder(plant,order,value){
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
-        "attribute":"COMPONENTI_MANCANTI",
+        "attribute":"COMPONENTI MANCANTI",
         "value": value
     };
     let body={
