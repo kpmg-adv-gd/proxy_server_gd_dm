@@ -2068,7 +2068,7 @@ async function getSafetyApprovalData(plant, project, sfc, co, startDate, endDate
                 sfc: comment.sfc || '',
                 id_lev_2: comment.id_lev_2 || '',
                 co: coValue,
-                macroActivity: comment.id_lev_2 || '',
+                macroActivity: comment.lev_2 || '',
                 machineType: comment.machine_type || '',
                 user: comment.user || '',
                 datetime: comment.datetime || '',
