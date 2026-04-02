@@ -1,7 +1,9 @@
 const postgresdbService = require('../../connection');
 const queryDashKPI = require("./queries");
 
-async function getDashboardKPI(plant, project, wbs, sfc, section) {
+const { getModificheTestingData } = require("../../api/modifiche/library");
+
+async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
 
     // 1. Raccolta dati da tutte le tabelle details
     var machineDetails = getMachineProgressDetails(plant, project, wbs, sfc);
@@ -11,7 +13,7 @@ async function getDashboardKPI(plant, project, wbs, sfc, section) {
     var scostamentoAll = getScostamentoDetails(plant, project, wbs, sfc); // tutti i dati
     var mancantiDetails  = getMancantiDetails(plant, project, wbs, sfc, section);
     var evasiDetails     = getEvasiDetails(plant, project, wbs, sfc);
-    var modificheDetails = getModificheDetails(plant, project, wbs, sfc, section);
+    var modificheDetails = await getModificheDetails(plant, project, wbs, sfc, section, material);
     var varianzeDetails  = getVarianzeDetails(plant, project, wbs, sfc);
     var analisiScarico   = getAnalisiGruppiScarico(plant, project, wbs, sfc);
 
@@ -322,33 +324,46 @@ function getEvasiDetails(plant, project, wbs, sfc) {
 }
 
 /**
- * 2.5.2 Modifiche Engineering Details - Tabella Modifiche (dedicata)
- * Colonne: Type, Prog.Number/Process Id, Material, Child, Qty, Flux, Status, Data, Owner
+ * 2.5.2 Modifiche Engineering Details - TreeTable Modifiche (dedicata)
+ * Recupera dati reali da getModificheTestingData, filtra per material
  */
-function getModificheDetails(plant, project, wbs, sfc, section) {
-    // TODO: Implementare query reale
-    var columns = [
-        { key: "type",       label: "Type",         width: "70px"  },
-        { key: "progNumber", label: "Prog. Number",  width: "140px" },
-        { key: "processId",  label: "Process Id",    width: "100px" },
-        { key: "material",   label: "Material",      width: "110px" },
-        { key: "child",      label: "Child",         width: "100px" },
-        { key: "qty",        label: "Qty",           width: "60px"  },
-        { key: "flux",       label: "Flux",          width: "90px"  },
-        { key: "status",     label: "Status",        width: "110px" },
-        { key: "data",       label: "Data",          width: "100px" },
-        { key: "owner",      label: "Owner",         width: "130px" }
+async function getModificheDetails(plant, project, wbs, sfc, section, material) {
+    var treeData = await getModificheTestingData(plant, project);
+    if (!treeData || treeData === false) treeData = [];
+
+    // Filtra per material se specificato
+    if (material) {
+        treeData = treeData.filter(function(parent) {
+            return parent.material === material;
+        });
+    }
+
+    // Colonne parent (livello 1)
+    var parentColumns = [
+        { key: "type",                 label: "Type",         width: "70px"  },
+        { key: "prog_eco",             label: "Prog. Number", width: "140px" },
+        { key: "process_id",           label: "Process Id",   width: "100px" },
+        { key: "wbs_element",          label: "WBS Element",  width: "120px" },
+        { key: "material",             label: "Material",     width: "110px" },
+        { key: "material_description", label: "Description",  width: "200px" }
     ];
-    var data = [
-        { type: "ECN", progNumber: "ECN-2026-001", processId: "PRC-100", material: "MAT-A100", child: "CHILD-01", qty: 4,  flux: "Standard",   status: "Open",        data: "05/03/2026", owner: "Engineering A" },
-        { type: "ECN", progNumber: "ECN-2026-002", processId: "PRC-101", material: "MAT-B101", child: "CHILD-02", qty: 2,  flux: "Urgente",    status: "Implemented", data: "08/03/2026", owner: "Engineering B" },
-        { type: "ECR", progNumber: "ECR-2026-003", processId: "PRC-102", material: "MAT-C301", child: "CHILD-03", qty: 1,  flux: "Standard",   status: "Open",        data: "10/03/2026", owner: "Design Team" },
-        { type: "ECN", progNumber: "ECN-2026-004", processId: "PRC-103", material: "MAT-A200", child: "CHILD-04", qty: 10, flux: "Standard",   status: "Closed",      data: "12/03/2026", owner: "Engineering A" },
-        { type: "ECR", progNumber: "ECR-2026-005", processId: "PRC-104", material: "MAT-D501", child: "CHILD-05", qty: 3,  flux: "Urgente",    status: "Open",        data: "15/03/2026", owner: "Engineering B" },
-        { type: "ECN", progNumber: "ECN-2026-006", processId: "PRC-105", material: "MAT-B202", child: "CHILD-06", qty: 6,  flux: "Standard",   status: "Implemented", data: "18/03/2026", owner: "Design Team" },
-        { type: "ECN", progNumber: "ECN-2026-007", processId: "PRC-106", material: "MAT-C402", child: "CHILD-07", qty: 8,  flux: "Standard",   status: "Closed",      data: "20/03/2026", owner: "Engineering A" }
+
+    // Colonne child (livello 2)
+    var childColumns = [
+        { key: "child_material",    label: "Child Material",  width: "120px" },
+        { key: "quantity",          label: "Qty",             width: "60px"  },
+        { key: "flux_type",         label: "Flux",            width: "90px"  },
+        { key: "resolution",        label: "Resolution",      width: "100px" },
+        { key: "status",            label: "Status",          width: "80px"  },
+        { key: "statusDescription", label: "Status Desc.",    width: "120px" },
+        { key: "owner",             label: "Owner",           width: "130px" },
+        { key: "due_date",          label: "Due Date",        width: "100px" },
+        { key: "sfc",               label: "SFC",             width: "120px" },
+        { key: "order",             label: "Order",           width: "100px" },
+        { key: "note",              label: "Note",            width: "150px" }
     ];
-    return { columns: columns, data: data };
+
+    return { parentColumns: parentColumns, childColumns: childColumns, data: treeData, isTree: true };
 }
 
 /**
@@ -534,17 +549,22 @@ function _calcEvasiChart(aData) {
  */
 function _calcModificheChart(aData, sStatusFilter) {
     var groups = {};
-    aData.forEach(function(row) {
-        var match = false;
-        if (sStatusFilter === "Open") {
-            match = row.status === "Open";
-        } else {
-            match = row.status === "Closed" || row.status === "Implemented";
-        }
-        if (match) {
-            var type = row.type || "Other";
-            groups[type] = (groups[type] || 0) + 1;
-        }
+    // aData è un array tree: ogni elemento ha .type e .children[]
+    aData.forEach(function(parent) {
+        var type = parent.type || "Other";
+        if (!parent.children) return;
+        parent.children.forEach(function(child) {
+            var match = false;
+            var status = child.status || "";
+            if (sStatusFilter === "Open") {
+                match = status === "0" || status === "Open";
+            } else {
+                match = status === "1" || status === "Closed" || status === "Implemented";
+            }
+            if (match) {
+                groups[type] = (groups[type] || 0) + 1;
+            }
+        });
     });
     return Object.keys(groups).map(function(key) {
         return { label: key, value: groups[key] };
