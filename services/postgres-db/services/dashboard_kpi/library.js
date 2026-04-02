@@ -1,7 +1,8 @@
 const postgresdbService = require('../../connection');
 const queryDashKPI = require("./queries");
 
-const { getModificheTestingData } = require("../../api/modifiche/library");
+const { getModificheTestingData } = require("../../../api/modifiche/library");
+const { getVerbaliSupervisoreAssembly } = require("../../../api/verbali/library");
 
 async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
 
@@ -82,24 +83,31 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
     return result;
 }
 
-function getDataFilterDashboardKPI(plant, project, phase, customer, section) {
-    // Dati di esempio - da sostituire con query reale
-    var mockData = [
-        { project: "PROGETTO_AC_1", wbe: "WBS-001-A", section: "Section A", phase: "Assembly", customer: "Customer A", sfc: "SFC-10001", order: "ORD-50001", material: "MAT-2001" },
-        { project: "PRJ-001", wbe: "WBS-001-B", section: "Section B", phase: "Testing", customer: "Customer B", sfc: "SFC-10002", order: "ORD-50002", material: "MAT-2002" },
-        { project: "PRJ-002", wbe: "WBS-002-A", section: "Section A", phase: "Installation", customer: "Customer C", sfc: "SFC-10003", order: "ORD-50003", material: "MAT-2003" },
-        { project: "PRJ-002", wbe: "WBS-002-B", section: "Section C", phase: "Assembly", customer: "Customer D", sfc: "SFC-10004", order: "ORD-50004", material: "MAT-2004" },
-        { project: "PRJ-003", wbe: "WBS-003-A", section: "Section B", phase: "Testing", customer: "Customer E", sfc: "SFC-10005", order: "ORD-50005", material: "MAT-2005" },
-        { project: "PRJ-003", wbe: "WBS-003-B", section: "Section A", phase: "Installation", customer: "Customer F", sfc: "SFC-10006", order: "ORD-50006", material: "MAT-2001" },
-        { project: "PROGETTO_AC_1", wbe: "WBS-001-C", section: "Section C", phase: "Assembly", customer: "Customer G", sfc: "SFC-10007", order: "ORD-50007", material: "MAT-2003" },
-        { project: "PRJ-004", wbe: "WBS-004-A", section: "Section A", phase: "Testing", customer: "Customer H", sfc: "SFC-10008", order: "ORD-50008", material: "MAT-2006" }
-    ];
+async function getDataFilterDashboardKPI(plant, project, phase, customer, section) {
+    // Recupera dati reali da getVerbaliSupervisoreAssembly
+    var treeData = await getVerbaliSupervisoreAssembly(plant, project || "", "", true);
+    if (!treeData || treeData === false) return [];
 
-    // Filtro lato server sui dati mock
-    var filtered = mockData.filter(function(item) {
-        if (project && item.project !== project) return false;
-        if (phase && item.phase !== phase) return false;
-        if (customer && item.customer !== customer) return false;
+    // Flatten tree: ogni progetto ha Children[] con le macchine
+    var flatData = [];
+    treeData.forEach(function(projectNode) {
+        if (!projectNode.Children) return;
+        projectNode.Children.forEach(function(child) {
+            flatData.push({
+                project: child.project_parent || projectNode.project || "",
+                wbs: child.wbs || "",
+                section: child.material || "",
+                sfc: child.sfc || "",
+                order: child.order || "",
+                material: child.material || "",
+                status: child.status || "",
+                reportStatus: child.reportStatus || ""
+            });
+        });
+    });
+
+    // Filtro lato server
+    var filtered = flatData.filter(function(item) {
         if (section && item.section !== section) return false;
         return true;
     });
