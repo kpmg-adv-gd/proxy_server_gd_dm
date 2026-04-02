@@ -56,7 +56,7 @@ const saveCommentsVerbale = `INSERT INTO z_comments (plant, sfc, wbe, id_lev_1, 
 
 const getSfcFromCommentsSafetyApproval = `SELECT DISTINCT sfc FROM z_comments WHERE comment_type = 'M' AND plant = $1`;
 
-const getSafetyApprovalComments = `SELECT zc.sfc, zc.plant, zv.lev_2 as id_lev_2, zc.machine_type, zc.id_lev_3, zc."user", zc.comment, zc.status, zc.id_lev_1, zc.wbe,
+const getSafetyApprovalComments = `SELECT zc.sfc, zc.plant, zv.id_lev_2, zv.lev_2 as lev_2, zc.machine_type, zc.id_lev_3, zc."user", zc.comment, zc.status, zc.id_lev_1, zc.wbe,
     TO_CHAR((zc.datetime::timestamp AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime, zc.approval_comment
     FROM z_comments zc
     inner join z_verbale_lev_2 zv on zv.plant = zc.plant and zv.sfc = zc.sfc and zv.id_lev_2 = zc.id_lev_2 and zv.id_lev_1 = zc.id_lev_1
