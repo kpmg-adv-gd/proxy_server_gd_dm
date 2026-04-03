@@ -1,5 +1,5 @@
 const { callGet, callGetFile } = require("../../../utility/CommonCallApi");
-const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, sendToSAPConfirmationNumberAdditionalOperations, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo, freezeFinalTestingData } = require("./library");
+const { generatePdfFineCollaudo, getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getCustomersVerbaliSupervisoreAssembly, getSectionsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting, getProjectsVerbaliTileSupervisoreTesting, updateCustomAssemblyReportStatusOrderDone, sendToSAPConfirmationNumberAdditionalOperations, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable,  saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomField, getRiepilogoTextFinalCollaudo, freezeFinalTestingData } = require("./library");
 const { saveWorkInstructionPDF, getWorkInstructionPDF } = require("../../api/workInstructions/library"); 
 const mdoQueries = require('../../mdo/queries');
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -49,6 +49,40 @@ module.exports.listenerSetup = (app) => {
                 return;
             }
             res.status(200).json(wbe);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per ottenere i Customer per filtro su supervisore assembly
+    app.post("/api/getCustomersVerbaliSupervisoreAssembly", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const customers = await getCustomersVerbaliSupervisoreAssembly(plant);
+            if (customers === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(customers);
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    // Endpoint per ottenere le Sezioni Macchina per filtro su supervisore assembly
+    app.post("/api/getSectionsVerbaliSupervisoreAssembly", async (req, res) => {
+        try {
+            const { plant } = req.body;
+            const sections = await getSectionsVerbaliSupervisoreAssembly(plant);
+            if (sections === false) {
+                res.status(500).json({ error: "Error while executing query" });
+                return;
+            }
+            res.status(200).json(sections);
         } catch (error) {
             let status = error.status || 500;
             let errMessage = error.message || "Internal Server Error";

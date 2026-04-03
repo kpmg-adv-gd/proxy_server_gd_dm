@@ -29,5 +29,21 @@ module.exports.listenerSetup = (app) => {
         }
     })
 
+    app.post("/db/getActualDateDashboardKPI", async (req, res) => {
+        const { plant, wbe, machSection } = req.body;
+
+        if (!plant || !wbe || !machSection) {
+            return res.status(400).json({ error: "Missing required parameters: plant, wbe, machSection" });
+        }
+
+        try {
+            const actualDate = await postgresdbService.getActualDate(plant, wbe, machSection);
+            res.status(200).json({ actualDate: actualDate });
+        } catch (error) {
+            console.log("Error executing query: " + error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    })
+
 };
 

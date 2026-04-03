@@ -118,6 +118,50 @@ async function getWBEVerbaliSupervisoreAssembly(plant) {
     }
 }
 
+// Funzione per ottenere i Customer per filtro su supervisore assembly
+async function getCustomersVerbaliSupervisoreAssembly(plant) {
+    var customers = [];
+    try {
+        var customerFilter = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqCustomer = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${customerFilter})` },
+            method: "GET"
+        };
+        var outMockCustomer = await dispatch(mockReqCustomer);
+        for (var i = 0; i < outMockCustomer.data.value.length; i++) {
+            var customerData = outMockCustomer.data.value[i];
+            if (!customers.some(p => p.customer === customerData.DATA_FIELD_VALUE))
+                customers.push({ customer: customerData.DATA_FIELD_VALUE });
+        }
+        return customers;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Funzione per ottenere le Sezioni Macchina per filtro su supervisore assembly
+async function getSectionsVerbaliSupervisoreAssembly(plant) {
+    var sections = [];
+    try {
+        var sectionFilter = `(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqSection = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${sectionFilter})` },
+            method: "GET"
+        };
+        var outMockSection = await dispatch(mockReqSection);
+        for (var i = 0; i < outMockSection.data.value.length; i++) {
+            var sectionData = outMockSection.data.value[i];
+            if (!sections.some(p => p.section === sectionData.DATA_FIELD_VALUE))
+                sections.push({ section: sectionData.DATA_FIELD_VALUE });
+        }
+        return sections;
+    } catch (error) {
+        return false;
+    }
+}
+
 async function getVerbaliTileSupervisoreTesting(plant, project, wbs, startDate, endDate) {
     var results = [];
     try {
@@ -4228,4 +4272,4 @@ async function freezeFinalTestingData(plant, project, order, sfc, treeDefects, t
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getCustomersVerbaliSupervisoreAssembly, getSectionsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };

@@ -16,7 +16,6 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
     var evasiDetails     = getEvasiDetails(plant, project, wbs, sfc);
     var modificheDetails = await getModificheDetails(plant, project, wbs, sfc, section, material);
     var varianzeDetails  = getVarianzeDetails(plant, project, wbs, sfc);
-    var analisiScarico   = getAnalisiGruppiScarico(plant, project, wbs, sfc);
 
     // 2. Filtra scostamento per workcenter
     var scostamentoGD = {
@@ -76,43 +75,61 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
         mancanti:            mancantiDetails,
         evasi:               evasiDetails,
         modifiche:           modificheDetails,
-        varianze:            varianzeDetails,
-        analisiGruppiScarico: analisiScarico
+        varianze:            varianzeDetails
     };
 
     return result;
 }
 
 async function getDataFilterDashboardKPI(plant, project, phase, customer, section) {
-    // Recupera dati reali da getVerbaliSupervisoreAssembly
     var treeData = await getVerbaliSupervisoreAssembly(plant, project || "", "", true);
     if (!treeData || treeData === false) return [];
 
-    // Flatten tree: ogni progetto ha Children[] con le macchine
-    var flatData = [];
-    treeData.forEach(function(projectNode) {
-        if (!projectNode.Children) return;
-        projectNode.Children.forEach(function(child) {
-            flatData.push({
-                project: child.project_parent || projectNode.project || "",
-                wbs: child.wbs || "",
+    // Restituisce direttamente la struttura ad albero raggruppata per progetto
+    // Ogni nodo parent ha: project, children[]
+    // Ogni child ha: project, wbe, section, sfc, order, material, status, reportStatus
+    var result = treeData.map(function(projectNode) {
+        var children = (projectNode.Children || []).map(function(child) {
+            return {
+                project: "",
+                wbe: child.wbs || "",
                 section: child.material || "",
                 sfc: child.sfc || "",
                 order: child.order || "",
                 material: child.material || "",
                 status: child.status || "",
-                reportStatus: child.reportStatus || ""
-            });
+                reportStatus: child.reportStatus || "",
+                project_parent: child.project_parent || projectNode.project || "",
+                children: []
+            };
         });
+
+        // Filtro lato server sui children
+        if (section) {
+            children = children.filter(function(item) {
+                return item.section === section;
+            });
+        }
+
+        return {
+            project: projectNode.project || "",
+            wbe: "",
+            section: "",
+            sfc: "",
+            order: "",
+            material: "",
+            status: "",
+            reportStatus: "",
+            children: children
+        };
     });
 
-    // Filtro lato server
-    var filtered = flatData.filter(function(item) {
-        if (section && item.section !== section) return false;
-        return true;
+    // Rimuovi progetti senza children dopo il filtro
+    result = result.filter(function(node) {
+        return node.children.length > 0;
     });
 
-    return filtered;
+    return result;
 }
 
 // ========== DETAILS MOCK DATA ==========
@@ -431,17 +448,29 @@ function getAnalisiGruppiScarico(plant, project, wbs, sfc) {
     return { columns: columns, data: data };
 }
 
+async function getActualDate(plant, wbe, machSection) {
+    const data = await postgresdbService.executeQuery(queryDashKPI.getActualDate, [plant, wbe, machSection]);
+    if (data && data.length > 0 && data[0].actual_date) {
+        var d = new Date(data[0].actual_date);
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        return dd + '/' + mm + '/' + yyyy;
+    }
+    return "";
+}
+
 module.exports = { 
     getDashboardKPI, 
     getDataFilterDashboardKPI,
+    getActualDate,
     getMachineProgressDetails,
     getSFCProgressDetails,
     getScostamentoDetails,
     getMancantiDetails,
     getEvasiDetails,
     getModificheDetails,
-    getVarianzeDetails,
-    getAnalisiGruppiScarico
+    getVarianzeDetails
 }
 
 // ========== FUNZIONI DI CALCOLO CHART DA DATI TABELLE ==========
