@@ -3,8 +3,9 @@ const queryDashKPI = require("./queries");
 
 const { getModificheTestingData } = require("../../../api/modifiche/library");
 const { getVerbaliSupervisoreAssembly } = require("../../../api/verbali/library");
+const { ordersChildrenRecursion } = require("../verbali/library");
 
-async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
+async function getDashboardKPI(plant, project, wbs, sfc, section, material, order) {
 
     // 1. Raccolta dati da tutte le tabelle details
     var machineDetails = getMachineProgressDetails(plant, project, wbs, sfc);
@@ -15,7 +16,8 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
     var mancantiDetails  = getMancantiDetails(plant, project, wbs, sfc, section);
     var evasiDetails     = getEvasiDetails(plant, project, wbs, sfc);
     var modificheDetails = await getModificheDetails(plant, project, wbs, sfc, section, material);
-    var varianzeDetails  = getVarianzeDetails(plant, project, wbs, sfc);
+    var varianzeDetails  = await getVarianzeDetails(plant, order);
+    var ncPresenzaData   = await _getNcPresenza(plant, sfc);
 
     // 2. Filtra scostamento per workcenter
     var scostamentoGD = {
@@ -38,8 +40,12 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
 
     result.mancanti = _calcMancantiSummary(mancantiDetails.data);
 
-    // NC non ha tabella details dedicata (apre report esterno)
-    result.nonConformita = { gruppiConNC: "43%", maOpen: "15", maClosed: "25" };
+    var modificheCounts = _calcModificheTotals(modificheDetails.data);
+    result.nonConformita = {
+        gruppiConNC: "43%",
+        maOpen: String(modificheCounts.open),
+        maClosed: String(modificheCounts.closed)
+    };
 
     result.chartData = {
         machineProgress: _calcMachineProgressChart(machineDetails.data),
@@ -50,9 +56,9 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
         mancanti: _calcMancantiChart(mancantiDetails.data),
         evasi:    _calcEvasiChart(evasiDetails.data),
         ncPresenza: [
-            { label: "NC open", value: 20 },
-            { label: "NC bloccanti", value: 28 },
-            { label: "NC closed", value: 52 }
+            { label: "NC open", value: ncPresenzaData.ncOpen },
+            { label: "NC bloccanti", value: ncPresenzaData.ncBloccanti },
+            { label: "NC closed", value: ncPresenzaData.ncClosed }
         ],
         modificheOpen:   _calcModificheChart(modificheDetails.data, "Open"),
         modificheClosed: _calcModificheChart(modificheDetails.data, "Closed"),
@@ -75,7 +81,8 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material) {
         mancanti:            mancantiDetails,
         evasi:               evasiDetails,
         modifiche:           modificheDetails,
-        varianze:            varianzeDetails
+        tipologiaVarianze:   varianzeDetails.detailsTipologia,
+        responsabilitaVarianze: varianzeDetails.detailsResponsabilita
     };
 
     return result;
@@ -356,13 +363,6 @@ async function getModificheDetails(plant, project, wbs, sfc, section, material) 
     var treeData = await getModificheTestingData(plant, project);
     if (!treeData || treeData === false) treeData = [];
 
-    // Filtra per material se specificato
-    if (material) {
-        treeData = treeData.filter(function(parent) {
-            return parent.material === material;
-        });
-    }
-
     // Colonne parent (livello 1)
     var parentColumns = [
         { key: "type",                 label: "Type",         width: "70px"  },
@@ -392,60 +392,63 @@ async function getModificheDetails(plant, project, wbs, sfc, section, material) 
 }
 
 /**
- * 2.6 Varianze Details - Tabella Varianze
- * Colonne: Codice, Tipologia, Responsabilità, Ore varianza, Include (Y/N); filtro per periodo/Project/WBS
+ * 2.6 Varianze Details - Dati reali da z_op_confirmations + z_variance_type
  */
-function getVarianzeDetails(plant, project, wbs, sfc) {
-    // TODO: Implementare query reale
-    var columns = [
-        { key: "codice",         label: "Codice",         width: "80px"  },
-        { key: "tipologia",      label: "Tipologia",      width: "200px" },
-        { key: "responsabilita", label: "Responsabilità", width: "180px" },
-        { key: "oreVarianza",    label: "Ore varianza",   width: "110px" },
-        { key: "include",        label: "Include (Y/N)",  width: "100px" }
-    ];
-    var data = [
-        { codice: "V29", tipologia: "Attesa materiale",         responsabilita: "Operational",      oreVarianza: 31, include: "Y" },
-        { codice: "V24", tipologia: "Rilavorazione",            responsabilita: "Assembly",          oreVarianza: 24, include: "Y" },
-        { codice: "V06", tipologia: "Attesa documentazione",    responsabilita: "Engineering",       oreVarianza: 14, include: "Y" },
-        { codice: "V26", tipologia: "Difetto fornitore",        responsabilita: "Fornitori",         oreVarianza: 12, include: "Y" },
-        { codice: "V12", tipologia: "Modifica engineering",     responsabilita: "Engineering",       oreVarianza: 11, include: "Y" },
-        { codice: "NA",  tipologia: "Non attribuita",           responsabilita: "Non attribuita",    oreVarianza: 9,  include: "N" },
-        { codice: "V28", tipologia: "Attesa attrezzatura",      responsabilita: "Operational",       oreVarianza: 5,  include: "Y" },
-        { codice: "V36", tipologia: "Ritardo consegna fornit.", responsabilita: "Fornitori Assembly", oreVarianza: 5,  include: "Y" },
-        { codice: "V02", tipologia: "Setup macchina",           responsabilita: "Assembly",          oreVarianza: 3,  include: "Y" },
-        { codice: "V15", tipologia: "Problema qualità",         responsabilita: "Sales",             oreVarianza: 3,  include: "Y" }
-    ];
-    return { columns: columns, data: data };
-}
+async function getVarianzeDetails(plant, order) {
+    var data = [];
+    try {
+        var allOrders = await ordersChildrenRecursion(plant, order);
+        var rows = await postgresdbService.executeQuery(queryDashKPI.getTipologiaVarianzeQuery, [plant, allOrders]);
+        if (rows && rows.length > 0) data = rows;
+    } catch (e) {
+        console.error("Errore getVarianzeDetails:", e);
+    }
 
-/**
- * 2.7 Analisi gruppi allo scarico Details
- * Tabella: SFC Gruppi, Data BSD, Data scarico, Delay, Data uscita RFID mag, Data completamento, % oggi, % a completamento
- */
-function getAnalisiGruppiScarico(plant, project, wbs, sfc) {
-    // TODO: Implementare query reale
-    var columns = [
-        { key: "sfcGruppo",                label: "SFC Gruppi",         width: "140px" },
-        { key: "dataBSD",                  label: "Data BSD",           width: "100px" },
-        { key: "dataScarico",              label: "Data scarico",       width: "100px" },
-        { key: "delay",                    label: "Delay",              width: "70px"  },
-        { key: "dataUscitaRFIDMag",        label: "Uscita RFID mag.",   width: "130px" },
-        { key: "dataCompletamento",        label: "Data completamento", width: "140px" },
-        { key: "percentualeOggi",          label: "% oggi",             width: "90px"  },
-        { key: "percentualeCompletamento", label: "% a completamento",  width: "130px" }
+    // Calcolo totale ore per percentuali
+    var totalOre = 0;
+    data.forEach(function(row) { totalOre += parseFloat(row.variance_labor) || 0; });
+
+    // Details Tipologia: reason_for_variance, description, variance_labor, percentuale
+    var tipologiaColumns = [
+        { key: "reason_for_variance", label: "Varianza",      width: "120px" },
+        { key: "description",         label: "Descrizione",   width: "250px" },
+        { key: "variance_labor",      label: "Ore Varianza",  width: "120px" },
+        { key: "percentuale",         label: "Percentuale",   width: "120px" }
     ];
-    var data = [
-        { sfcGruppo: "G1-SFC-10001", dataBSD: "01/03/2026", dataScarico: "05/03/2026", delay: "SI", dataUscitaRFIDMag: "02/03/2026", dataCompletamento: "",           percentualeOggi: "54,84%",  percentualeCompletamento: "" },
-        { sfcGruppo: "G2-SFC-10001", dataBSD: "05/03/2026", dataScarico: "06/03/2026", delay: "SI", dataUscitaRFIDMag: "05/03/2026", dataCompletamento: "10/03/2026", percentualeOggi: "100,00%", percentualeCompletamento: "100,00%" },
-        { sfcGruppo: "G3-SFC-10001", dataBSD: "10/03/2026", dataScarico: "12/03/2026", delay: "SI", dataUscitaRFIDMag: "11/03/2026", dataCompletamento: "",           percentualeOggi: "26,32%",  percentualeCompletamento: "" },
-        { sfcGruppo: "G4-SFC-10001", dataBSD: "15/03/2026", dataScarico: "",           delay: "NO", dataUscitaRFIDMag: "",           dataCompletamento: "",           percentualeOggi: "34,38%",  percentualeCompletamento: "" },
-        { sfcGruppo: "G5-SFC-10001", dataBSD: "08/03/2026", dataScarico: "08/03/2026", delay: "NO", dataUscitaRFIDMag: "08/03/2026", dataCompletamento: "09/03/2026", percentualeOggi: "100,00%", percentualeCompletamento: "100,00%" },
-        { sfcGruppo: "G6-SFC-10001", dataBSD: "20/03/2026", dataScarico: "",           delay: "NO", dataUscitaRFIDMag: "",           dataCompletamento: "",           percentualeOggi: "30,77%",  percentualeCompletamento: "" },
-        { sfcGruppo: "G7-SFC-10001", dataBSD: "12/03/2026", dataScarico: "15/03/2026", delay: "SI", dataUscitaRFIDMag: "13/03/2026", dataCompletamento: "",           percentualeOggi: "97,37%",  percentualeCompletamento: "" },
-        { sfcGruppo: "G8-SFC-10001", dataBSD: "25/03/2026", dataScarico: "",           delay: "NO", dataUscitaRFIDMag: "",           dataCompletamento: "",           percentualeOggi: "33,33%",  percentualeCompletamento: "" }
+    var tipologiaData = data.map(function(row) {
+        var ore = parseFloat(row.variance_labor) || 0;
+        var pct = totalOre > 0 ? (ore / totalOre * 100).toFixed(1) : "0";
+        return {
+            reason_for_variance: row.reason_for_variance || "",
+            description: row.description || "",
+            variance_labor: ore,
+            percentuale: pct + "%"
+        };
+    });
+
+    // Details Responsabilità: attribution, ore sommate, percentuale
+    var attrGroups = {};
+    data.forEach(function(row) {
+        var attr = row.attribution || "Non attribuita";
+        var ore = parseFloat(row.variance_labor) || 0;
+        attrGroups[attr] = (attrGroups[attr] || 0) + ore;
+    });
+    var responsabilitaColumns = [
+        { key: "attribution",    label: "Responsabilità", width: "250px" },
+        { key: "variance_labor", label: "Ore Varianza",   width: "120px" },
+        { key: "percentuale",    label: "Percentuale",    width: "120px" }
     ];
-    return { columns: columns, data: data };
+    var responsabilitaData = Object.keys(attrGroups).map(function(key) {
+        var ore = attrGroups[key];
+        var pct = totalOre > 0 ? (ore / totalOre * 100).toFixed(1) : "0";
+        return { attribution: key, variance_labor: ore, percentuale: pct + "%" };
+    }).sort(function(a, b) { return b.variance_labor - a.variance_labor; });
+
+    return {
+        data: data,
+        detailsTipologia: { columns: tipologiaColumns, data: tipologiaData },
+        detailsResponsabilita: { columns: responsabilitaColumns, data: responsabilitaData }
+    };
 }
 
 async function getActualDate(plant, wbe, machSection) {
@@ -458,6 +461,22 @@ async function getActualDate(plant, wbe, machSection) {
         return dd + '/' + mm + '/' + yyyy;
     }
     return "";
+}
+
+async function _getNcPresenza(plant, sfc) {
+    try {
+        var rows = await postgresdbService.executeQuery(queryDashKPI.getNcPresenzaQuery, [plant, sfc]);
+        if (rows && rows.length > 0) {
+            return {
+                ncOpen:      parseInt(rows[0].nc_open) || 0,
+                ncClosed:    parseInt(rows[0].nc_closed) || 0,
+                ncBloccanti: parseInt(rows[0].nc_bloccanti) || 0
+            };
+        }
+    } catch (e) {
+        console.error("Errore getNcPresenza:", e);
+    }
+    return { ncOpen: 0, ncClosed: 0, ncBloccanti: 0 };
 }
 
 module.exports = { 
@@ -582,60 +601,72 @@ function _calcEvasiChart(aData) {
 }
 
 /**
- * Calcola Modifiche chart (raggruppate per type, filtrate per status Open o Closed/Implemented)
+ * Conta totale modifiche Open (status != '2') e Closed (status == '2')
  */
-function _calcModificheChart(aData, sStatusFilter) {
-    var groups = {};
-    // aData è un array tree: ogni elemento ha .type e .children[]
+function _calcModificheTotals(aData) {
+    var open = 0, closed = 0;
     aData.forEach(function(parent) {
-        var type = parent.type || "Other";
         if (!parent.children) return;
         parent.children.forEach(function(child) {
+            var status = String(child.status != null ? child.status : "");
+            if (status === "2") { closed++; } else { open++; }
+        });
+    });
+    return { open: open, closed: closed };
+}
+
+/**
+ * Calcola Modifiche chart (raggruppate per MT/MK/MA dal type, filtrate per status)
+ * Open: status != '2'
+ * Closed: status = '2'
+ */
+function _calcModificheChart(aData, sStatusFilter) {
+    var groups = { "MT": 0, "MK": 0, "MA": 0 };
+    // aData è un array tree: ogni elemento ha .type e .children[]
+    aData.forEach(function(parent) {
+        var rawType = (parent.type || "").toUpperCase();
+        var type = "Other";
+        if (rawType.indexOf("MT") !== -1) { type = "MT"; }
+        else if (rawType.indexOf("MK") !== -1) { type = "MK"; }
+        else if (rawType.indexOf("MA") !== -1) { type = "MA"; }
+        if (!parent.children) return;
+        parent.children.forEach(function(child) {
+            var status = String(child.status != null ? child.status : "");
             var match = false;
-            var status = child.status || "";
             if (sStatusFilter === "Open") {
-                match = status === "0" || status === "Open";
+                match = status !== "2";
             } else {
-                match = status === "1" || status === "Closed" || status === "Implemented";
+                match = status === "2";
             }
             if (match) {
                 groups[type] = (groups[type] || 0) + 1;
             }
         });
     });
-    return Object.keys(groups).map(function(key) {
-        return { label: key, value: groups[key] };
+    return ["MT", "MK", "MA"].map(function(key) {
+        return { label: key, value: groups[key] || 0 };
     });
 }
 
 /**
- * Calcola Tipologia Varianze chart (raggruppato per codice, somma ore varianza)
+ * Calcola Tipologia Varianze chart (raggruppato per reason_for_variance, somma ore varianza)
  */
 function _calcTipologiaVarianzeChart(aData) {
-    var groups = {};
-    aData.forEach(function(row) {
-        var key = row.codice || "NA";
-        groups[key] = (groups[key] || 0) + (row.oreVarianza || 0);
-    });
-    return Object.keys(groups).map(function(key) {
-        return { label: key === "NA" ? "Non attr." : key, value: groups[key] };
+    return aData.map(function(row) {
+        return { label: row.reason_for_variance || "NA", value: parseFloat(row.variance_labor) || 0 };
     }).sort(function(a, b) { return b.value - a.value; });
 }
 
 /**
- * Calcola Responsabilità Varianze chart (raggruppato per responsabilità, somma ore varianza)
+ * Calcola Responsabilità Varianze chart (raggruppato per attribution, somma ore varianza)
  */
 function _calcResponsabilitaVarianzeChart(aData) {
     var groups = {};
     aData.forEach(function(row) {
-        var key = row.responsabilita || "Non attribuita";
-        groups[key] = (groups[key] || 0) + (row.oreVarianza || 0);
+        var key = row.attribution || "Non attribuita";
+        groups[key] = (groups[key] || 0) + (parseFloat(row.variance_labor) || 0);
     });
-    var labelMap = {
-        "Non attribuita": "Non attr.",
-        "Fornitori Assembly": "Forn. Ass."
-    };
     return Object.keys(groups).map(function(key) {
-        return { label: labelMap[key] || key, value: groups[key] };
+        return { label: key, value: groups[key] };
     }).sort(function(a, b) { return b.value - a.value; });
 }
