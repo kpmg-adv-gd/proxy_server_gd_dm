@@ -174,8 +174,12 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
                 "value": fluxType
             },
             {
-                "attribute":"COMPONENTE MANCANTE",
+                "attribute":"ORDINE MANCANTE",
                 "value": modificaType=="MA"? "true":"false"
+            },
+            {
+                "attribute":"COMPONENTE MANCANTE",
+                "value": "false"
             }],
             "componentType": "NORMAL",
             "unitOfMeasure": "ST",
@@ -195,7 +199,7 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
                 if(fluxType=="M") obj.quantity = qty;
                 //Gestione mancanti in caso di modifica di assieme per rimozione gruppo
                 if(modificaType=="MA" && fluxType=="D"){
-                    let mancantiField = obj.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE");
+                    let mancantiField = obj.customValues.find(obj => obj.attribute == "ORDINE MANCANTE");
                     if(mancantiField?.value =="true"){
                         mancantiField.value = "false";
                         if(!hasComponentMancante(bomComponentResponse[0].components)){
@@ -219,7 +223,7 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
 async function updateCustomMancanteOrder(plant,order,value){
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
-        "attribute":"MANCANTI",
+        "attribute":"ORDINI MANCANTI",
         "value": value
     };
     let body={
@@ -235,7 +239,7 @@ function updateBodyBomComponentMaterial(plant,bomDetailBody,material,value){
     for(let obj of bomDetailBody[0]?.components){
         if (obj?.material?.material == material && obj.material.plant === plant ) {
             for(let customValueObj of obj.customValues){
-                if (customValueObj.attribute === "COMPONENTE MANCANTE") {
+                if (customValueObj.attribute === "ORDINE MANCANTE") {
                     customValueObj.value = value;
                 }
             }
@@ -308,7 +312,7 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>
-            cv.attribute === "COMPONENTE MANCANTE" && cv.value === "true"
+            cv.attribute === "ORDINI MANCANTI" && cv.value === "true"
         )
     );
 }
