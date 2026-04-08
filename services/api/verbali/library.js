@@ -50,6 +50,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
+            data.customer = orderResponse?.customValues?.filter(item => item.attribute == "CUSTOMER")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
@@ -1520,7 +1521,8 @@ function generateTreeTable(data) {
             idReportWeight: data[i].idReportWeight,
             order: data[i].order,
             assemblyReportDate: data[i].assemblyReportDate || "",
-            user: data[i].user || ""
+            user: data[i].user || "",
+            customer: data[i].customer || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });

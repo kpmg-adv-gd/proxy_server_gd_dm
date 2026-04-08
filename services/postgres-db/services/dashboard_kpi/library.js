@@ -4,20 +4,28 @@ const queryDashKPI = require("./queries");
 const { getModificheTestingData } = require("../../../api/modifiche/library");
 const { getVerbaliSupervisoreAssembly } = require("../../../api/verbali/library");
 const { ordersChildrenRecursion } = require("../verbali/library");
+const { callGet } = require("../../../../utility/CommonCallApi");
+const { dispatch } = require("../../../mdo/library");
+const credentials = JSON.parse(process.env.CREDENTIALS);
+const hostname = credentials.DM_API_URL;
 
-async function getDashboardKPI(plant, project, wbs, sfc, section, material, order) {
+async function getDashboardKPI(plant, project, wbe, sfc, section, material, order) {
 
     // 1. Raccolta dati da tutte le tabelle details
-    var machineDetails = getMachineProgressDetails(plant, project, wbs, sfc);
-    var sfcGruppi  = getSFCProgressDetails(plant, project, wbs, sfc, "gruppi");
-    var sfcAggr    = getSFCProgressDetails(plant, project, wbs, sfc, "aggr");
-    var sfcMacr    = getSFCProgressDetails(plant, project, wbs, sfc, "macr");
-    var scostamentoAll = getScostamentoDetails(plant, project, wbs, sfc); // tutti i dati
-    var mancantiDetails  = getMancantiDetails(plant, project, wbs, sfc, section);
-    var evasiDetails     = getEvasiDetails(plant, project, wbs, sfc);
-    var modificheDetails = await getModificheDetails(plant, project, wbs, sfc, section, material);
+    var orderClassification = await _classifyOrders(plant, order);
+    var hierarchyResult = await _calcCumulativeDurations(plant, orderClassification.all);
+    var cumulativeDurations = hierarchyResult.durations;
+    var childToParent = hierarchyResult.childToParent;
+    var machineDetails = await getMachineProgressDetails(plant, wbe, orderClassification, cumulativeDurations, hierarchyResult.childrenMap);
+    var sfcGruppi  = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent);
+    var sfcAggr    = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent);
+    var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent);
+    var scostamentoAll = getScostamentoDetails(plant, project, wbe, sfc); // tutti i dati
+    var mancantiDetails  = getMancantiDetails(plant, project, wbe, sfc, section);
+    var evasiDetails     = getEvasiDetails(orderClassification);
+    var modificheDetails = await getModificheDetails(plant, project, wbe, sfc, section, material);
     var varianzeDetails  = await getVarianzeDetails(plant, order);
-    var ncPresenzaData   = await _getNcPresenza(plant, sfc);
+    var ncPresenzaData   = await _getNcPresenza(plant, orderClassification);
 
     // 2. Filtra scostamento per workcenter
     var scostamentoGD = {
@@ -42,7 +50,7 @@ async function getDashboardKPI(plant, project, wbs, sfc, section, material, orde
 
     var modificheCounts = _calcModificheTotals(modificheDetails.data);
     result.nonConformita = {
-        gruppiConNC: "43%",
+        ordiniConNC: ncPresenzaData.ordiniConNC,
         maOpen: String(modificheCounts.open),
         maClosed: String(modificheCounts.closed)
     };
@@ -106,6 +114,7 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
                 material: child.material || "",
                 status: child.status || "",
                 reportStatus: child.reportStatus || "",
+                customer: child.customer || "",
                 project_parent: child.project_parent || projectNode.project || "",
                 children: []
             };
@@ -117,6 +126,13 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
                 return item.section === section;
             });
         }
+        // Filtro lato server sui customer
+        if (customer) {
+            children = children.filter(function(item) {
+                return item.customer === customer;
+            });
+        }
+        // todo: il filtro phase attualmente non è in uso, poichè è attiva solo la scelta "Assembly"
 
         return {
             project: projectNode.project || "",
@@ -139,125 +155,453 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
     return result;
 }
 
-// ========== DETAILS MOCK DATA ==========
+// ========== REAL DATA FUNCTIONS ==========
 
 /**
- * 2.2.1 Machine Progress Details - Stato di completamento (gerarchia ore)
- * Griglia: Macchina → Macroaggregati → Aggregati → Gruppi → Lavorazioni
- * Colonne: Type, SFC, Work Center, Status, Ore pianificate, Ore marcate, Ore effettive montaggio, % completamento
+ * Classifica tutti gli ordini (figli/nipoti) per ORDER_TYPE.
+ * Per ogni ordine recupera: order, orderType, sfc, totalOps, completedOps, percentuale
  */
-function getMachineProgressDetails(plant, project, wbs, sfc) {
-    // TODO: Implementare query reale
-    var columns = [
-        { key: "type",                     label: "Type",            width: "180px" },
-        { key: "sfc",                      label: "SFC",             width: "220px" },
-        { key: "workCenter",               label: "Work Center",     width: "100px" },
-        { key: "status",                   label: "Status",          width: "100px" },
-        { key: "orePianificate",           label: "Ore pianificate", width: "110px" },
-        { key: "oreMarcate",               label: "Ore marcate",     width: "100px" },
-        { key: "oreEffettive",             label: "Ore effettive",   width: "100px" },
-        { key: "percentualeCompletamento", label: "% completamento", width: "120px" }
-    ];
-    var data = [
-        { type: "MACCHINA",               sfc: "C005.25001.MKM01_121 MK_223", workCenter: "GD",     status: "Start",       orePianificate: 59, oreMarcate: 23, oreEffettive: 23, percentualeCompletamento: "38,98%" },
-        { type: "Lavorazione macchina",    sfc: "",                             workCenter: "F_14441", status: "Start",       orePianificate: 7,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Aggregato 1",            sfc: "C005.25001.MKM01_MK_COMPLETAMENTO SUPPORTI MODULI BKP_105", workCenter: "GD", status: "Start", orePianificate: 3, oreMarcate: 1, oreEffettive: 1, percentualeCompletamento: "33,33%" },
-        { type: "Lavorazione aggregato",   sfc: "",                             workCenter: "GD",     status: "Start",       orePianificate: 3,  oreMarcate: 1,  oreEffettive: 1,  percentualeCompletamento: "33,33%" },
-        { type: "Aggregato 2",            sfc: "C005.25001.MKM01_MK_ELE_MODULI REMOTI MK_196", workCenter: "GD", status: "Start", orePianificate: 49, oreMarcate: 22, oreEffettive: 22, percentualeCompletamento: "44,90%" },
-        { type: "Lavorazione aggregato",   sfc: "",                             workCenter: "GD",     status: "Complete",    orePianificate: 5,  oreMarcate: 5,  oreEffettive: 5,  percentualeCompletamento: "100,00%" },
-        { type: "Gruppo 1",               sfc: "C005.25001.MKM01_28MK_AGGR_306", workCenter: "GD",  status: "Start",       orePianificate: 31, oreMarcate: 17, oreEffettive: 17, percentualeCompletamento: "54,84%" },
-        { type: "Lavorazione 1",          sfc: "",                             workCenter: "GD",     status: "Not started", orePianificate: 2,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Lavorazione 2",          sfc: "",                             workCenter: "GD",     status: "Complete",    orePianificate: 4,  oreMarcate: 4,  oreEffettive: 4,  percentualeCompletamento: "100,00%" },
-        { type: "Lavorazione 3",          sfc: "",                             workCenter: "GD",     status: "Start",       orePianificate: 5,  oreMarcate: 3,  oreEffettive: 3,  percentualeCompletamento: "60,00%" },
-        { type: "Lavorazione 4",          sfc: "",                             workCenter: "GD",     status: "Start",       orePianificate: 3,  oreMarcate: 1,  oreEffettive: 1,  percentualeCompletamento: "33,33%" },
-        { type: "Lavorazione 5",          sfc: "",                             workCenter: "GD",     status: "Start",       orePianificate: 1,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Lavorazione 6",          sfc: "",                             workCenter: "GD",     status: "Complete",    orePianificate: 7,  oreMarcate: 7,  oreEffettive: 7,  percentualeCompletamento: "100,00%" },
-        { type: "Lavorazione 7",          sfc: "",                             workCenter: "GD",     status: "Start",       orePianificate: 4,  oreMarcate: 2,  oreEffettive: 2,  percentualeCompletamento: "50,00%" },
-        { type: "Lavorazione 8",          sfc: "",                             workCenter: "GD",     status: "Not started", orePianificate: 5,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Gruppo 2",               sfc: "C005.25001.MKM01_28MK_KD04_298", workCenter: "F_16013", status: "Start", orePianificate: 13, oreMarcate: 0, oreEffettive: 0, percentualeCompletamento: "0,00%" },
-        { type: "Lavorazione 1",          sfc: "",                             workCenter: "F_16013", status: "Start",      orePianificate: 3,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Lavorazione 2",          sfc: "",                             workCenter: "F_16014", status: "Complete",   orePianificate: 2,  oreMarcate: 0,  oreEffettive: 3,  percentualeCompletamento: "100,00%" },
-        { type: "Lavorazione 3",          sfc: "",                             workCenter: "F_16015", status: "Start",      orePianificate: 4,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" },
-        { type: "Lavorazione 4",          sfc: "",                             workCenter: "F_16016", status: "Complete",   orePianificate: 2,  oreMarcate: 2,  oreEffettive: 2,  percentualeCompletamento: "100,00%" },
-        { type: "Lavorazione 5",          sfc: "",                             workCenter: "F_16017", status: "Start",      orePianificate: 1,  oreMarcate: 0,  oreEffettive: 0,  percentualeCompletamento: "0,00%" }
-    ];
-    return { columns: columns, data: data };
+async function _classifyOrders(plant, order) {
+    var allOrders = await ordersChildrenRecursion(plant, order);
+    var gruppi = [], aggregati = [], macroaggregati = [];
+
+    // Recupera ORDER_TYPE per tutti gli ordini in parallelo (batch)
+    var orderDetails = await Promise.all(allOrders.map(async function(ord) {
+        try {
+            var url = hostname + "/order/v1/orders?order=" + ord + "&plant=" + plant;
+            var orderResp = await callGet(url);
+            var orderTypeField = orderResp?.customValues?.find(function(obj) { return obj.attribute === "ORDER_TYPE"; });
+            var orderType = orderTypeField?.value || "";
+            var unloadPointField = orderResp?.customValues?.find(function(obj) { return obj.attribute === "UNLOAD_POINT"; });
+            var unloadPoint = unloadPointField?.value || null;
+            var plannedStartDate = orderResp?.plannedStartDate || null;
+            var sfcValue = orderResp?.sfcs?.[0] || "";
+            return { order: ord, orderType: orderType, unloadPoint: unloadPoint, plannedStartDate: plannedStartDate, sfc: sfcValue };
+        } catch (e) {
+            console.log("Error fetching order detail for " + ord + ": " + e.message);
+            return { order: ord, orderType: "", unloadPoint: null, plannedStartDate: null, sfc: "" };
+        }
+    }));
+
+    // Per ogni ordine recupera % completamento dall'SFC (ponderata su DURATION) e routing steps
+    var enriched = await Promise.all(orderDetails.map(async function(item) {
+        var pct = "0,00%";
+        var routingSteps = [];
+        var totalOps = 0, completedOps = 0;
+        var pctOps = "0,00%";
+        if (item.sfc) {
+            try {
+                var urlSfc = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + item.sfc;
+                var sfcDetail = await callGet(urlSfc);
+                var steps = sfcDetail?.steps || [];
+                var totalOps = steps.length;
+                var completedOps = steps.filter(function(s) { return s.quantityDone === 1; }).length;
+                var pctOps = "0,00%";
+                if (totalOps > 0) {
+                    pctOps = (completedOps / totalOps * 100).toFixed(2).replace(".", ",") + "%";
+                }
+                // Recupera routing steps con DURATION
+                var routing = sfcDetail?.routing?.routing;
+                var routingVersion = sfcDetail?.routing?.version;
+                var routingType = sfcDetail?.routing?.type === "SHOPORDER_SPECIFIC" ? "SHOP_ORDER" : sfcDetail?.routing?.type;
+                var routingStepsData = [];
+                if (routing) {
+                    try {
+                        var urlRouting = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + "&routing=" + routing + "&type=" + routingType + "&version=" + routingVersion;
+                        var routingResp = await callGet(urlRouting);
+                        routingStepsData = routingResp?.routingSteps || [];
+                    } catch (e2) {
+                        console.log("Error fetching routing steps for " + routing + ": " + e2.message);
+                    }
+                }
+
+                // Combina sfcdetail steps con routing steps per DURATION
+                steps.forEach(function(sfcStep) {
+                    var stepOp = sfcStep?.operation?.operation || "";
+                    var status = "New";
+                    if (sfcStep.quantityDone === 1) status = "Done";
+                    else if (sfcStep.quantityInWork === 1) status = "In Work";
+                    else if (sfcStep.quantityInQueue === 1) status = "In Queue";
+
+                    // Cerca DURATION nel routing step corrispondente
+                    var duration = "";
+                    var matchedRouting = routingStepsData.find(function(rs) {
+                        return rs?.routingOperation?.operationActivity?.operationActivity === stepOp;
+                    });
+                    if (matchedRouting) {
+                        var durationField = matchedRouting?.routingOperation?.customValues?.find(function(cv) { return cv.attribute === "DURATION"; });
+                        duration = durationField?.value || "";
+                    }
+
+                    routingSteps.push({
+                        stepId: sfcStep.stepId || "",
+                        operation: stepOp,
+                        description: sfcStep?.operation?.description || "",
+                        workCenter: sfcStep?.plannedWorkCenter || "",
+                        status: status,
+                        duration: duration
+                    });
+                });
+
+                // Calcola % completamento ponderata su DURATION
+                var totalDuration = 0, completedDuration = 0;
+                routingSteps.forEach(function(rs) {
+                    var dur = (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 1000;
+                    totalDuration += dur;
+                    if (rs.status === "Done") completedDuration += dur;
+                });
+                if (totalDuration > 0) {
+                    pct = (completedDuration / totalDuration * 100).toFixed(2).replace(".", ",") + "%";
+                }
+            } catch (e) {
+                console.log("Error fetching sfc detail for " + item.sfc + ": " + e.message);
+            }
+        }
+        return {
+            order: item.order,
+            orderType: item.orderType,
+            sfc: item.sfc,
+            totalOps: totalOps || 0,
+            completedOps: completedOps || 0,
+            percentualeCompletamento: pct,
+            percentualeCompletamentoOps: pctOps || "0,00%",
+            unloadPoint: item.unloadPoint,
+            plannedStartDate: item.plannedStartDate,
+            routingSteps: routingSteps
+        };
+    }));
+
+    // Classifica
+    enriched.forEach(function(item) {
+        if (item.orderType === "MACH" || item.orderType === "MACR" || item.orderType === "AGGR") {
+            if (item.orderType === "AGGR") aggregati.push(item);
+            else if (item.orderType === "MACR") macroaggregati.push(item);
+            // MACH non va in nessuna lista di conteggio
+        } else {
+            gruppi.push(item);
+        }
+    });
+
+    return { all: enriched, gruppi: gruppi, aggregati: aggregati, macroaggregati: macroaggregati };
 }
 
 /**
- * 2.2.2 SFC Gruppi Progress Details - SFC per lavorazioni e per gruppi
- * Vista "per lavorazioni": Macchina, Macro, Aggregato, Gruppo, Lavorazione, Stato, Ore teoriche, Ore effettive, Completata (SI/NO)
- * Vista "per gruppi": Macchina, Macro, Aggregato, Gruppo, #Lavorazioni, #Completate, Gruppo completo, Ore teoriche, Ore completate, %
+ * Calcola la duration cumulativa per ogni ordine (propria + tutti i discendenti).
+ * Usa z_orders_link per ricostruire la gerarchia.
  */
-function getSFCProgressDetails(plant, project, wbs, sfc, level) {
-    // TODO: Implementare query reale
-    // Restituisce colonne e dati in base al livello selezionato (gruppi/aggr/macr)
-    var columnsMap = {
-        gruppi: [
-            { key: "idMacchina",         label: "ID Macchina" },
-            { key: "idMacroaggregato",   label: "ID Macroaggregato" },
-            { key: "idAggregato",        label: "ID Aggregato" },
-            { key: "idGruppo",           label: "ID Gruppo" },
-            { key: "numLavorazioni",     label: "#Lavorazioni" },
-            { key: "numCompletate",      label: "#Completate" },
-            { key: "gruppoCompleto",     label: "Gruppo completo" },
-            { key: "oreTeoricheGruppo",  label: "Ore teoriche" },
-            { key: "oreCompletateGruppo", label: "Ore completate" },
-            { key: "percentualeCompletamento", label: "% completamento" }
-        ],
-        aggr: [
-            { key: "idMacchina",         label: "ID Macchina" },
-            { key: "idMacroaggregato",   label: "ID Macroaggregato" },
-            { key: "idAggregato",        label: "ID Aggregato" },
-            { key: "numGruppi",          label: "#Gruppi" },
-            { key: "numCompletati",      label: "#Completati" },
-            { key: "oreTeoricheAggr",    label: "Ore teoriche" },
-            { key: "oreCompletateAggr",  label: "Ore completate" },
-            { key: "percentualeCompletamento", label: "% completamento" }
-        ],
-        macr: [
-            { key: "idMacchina",          label: "ID Macchina" },
-            { key: "idMacroaggregato",    label: "ID Macroaggregato" },
-            { key: "numAggregati",        label: "#Aggregati" },
-            { key: "numCompletati",       label: "#Completati" },
-            { key: "oreTeoricheMacr",     label: "Ore teoriche" },
-            { key: "oreCompletateMacr",   label: "Ore completate" },
-            { key: "percentualeCompletamento", label: "% completamento" }
-        ]
-    };
+async function _calcCumulativeDurations(plant, enrichedOrders) {
+    var allOrderIds = enrichedOrders.map(function(item) { return item.order; });
+
+    // Recupera gerarchia parent->children da DB
+    var hierarchyRows = [];
+    try {
+        hierarchyRows = await postgresdbService.executeQuery(queryDashKPI.getOrdersHierarchyQuery, [plant, allOrderIds]) || [];
+    } catch (e) {
+        console.log("Error fetching orders hierarchy: " + e.message);
+    }
+
+    // Mappa parent -> [children]
+    var childrenMap = {};
+    hierarchyRows.forEach(function(row) {
+        if (!childrenMap[row.parent_order]) childrenMap[row.parent_order] = [];
+        childrenMap[row.parent_order].push(row.child_order);
+    });
+
+    // Mappa order -> somma duration proprie routing steps
+    var ownDurationMap = {};
+    enrichedOrders.forEach(function(item) {
+        var sum = 0;
+        (item.routingSteps || []).forEach(function(rs) { sum += (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 1000; });
+        ownDurationMap[item.order] = sum;
+    });
+
+    // Ricorsione per sommare duration di tutti i discendenti
+    var cache = {};
+    function getCumulativeDuration(orderId) {
+        if (cache[orderId] !== undefined) return cache[orderId];
+        var total = ownDurationMap[orderId] || 0;
+        var children = childrenMap[orderId] || [];
+        children.forEach(function(childId) {
+            total += getCumulativeDuration(childId);
+        });
+        cache[orderId] = total;
+        return total;
+    }
+
+    // Calcola per tutti gli ordini
+    var result = {};
+    allOrderIds.forEach(function(orderId) {
+        result[orderId] = getCumulativeDuration(orderId);
+    });
+
+    // Mappa child -> parent (inversa)
+    var childToParent = {};
+    hierarchyRows.forEach(function(row) {
+        childToParent[row.child_order] = row.parent_order;
+    });
+
+    return { durations: result, childToParent: childToParent, childrenMap: childrenMap };
+}
+
+/**
+ * 2.2.1 Machine Progress Details - TreeTable con ordini (parent) e routing steps (children)
+ * Aggiunge Ore effettive e Ore marcate.
+ * - Workcenter F_*: Done -> oreEffettive = orePianificate, altrimenti 0; oreMarcate sempre vuota
+ * - Altri workcenter: oreEffettive = oreMarcate = marked_labor da z_marking_recap
+ * - % completamento = Ore Effettive / Ore Pianificate (cumulative)
+ */
+async function getMachineProgressDetails(plant, wbe, orderClassification, cumulativeDurations, childrenMap) {
+    var parentColumns = [
+        { key: "type",                     label: "Type",            width: "120px" },
+        { key: "order",                    label: "Order",           width: "180px" },
+        { key: "sfc",                      label: "SFC",             width: "220px" },
+        { key: "percentualeCompletamento", label: "% completamento", width: "120px" },
+    ];
+    var childColumns = [
+        { key: "operation",    label: "Operation",       width: "140px" },
+        { key: "description",  label: "Description",     width: "200px" },
+        { key: "workCenter",   label: "Work Center",     width: "130px" },
+        { key: "status",       label: "Status",          width: "100px" },
+        { key: "duration",     label: "Ore pianificate", width: "100px" },
+        { key: "oreEffettive", label: "Ore effettive",   width: "110px" },
+        { key: "oreMarcate",   label: "Ore marcate",     width: "110px" }
+    ];
+
+    // Query z_marking_recap in batch per tutti gli ordini
+    var allOrderIds = orderClassification.all.map(function(item) { return item.order; });
+    var markingLookup = {};
+    try {
+        var markingRows = await postgresdbService.executeQuery(
+            queryDashKPI.getMarkingRecapForDashboardQuery,
+            [plant, wbe, allOrderIds]
+        );
+        (markingRows || []).forEach(function(row) {
+            var key = row.mes_order + "_" + row.operation;
+            markingLookup[key] = (markingLookup[key] || 0) + (parseFloat(row.marked_labor) || 0);
+        });
+    } catch (e) {
+        console.log("Error fetching marking recap for dashboard: " + e.message);
+    }
+
+    // Mappe per calcolo cumulativo ore effettive e marcate
+    var ownOreEffettiveMap = {};
+    var ownOreMarcateMap = {};
+
+    var data = orderClassification.all.map(function(item) {
+        var type = "Gruppo";
+        if (item.orderType === "MACH") type = "Macchina";
+        else if (item.orderType === "MACR") type = "Macroaggregato";
+        else if (item.orderType === "AGGR") type = "Aggregato";
+
+        var ownOreEffettive = 0;
+        var ownOreMarcate = 0;
+
+        var children = (item.routingSteps || []).map(function(step) {
+            var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000;
+            var oreEffettive = 0;
+            var oreMarcate = "";
+
+            if (step.workCenter && step.workCenter.startsWith("F_")) {
+                // Workcenter F_: ore effettive in base a status, ore marcate sempre vuota
+                if (step.status === "Done") {
+                    oreEffettive = dur;
+                } else {
+                    oreEffettive = 0;
+                }
+                oreMarcate = "";
+            } else {
+                // Altri workcenter: leggi da z_marking_recap
+                var key = item.order + "_" + step.operation;
+                var markedLabor = markingLookup[key] || 0;
+                oreEffettive = markedLabor;
+                oreMarcate = markedLabor;
+            }
+
+            ownOreEffettive += (typeof oreEffettive === "number" ? oreEffettive : 0);
+            ownOreMarcate += (typeof oreMarcate === "number" ? oreMarcate : 0);
+
+            return {
+                operation: step.operation,
+                description: step.description,
+                workCenter: step.workCenter,
+                status: step.status,
+                duration: dur,
+                oreEffettive: oreEffettive,
+                oreMarcate: oreMarcate
+            };
+        });
+
+        ownOreEffettiveMap[item.order] = ownOreEffettive;
+        ownOreMarcateMap[item.order] = ownOreMarcate;
+
+        return {
+            type: type,
+            order: item.order,
+            sfc: item.sfc,
+            percentualeCompletamento: "0,00%",
+            duration: cumulativeDurations[item.order] || 0,
+            oreEffettive: 0,
+            oreMarcate: 0,
+            children: children
+        };
+    });
+
+    // Calcolo cumulativo ore effettive (proprie + discendenti)
+    var cacheEff = {};
+    function getCumulativeOreEffettive(orderId) {
+        if (cacheEff[orderId] !== undefined) return cacheEff[orderId];
+        var total = ownOreEffettiveMap[orderId] || 0;
+        var chl = (childrenMap || {})[orderId] || [];
+        chl.forEach(function(childId) {
+            total += getCumulativeOreEffettive(childId);
+        });
+        cacheEff[orderId] = total;
+        return total;
+    }
+
+    // Calcolo cumulativo ore marcate (proprie + discendenti)
+    var cacheMarc = {};
+    function getCumulativeOreMarcate(orderId) {
+        if (cacheMarc[orderId] !== undefined) return cacheMarc[orderId];
+        var total = ownOreMarcateMap[orderId] || 0;
+        var chl = (childrenMap || {})[orderId] || [];
+        chl.forEach(function(childId) {
+            total += getCumulativeOreMarcate(childId);
+        });
+        cacheMarc[orderId] = total;
+        return total;
+    }
+
+    // Imposta valori cumulativi e ricalcola % completamento
+    data.forEach(function(row) {
+        var cumOreEff = getCumulativeOreEffettive(row.order);
+        var cumOreMarcate = getCumulativeOreMarcate(row.order);
+        var cumDuration = cumulativeDurations[row.order] || 0;
+
+        row.oreEffettive = cumOreEff;
+        row.oreMarcate = cumOreMarcate;
+
+        // % completamento = Ore Effettive / Ore Pianificate
+        if (cumDuration > 0) {
+            row.percentualeCompletamento = (cumOreEff / cumDuration * 100).toFixed(2).replace(".", ",") + "%";
+        } else {
+            row.percentualeCompletamento = "0,00%";
+        }
+    });
+
+    return { parentColumns: parentColumns, childColumns: childColumns, data: data, isTree: true };
+}
+
+/**
+ * 2.2.2 SFC Progress Details per livello (gruppi/aggr/macr) dalla classificazione
+ */
+function _getSFCProgressFromClassification(orderClassification, level, childToParent) {
+    // Mappa order -> orderType per risalire la gerarchia
+    var orderTypeMap = {};
+    orderClassification.all.forEach(function(item) { orderTypeMap[item.order] = item.orderType; });
+
+    // Risale la catena parent per trovare Aggregato, Macroaggregato, Macchina
+    function _getAncestors(orderId) {
+        var ancestors = { aggregato: "", macroaggregato: "", macchina: "" };
+        var current = orderId;
+        var visited = {};
+        while (childToParent[current] && !visited[current]) {
+            visited[current] = true;
+            var parent = childToParent[current];
+            var parentType = orderTypeMap[parent] || "";
+            if (parentType === "AGGR" && !ancestors.aggregato) ancestors.aggregato = parent;
+            else if (parentType === "MACR" && !ancestors.macroaggregato) ancestors.macroaggregato = parent;
+            else if (parentType === "MACH" && !ancestors.macchina) ancestors.macchina = parent;
+            current = parent;
+        }
+        return ancestors;
+    }
+
+    var columns = [
+        { key: "order",  label: "Order",   width: "180px" },
+        { key: "sfc",    label: "SFC",     width: "220px" },
+        { key: "aggregato",       label: "Aggregato",       width: "180px" },
+        { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
+        { key: "macchina",        label: "Macchina",        width: "180px" },
+        { key: "totalOps",      label: "Tot. Operazioni", width: "120px" },
+        { key: "completedOps",  label: "Op. Completate",  width: "120px" },
+        { key: "percentualeCompletamentoOps", label: "% completamento", width: "120px" }
+    ];
+
+    var opsColumns = [
+        { key: "order",       label: "Order",       width: "180px" },
+        { key: "macchina",        label: "Macchina",        width: "180px" },
+        { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
+        { key: "aggregato",       label: "Aggregato",       width: "180px" },
+        { key: "operation",   label: "Operation",   width: "140px" },
+        { key: "description", label: "Description",  width: "200px" },
+        { key: "workCenter",  label: "Work Center",  width: "130px" },
+        { key: "status",      label: "Status",       width: "100px" },
+        { key: "duration",    label: "Ore pianificate",     width: "100px" }
+    ];
 
     var dataMap = {
-        gruppi: [
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A1", idGruppo: "G1", numLavorazioni: 2, numCompletate: 0, gruppoCompleto: "NO", oreTeoricheGruppo: 24, oreCompletateGruppo: 6,  percentualeCompletamento: "25,00%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A1", idGruppo: "G2", numLavorazioni: 2, numCompletate: 2, gruppoCompleto: "SI", oreTeoricheGruppo: 28, oreCompletateGruppo: 28, percentualeCompletamento: "100,00%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A2", idGruppo: "G3", numLavorazioni: 2, numCompletate: 0, gruppoCompleto: "NO", oreTeoricheGruppo: 38, oreCompletateGruppo: 10, percentualeCompletamento: "26,32%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A2", idGruppo: "G4", numLavorazioni: 2, numCompletate: 0, gruppoCompleto: "NO", oreTeoricheGruppo: 32, oreCompletateGruppo: 11, percentualeCompletamento: "34,38%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A3", idGruppo: "G5", numLavorazioni: 2, numCompletate: 2, gruppoCompleto: "SI", oreTeoricheGruppo: 40, oreCompletateGruppo: 41, percentualeCompletamento: "100,00%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A3", idGruppo: "G6", numLavorazioni: 2, numCompletate: 0, gruppoCompleto: "NO", oreTeoricheGruppo: 26, oreCompletateGruppo: 8,  percentualeCompletamento: "30,77%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A4", idGruppo: "G7", numLavorazioni: 2, numCompletate: 1, gruppoCompleto: "NO", oreTeoricheGruppo: 38, oreCompletateGruppo: 37, percentualeCompletamento: "97,37%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A4", idGruppo: "G8", numLavorazioni: 2, numCompletate: 0, gruppoCompleto: "NO", oreTeoricheGruppo: 36, oreCompletateGruppo: 12, percentualeCompletamento: "33,33%" }
-        ],
-        aggr: [
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A1", numGruppi: 2, numCompletati: 1, oreTeoricheAggr: 52,  oreCompletateAggr: 34, percentualeCompletamento: "65,38%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", idAggregato: "A2", numGruppi: 2, numCompletati: 0, oreTeoricheAggr: 70,  oreCompletateAggr: 21, percentualeCompletamento: "30,00%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A3", numGruppi: 2, numCompletati: 1, oreTeoricheAggr: 66,  oreCompletateAggr: 49, percentualeCompletamento: "74,24%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", idAggregato: "A4", numGruppi: 2, numCompletati: 0, oreTeoricheAggr: 74,  oreCompletateAggr: 49, percentualeCompletamento: "66,22%" }
-        ],
-        macr: [
-            { idMacchina: "MAC1", idMacroaggregato: "MA1", numAggregati: 2, numCompletati: 0, oreTeoricheMacr: 122, oreCompletateMacr: 55,  percentualeCompletamento: "45,08%" },
-            { idMacchina: "MAC1", idMacroaggregato: "MA2", numAggregati: 2, numCompletati: 0, oreTeoricheMacr: 140, oreCompletateMacr: 98,  percentualeCompletamento: "70,00%" }
-        ]
+        gruppi: orderClassification.gruppi,
+        aggr: orderClassification.aggregati,
+        macr: orderClassification.macroaggregati
     };
 
     var sLevel = level || "gruppi";
-    return { columns: columnsMap[sLevel] || columnsMap.gruppi, data: dataMap[sLevel] || dataMap.gruppi };
+    var items = dataMap[sLevel] || [];
+    var data = items.map(function(item) {
+        var anc = _getAncestors(item.order);
+        return {
+            order: item.order,
+            sfc: item.sfc,
+            aggregato: anc.aggregato,
+            macroaggregato: anc.macroaggregato,
+            macchina: anc.macchina,
+            totalOps: item.totalOps,
+            completedOps: item.completedOps,
+            percentualeCompletamentoOps: item.percentualeCompletamentoOps
+        };
+    });
+
+    // Flat list di tutte le operazioni di tutti gli ordini del livello
+    var allOps = [];
+    items.forEach(function(item) {
+        var anc = _getAncestors(item.order);
+        (item.routingSteps || []).forEach(function(step) {
+            allOps.push({
+                order: item.order,
+                aggregato: anc.aggregato,
+                macroaggregato: anc.macroaggregato,
+                macchina: anc.macchina,
+                operation: step.operation,
+                description: step.description,
+                workCenter: step.workCenter,
+                status: step.status,
+                duration: step.duration
+            });
+        });
+    });
+
+    return {
+        columns: columns,
+        data: data,
+        opsColumns: opsColumns,
+        opsData: allOps
+    };
+}
+
+/**
+ * Wrapper per compatibilità export (usata dal frontend details)
+ */
+function getSFCProgressDetails(plant, project, wbe, sfc, level) {
+    // Fallback vuoto se chiamata direttamente senza classificazione
+    return { columns: [], data: [] };
 }
 
 /**
  * 2.2.3 Scostamento Details - Tabella scostamenti (netto varianza)
  * Colonne: Type, SFC, Work Center, Status, % completamento, Ore pianificate, Ore effettive montaggio, Ore varianza, Time spent, Scostamento, Alert
  */
-function getScostamentoDetails(plant, project, wbs, sfc, workcenter) {
+function getScostamentoDetails(plant, project, wbe, sfc, workcenter) {
     // TODO: Implementare query reale
     var columns = [
         { key: "type",                     label: "Type",               width: "160px" },
@@ -303,7 +647,7 @@ function getScostamentoDetails(plant, project, wbs, sfc, workcenter) {
  * 2.3 Mancanti Details - Report Mancanti
  * Apertura report Mancanti esistente, prefiltrato con Project/WBS/Section/SFC
  */
-function getMancantiDetails(plant, project, wbs, sfc, section) {
+function getMancantiDetails(plant, project, wbe, sfc, section) {
     // TODO: Implementare query reale - si integrerà con il report Mancanti esistente
     var columns = [
         { key: "sfc",               label: "SFC",           width: "120px" },
@@ -328,30 +672,58 @@ function getMancantiDetails(plant, project, wbs, sfc, section) {
 }
 
 /**
- * 2.4 Evasi Details - Tabella sintetica evasi (SFC/Componente/Status/Date rilevanti)
+ * 2.4 Evasi Details - Verifica campo custom UNLOAD_POINT su tutti gli ordini
+ * Include solo ordini con UNLOAD_POINT presente
  */
-function getEvasiDetails(plant, project, wbs, sfc) {
-    // TODO: Implementare query reale
+function getEvasiDetails(orderClassification) {
     var columns = [
-        { key: "sfc",                 label: "SFC",              width: "120px" },
-        { key: "componente",          label: "Componente",       width: "120px" },
-        { key: "materiale",           label: "Materiale",        width: "120px" },
-        { key: "descrizione",         label: "Descrizione",      width: "200px" },
-        { key: "status",              label: "Status",           width: "140px" },
-        { key: "dataUscitaMagazzino", label: "Uscita Magazzino", width: "130px" },
-        { key: "dataRFID",            label: "Data RFID",        width: "110px" },
-        { key: "bsd",                 label: "BSD",              width: "100px" }
+        { key: "order",           label: "Order",           width: "200px" },
+        { key: "unloadPoint",     label: "Unload Point",    width: "200px" },
+        { key: "plannedStartDate",label: "Planned Start",   width: "150px" },
+        { key: "stato",           label: "Stato",           width: "150px" }
     ];
-    var data = [
-        { sfc: "SFC-10001", componente: "COMP-001", materiale: "MAT-A100", descrizione: "Supporto flangia DN200",   status: "Evaso",             dataUscitaMagazzino: "02/03/2026", dataRFID: "02/03/2026", bsd: "01/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-002", materiale: "MAT-A200", descrizione: "Modulo BKP standard",      status: "Evaso",             dataUscitaMagazzino: "04/03/2026", dataRFID: "04/03/2026", bsd: "05/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-003", materiale: "MAT-B101", descrizione: "Connettore elettrico M12",  status: "Non evaso scaduto", dataUscitaMagazzino: "",           dataRFID: "",           bsd: "10/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-004", materiale: "MAT-B202", descrizione: "Cavo segnale 5m",          status: "Evaso",             dataUscitaMagazzino: "14/03/2026", dataRFID: "14/03/2026", bsd: "15/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-005", materiale: "MAT-C301", descrizione: "Piastra montaggio 400x300", status: "Non evaso scaduto", dataUscitaMagazzino: "",           dataRFID: "",           bsd: "20/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-006", materiale: "MAT-C402", descrizione: "Guarnizione OR 50mm",      status: "Non evaso",         dataUscitaMagazzino: "",           dataRFID: "",           bsd: "25/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-007", materiale: "MAT-D501", descrizione: "Sensore pressione 0-10bar", status: "Evaso",             dataUscitaMagazzino: "18/03/2026", dataRFID: "18/03/2026", bsd: "18/03/2026" },
-        { sfc: "SFC-10001", componente: "COMP-008", materiale: "MAT-D602", descrizione: "Valvola pneumatica 3/2",   status: "Non evaso",         dataUscitaMagazzino: "",           dataRFID: "",           bsd: "30/03/2026" }
-    ];
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    var data = orderClassification.all
+        .filter(function(item) { return item.unloadPoint != null && item.unloadPoint !== ""; })
+        .map(function(item) {
+            var val = (item.unloadPoint || "").toUpperCase();
+            var stato = "Non evaso";
+            if (val === "EVASO") {
+                stato = "Evaso";
+            } else {
+                // UNLOAD_POINT valorizzato ma diverso da EVASO
+                if (item.plannedStartDate) {
+                    var psd = new Date(item.plannedStartDate);
+                    psd.setHours(0, 0, 0, 0);
+                    if (psd < today) {
+                        stato = "Non evaso scaduto";
+                    } else {
+                        stato = "Non evaso";
+                    }
+                } else {
+                    stato = "Non evaso";
+                }
+            }
+
+            var formattedDate = "";
+            if (item.plannedStartDate) {
+                var d = new Date(item.plannedStartDate);
+                var dd = String(d.getDate()).padStart(2, '0');
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var yyyy = d.getFullYear();
+                formattedDate = dd + "/" + mm + "/" + yyyy;
+            }
+
+            return {
+                order: item.order,
+                unloadPoint: item.unloadPoint,
+                plannedStartDate: formattedDate,
+                stato: stato
+            };
+        });
     return { columns: columns, data: data };
 }
 
@@ -359,7 +731,7 @@ function getEvasiDetails(plant, project, wbs, sfc) {
  * 2.5.2 Modifiche Engineering Details - TreeTable Modifiche (dedicata)
  * Recupera dati reali da getModificheTestingData, filtra per material
  */
-async function getModificheDetails(plant, project, wbs, sfc, section, material) {
+async function getModificheDetails(plant, project, wbe, sfc, section, material) {
     var treeData = await getModificheTestingData(plant, project);
     if (!treeData || treeData === false) treeData = [];
 
@@ -368,7 +740,7 @@ async function getModificheDetails(plant, project, wbs, sfc, section, material) 
         { key: "type",                 label: "Type",         width: "70px"  },
         { key: "prog_eco",             label: "Prog. Number", width: "140px" },
         { key: "process_id",           label: "Process Id",   width: "100px" },
-        { key: "wbs_element",          label: "WBS Element",  width: "120px" },
+        { key: "wbe_element",          label: "WBS Element",  width: "120px" },
         { key: "material",             label: "Material",     width: "110px" },
         { key: "material_description", label: "Description",  width: "200px" }
     ];
@@ -463,20 +835,30 @@ async function getActualDate(plant, wbe, machSection) {
     return "";
 }
 
-async function _getNcPresenza(plant, sfc) {
+async function _getNcPresenza(plant, orderClassification) {
+    var allOrders = orderClassification.all.map(function(item) { return item.order; });
     try {
-        var rows = await postgresdbService.executeQuery(queryDashKPI.getNcPresenzaQuery, [plant, sfc]);
+        var rows = await postgresdbService.executeQuery(queryDashKPI.getNcPresenzaQuery, [plant, allOrders]);
+        var ncOpen = 0, ncClosed = 0, ncBloccanti = 0;
         if (rows && rows.length > 0) {
-            return {
-                ncOpen:      parseInt(rows[0].nc_open) || 0,
-                ncClosed:    parseInt(rows[0].nc_closed) || 0,
-                ncBloccanti: parseInt(rows[0].nc_bloccanti) || 0
-            };
+            ncOpen = parseInt(rows[0].nc_open) || 0;
+            ncClosed = parseInt(rows[0].nc_closed) || 0;
+            ncBloccanti = parseInt(rows[0].nc_bloccanti) || 0;
         }
+
+        // Calcola % ordini con NC
+        var ordiniConNC = "0%";
+        if (allOrders.length > 0) {
+            var ncRows = await postgresdbService.executeQuery(queryDashKPI.getOrdersConNcQuery, [plant, allOrders]);
+            var ordersWithDefect = (ncRows || []).length;
+            ordiniConNC = Math.round(ordersWithDefect / allOrders.length * 100) + "%";
+        }
+
+        return { ncOpen: ncOpen, ncClosed: ncClosed, ncBloccanti: ncBloccanti, ordiniConNC: ordiniConNC };
     } catch (e) {
         console.error("Errore getNcPresenza:", e);
     }
-    return { ncOpen: 0, ncClosed: 0, ncBloccanti: 0 };
+    return { ncOpen: 0, ncClosed: 0, ncBloccanti: 0, ordiniConNC: "0%" };
 }
 
 module.exports = { 
@@ -506,7 +888,7 @@ function _calcGruppiLevelChart(aData) {
     ];
     var completati = 0, iniziati = 0, daIniziare = 0;
     aData.forEach(function(row) {
-        var pct = row.percentualeCompletamento || "0,00%";
+        var pct = row.percentualeCompletamentoOps || "0,00%";
         if (pct === "100,00%") completati++;
         else if (pct === "0,00%") daIniziare++;
         else iniziati++;
@@ -519,21 +901,23 @@ function _calcGruppiLevelChart(aData) {
 }
 
 /**
- * Calcola Machine Progress chart (ore per stato) dalle lavorazioni
+ * Calcola Machine Progress chart ponderato su DURATION.
+ * Per ogni ordine somma le DURATION degli step completati / in lavorazione / da iniziare.
  */
 function _calcMachineProgressChart(aData) {
-    var oreComplete = 0, oreStart = 0, oreNotStarted = 0;
+    var durCompletati = 0, durIniziati = 0, durDaIniziare = 0;
     aData.forEach(function(row) {
-        if (!row.type.startsWith("Lavorazione")) return;
-        var ore = row.orePianificate || 0;
-        if (row.status === "Complete") oreComplete += ore;
-        else if (row.status === "Start") oreStart += ore;
-        else oreNotStarted += ore;
+        (row.children || []).forEach(function(step) {
+            var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000;
+            if (step.status === "Done") durCompletati += dur;
+            else if (step.status === "In Work") durIniziati += dur;
+            else durDaIniziare += dur;
+        });
     });
     return [
-        { label: "Ore completate",  value: oreComplete },
-        { label: "Ore iniziate",    value: oreStart },
-        { label: "Ore da iniziare", value: oreNotStarted }
+        { label: "Completati",  value: durCompletati },
+        { label: "Iniziati",    value: durIniziati },
+        { label: "Da iniziare", value: durDaIniziare }
     ];
 }
 
@@ -584,19 +968,20 @@ function _calcMancantiChart(aData) {
 }
 
 /**
- * Calcola Evasi chart (evasi / non evasi / non evasi scaduti) dai dati tabella
+ * Calcola Evasi chart (Evaso / Non Evaso) dal campo UNLOAD_POINT
  */
 function _calcEvasiChart(aData) {
     var evasi = 0, nonEvasi = 0, nonEvasiScaduti = 0;
     aData.forEach(function(row) {
-        if (row.status === "Evaso") evasi++;
-        else if (row.status === "Non evaso scaduto") nonEvasiScaduti++;
+        var stato = row.stato || "";
+        if (stato === "Evaso") evasi++;
+        else if (stato === "Non evaso scaduto") nonEvasiScaduti++;
         else nonEvasi++;
     });
     return [
-        { label: "Non evasi",         value: nonEvasi },
-        { label: "Non evasi scaduti", value: nonEvasiScaduti },
-        { label: "Evasi",             value: evasi }
+        { label: "Evaso",              value: evasi },
+        { label: "Non evaso",           value: nonEvasi },
+        { label: "Non evaso scaduto",   value: nonEvasiScaduti }
     ];
 }
 

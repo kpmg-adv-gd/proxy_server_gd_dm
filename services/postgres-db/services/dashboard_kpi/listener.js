@@ -3,9 +3,9 @@ const postgresdbService = require('./library');
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/getDashboardKPI", async (req, res) => {
-        const { plant, project, wbs, sfc, section, material, order } = req.body;
+        const { plant, project, wbe, sfc, section, material, order } = req.body;
         try {
-            const dashboardKPIData = await postgresdbService.getDashboardKPI(plant, project, wbs, sfc, section, material, order);
+            const dashboardKPIData = await postgresdbService.getDashboardKPI(plant, project, wbe, sfc, section, material, order);
             res.status(200).json(dashboardKPIData); 
         } catch (error) {
             console.log("Error executing query: "+error);
