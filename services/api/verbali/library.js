@@ -489,7 +489,7 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             if (opt.CONFIRMATION_NUMBER != null && opt.CONFIRMATION_NUMBER != "") continue;
             dataForSap.operations.push({
                 plant: plant,
-                projet: row.project,
+                project: row.project,
                 wbe: row.wbeAssembly,
                 sfc: row.sfc,
                 order: row.order,
