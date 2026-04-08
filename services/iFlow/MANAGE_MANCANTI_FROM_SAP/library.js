@@ -286,7 +286,7 @@ async function getOrderStatusMancanti(plant,order){
 
     let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     if(isParentAssembly){
-        let mancantiField = orderResponse?.customValues.find(obj => obj.attribute == "MANCANTI");
+        let mancantiField = orderResponse?.customValues.find(obj => obj.attribute == "COMPONENTI MANCANTI");
         let mancanti = mancantiField?.value || "";
         output=mancanti;
     } else{
