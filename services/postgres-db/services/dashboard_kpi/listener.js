@@ -1,4 +1,5 @@
 const postgresdbService = require('./library');
+const { getZSharedMemoryData } = require("../shared_memory/library");
 
 module.exports.listenerSetup = (app) => {
 
@@ -42,6 +43,22 @@ module.exports.listenerSetup = (app) => {
         } catch (error) {
             console.log("Error executing query: " + error);
             res.status(500).json({ error: "Error while executing query" });
+        }
+    })
+
+    app.post("/db/getPodIdValues", async (req, res) => {
+        const { plant } = req.body;
+        try {
+            const rows = await getZSharedMemoryData(plant, "POD_ID_VALUE");
+            if (rows && rows.length > 0 && rows[0].value) {
+                var parsed = typeof rows[0].value === "string" ? JSON.parse(rows[0].value) : rows[0].value;
+                res.status(200).json(parsed);
+            } else {
+                res.status(200).json({});
+            }
+        } catch (error) {
+            console.log("Error fetching POD_ID_VALUE: " + error);
+            res.status(500).json({ error: "Error while fetching POD_ID_VALUE" });
         }
     })
 
