@@ -22,7 +22,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent);
     var scostamentoGD       = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
     var scostamentoFornitori = getScostamentoDetails(machineDetails, "Fornitori", hierarchyResult.childrenMap);
-    var mancantiDetails  = getMancantiDetails(plant, project, wbe, sfc, section);
+    var mancantiDetails  = await getMancantiDetails(plant, wbe, orderClassification);
     var evasiDetails     = getEvasiDetails(orderClassification);
     var modificheDetails = await getModificheDetails(plant, project, wbe, sfc, section, material);
     var varianzeDetails  = await getVarianzeDetails(plant, order);
@@ -37,7 +37,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
         macr:   _calcGruppiLevelChart(sfcMacr.data)
     };
 
-    result.mancanti = _calcMancantiSummary(mancantiDetails.data);
+    result.mancanti = _calcMancantiSummary(mancantiDetails);
 
     var modificheCounts = _calcModificheTotals(modificheDetails.data);
     result.nonConformita = {
@@ -52,7 +52,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
             GD:        _calcScostamentoChart(scostamentoGD.data),
             Fornitori: _calcScostamentoChart(scostamentoFornitori.data)
         },
-        mancanti: _calcMancantiChart(mancantiDetails.data),
+        mancanti: _calcMancantiChart(mancantiDetails),
         evasi:    _calcEvasiChart(evasiDetails.data),
         ncPresenza: [
             { label: "NC open", value: ncPresenzaData.ncOpen },
@@ -77,7 +77,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
             GD:        scostamentoGD,
             Fornitori: scostamentoFornitori
         },
-        mancanti:            mancantiDetails,
+        mancanti:            { columns: mancantiDetails.columns, data: mancantiDetails.data },
         evasi:               evasiDetails,
         modifiche:           modificheDetails,
         tipologiaVarianze:   varianzeDetails.detailsTipologia,
@@ -713,31 +713,98 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
 }
 
 /**
- * 2.3 Mancanti Details - Report Mancanti
- * Apertura report Mancanti esistente, prefiltrato con Project/WBS/Section/SFC
+ * 2.3 Mancanti Details - Dati reali da z_report_mancanti
+ * Per ogni ordine gruppo, verifica presenza in z_report_mancanti e classifica:
+ *   - No mancanti: ordine non presente nella tabella
+ *   - Con mancanti: ordine presente, data di ricezione >= oggi
+ *   - Mancanti scaduti: ordine presente, data di ricezione < oggi
  */
-function getMancantiDetails(plant, project, wbe, sfc, section) {
-    // TODO: Implementare query reale - si integrerà con il report Mancanti esistente
+async function getMancantiDetails(plant, wbe, orderClassification) {
+    var gruppiOrders = orderClassification.gruppi.map(function(item) { return item.order; });
+    if (gruppiOrders.length === 0) {
+        return { columns: [], data: [], totalMissing: 0, gruppiCount: 0 };
+    }
+
     var columns = [
-        { key: "sfc",               label: "SFC",           width: "120px" },
-        { key: "componente",        label: "Componente",    width: "120px" },
-        { key: "materiale",         label: "Materiale",     width: "120px" },
-        { key: "descrizione",       label: "Descrizione",   width: "220px" },
-        { key: "quantitaRichiesta", label: "Qty Richiesta", width: "100px" },
-        { key: "quantitaEvasa",     label: "Qty Evasa",     width: "100px" },
-        { key: "quantitaMancante",  label: "Qty Mancante",  width: "110px" },
-        { key: "bsd",               label: "BSD",           width: "100px" },
-        { key: "scaduto",           label: "Scaduto",       width: "80px"  }
+        { key: "order",                label: "Order",                width: "150px" },
+        { key: "missingComponent",     label: "Componente Mancante",  width: "150px" },
+        { key: "componentDescription", label: "Descrizione",          width: "220px" },
+        { key: "missingQuantity",      label: "Qty Mancante",         width: "110px" },
+        { key: "coverElement",         label: "Cover Element",        width: "150px" },
+        { key: "dataRicezione",        label: "Data Ricezione",       width: "120px" },
+        { key: "stato",                label: "Stato",                width: "120px" }
     ];
-    var data = [
-        { sfc: "SFC-10001", componente: "COMP-001", materiale: "MAT-A100", descrizione: "Supporto flangia DN200",  quantitaRichiesta: 4,  quantitaEvasa: 2,  quantitaMancante: 2, bsd: "01/03/2026", scaduto: "SI" },
-        { sfc: "SFC-10001", componente: "COMP-002", materiale: "MAT-A200", descrizione: "Modulo BKP standard",     quantitaRichiesta: 10, quantitaEvasa: 10, quantitaMancante: 0, bsd: "05/03/2026", scaduto: "NO" },
-        { sfc: "SFC-10001", componente: "COMP-003", materiale: "MAT-B101", descrizione: "Connettore elettrico M12", quantitaRichiesta: 8,  quantitaEvasa: 3,  quantitaMancante: 5, bsd: "10/03/2026", scaduto: "SI" },
-        { sfc: "SFC-10001", componente: "COMP-004", materiale: "MAT-B202", descrizione: "Cavo segnale 5m",         quantitaRichiesta: 12, quantitaEvasa: 12, quantitaMancante: 0, bsd: "15/03/2026", scaduto: "NO" },
-        { sfc: "SFC-10001", componente: "COMP-005", materiale: "MAT-C301", descrizione: "Piastra montaggio 400x300", quantitaRichiesta: 2, quantitaEvasa: 0,  quantitaMancante: 2, bsd: "20/03/2026", scaduto: "SI" },
-        { sfc: "SFC-10001", componente: "COMP-006", materiale: "MAT-C402", descrizione: "Guarnizione OR 50mm",     quantitaRichiesta: 20, quantitaEvasa: 15, quantitaMancante: 5, bsd: "25/03/2026", scaduto: "NO" }
-    ];
-    return { columns: columns, data: data };
+
+    var rows = await postgresdbService.query(queryDashKPI.getMancantiForDashboardQuery, [plant, wbe, gruppiOrders]);
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Raggruppa i record per ordine per classificare a livello gruppo
+    var orderMap = {}; // order -> array of rows
+    rows.forEach(function(r) {
+        if (!orderMap[r.order]) orderMap[r.order] = [];
+        orderMap[r.order].push(r);
+    });
+
+    var data = [];
+    var totalMissing = 0;
+
+    gruppiOrders.forEach(function(ord) {
+        var recs = orderMap[ord];
+        if (!recs || recs.length === 0) {
+            // Ordine senza mancanti - non aggiungere righe al dettaglio
+            return;
+        }
+        recs.forEach(function(r) {
+            var receiptDate = _getReceiptDate(r);
+            var stato = "Con mancanti";
+            if (receiptDate && receiptDate < today) {
+                stato = "Mancanti scaduti";
+            }
+
+            var formattedDate = "";
+            if (receiptDate) {
+                var dd = String(receiptDate.getDate()).padStart(2, '0');
+                var mm = String(receiptDate.getMonth() + 1).padStart(2, '0');
+                var yyyy = receiptDate.getFullYear();
+                formattedDate = dd + "/" + mm + "/" + yyyy;
+            }
+
+            totalMissing += parseFloat(r.missing_quantity) || 0;
+
+            data.push({
+                order: r.order,
+                missingComponent: r.missing_component,
+                componentDescription: r.component_description,
+                missingQuantity: parseFloat(r.missing_quantity) || 0,
+                coverElement: r.cover_element,
+                dataRicezione: formattedDate,
+                stato: stato
+            });
+        });
+    });
+
+    return { columns: columns, data: data, totalMissing: totalMissing, gruppiCount: gruppiOrders.length, orderMap: orderMap };
+}
+
+/**
+ * Calcola la data di ricezione in base al cover_element
+ */
+function _getReceiptDate(row) {
+    var cover = (row.cover_element || "").toUpperCase();
+    var dateStr = null;
+    if (cover === "PURCHASE REQUISITION" || cover === "PURCHASE ORDER") {
+        dateStr = row.receipt_expected_date || row.first_conf_date || row.mrp_date;
+    } else if (cover === "PROD" || cover === "PLANNED ORDER") {
+        dateStr = row.date_from_workshop || row.mrp_date;
+    } else {
+        dateStr = row.receipt_expected_date || row.first_conf_date || row.mrp_date || row.date_from_workshop;
+    }
+    if (!dateStr) return null;
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
 }
 
 /**
@@ -1011,32 +1078,45 @@ function _calcScostamentoChart(aData) {
 }
 
 /**
- * Calcola summary mancanti (percentuale e totale) dai dati tabella
+ * Calcola summary mancanti: percentuale = totalMissing / 2000 * 100, totale = "totalMissing / gruppiCount"
  */
-function _calcMancantiSummary(aData) {
-    var totalRichiesta = 0, totalMancante = 0;
-    aData.forEach(function(row) {
-        totalRichiesta += row.quantitaRichiesta || 0;
-        totalMancante  += row.quantitaMancante || 0;
-    });
-    var pct = totalRichiesta > 0 ? (totalMancante / totalRichiesta * 100).toFixed(1).replace(".", ",") : "0";
-    return { percentuale: pct + "%", totale: totalMancante + "/" + totalRichiesta };
+function _calcMancantiSummary(mancantiDetails) {
+    var totalMissing = mancantiDetails.totalMissing || 0;
+    var gruppiCount = mancantiDetails.gruppiCount || 0;
+    var pct = gruppiCount > 0 ? (totalMissing / 2000 * 100).toFixed(1).replace(".", ",") : "0";
+    return { percentuale: pct + "%", totale: totalMissing + "/" + gruppiCount };
 }
 
 /**
- * Calcola Mancanti chart (con mancanti / scaduti / no mancanti) dai dati tabella
+ * Calcola Mancanti chart (con mancanti / scaduti / no mancanti) per ordine gruppo
+ * Classifica ogni ordine gruppo in base alla presenza in orderMap e alla data di ricezione
  */
-function _calcMancantiChart(aData) {
+function _calcMancantiChart(mancantiDetails) {
     var conMancanti = 0, mancantiScaduti = 0, noMancanti = 0;
-    aData.forEach(function(row) {
-        if ((row.quantitaMancante || 0) === 0) noMancanti++;
-        else if (row.scaduto === "SI") mancantiScaduti++;
-        else conMancanti++;
+    var orderMap = mancantiDetails.orderMap || {};
+    var gruppiCount = mancantiDetails.gruppiCount || 0;
+    var data = mancantiDetails.data || [];
+
+    // Conta ordini distinti con almeno un record
+    var ordersWithMancanti = {};
+    var ordersScaduti = {};
+    data.forEach(function(row) {
+        ordersWithMancanti[row.order] = true;
+        if (row.stato === "Mancanti scaduti") {
+            ordersScaduti[row.order] = true;
+        }
     });
+
+    var countWithMancanti = Object.keys(ordersWithMancanti).length;
+    // Un ordine è "scaduto" se almeno un suo record è scaduto
+    var countScaduti = Object.keys(ordersScaduti).length;
+    var countConMancanti = countWithMancanti - countScaduti;
+    var countNoMancanti = gruppiCount - countWithMancanti;
+
     return [
-        { label: "Con mancanti",     value: conMancanti },
-        { label: "Mancanti scaduti", value: mancantiScaduti },
-        { label: "No mancanti",      value: noMancanti }
+        { label: "Con mancanti",     value: countConMancanti },
+        { label: "Mancanti scaduti", value: countScaduti },
+        { label: "No mancanti",      value: countNoMancanti }
     ];
 }
 

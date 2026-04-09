@@ -26,4 +26,6 @@ const getOrdersHierarchyQuery = `SELECT parent_order, child_order FROM z_orders_
 
 const getMarkingRecapForDashboardQuery = `SELECT mes_order, operation, SUM(COALESCE(marked_labor, 0)) as marked_labor, SUM(COALESCE(variance_labor, 0)) as variance_labor FROM z_marking_recap WHERE plant = $1 AND wbe_machine = $2 AND mes_order = ANY($3) GROUP BY mes_order, operation`;
 
-module.exports = { getActualDate, getNcPresenzaQuery, getOrdersConNcQuery, getOrdersHierarchyQuery, getTipologiaVarianzeQuery, getMarkingRecapForDashboardQuery };
+const getMancantiForDashboardQuery = `SELECT "order", missing_component, component_description, missing_quantity, receipt_expected_date, first_conf_date, mrp_date, date_from_workshop, cover_element FROM z_report_mancanti WHERE plant = $1 AND wbs_element = $2 AND "order" = ANY($3) AND active = true`;
+
+module.exports = { getActualDate, getNcPresenzaQuery, getOrdersConNcQuery, getOrdersHierarchyQuery, getTipologiaVarianzeQuery, getMarkingRecapForDashboardQuery, getMancantiForDashboardQuery };
