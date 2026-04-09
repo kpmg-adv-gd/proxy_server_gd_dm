@@ -24,6 +24,17 @@ module.exports.listenerSetup = (app) => {
             var modificheMT_MK = modificheData.filter(el => {
                 if(el.type!=="MA") return el;
             });
+
+            // aggiungo il link delle modifiche
+            const linkModifiche = await postgresdbService.getLinkModifiche(plant);
+            if (linkModifiche != "") {
+                modificheMT_MK.forEach(modifica => {
+                    if (modifica.type === "MK") { 
+                        modifica.link = linkModifiche + modifica.material;
+                    }
+                });
+            }
+
             var returnModifiche = {modificheMA:modificheMA,modificheMT_MK:modificheMT_MK};
             res.status(200).json(returnModifiche);
         } catch (error) {
