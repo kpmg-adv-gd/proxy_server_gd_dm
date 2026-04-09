@@ -6,10 +6,10 @@ const hostname = credentials.DM_API_URL;
 
 async function manageReceiveConfirmationNumber(jsonResponse) {
     var plant = await getPlantFromERPPlant(jsonResponse.plant);
-    for (let k = 0; k < jsonResponse.Orders.length; k++) {
-        var operations = jsonResponse.Orders[k].operations;
+    for (let k = 0; k < jsonResponse.orders.length; k++) {
+        var operations = jsonResponse.orders[k].operations;
         // Step 1. chiamo api sfcdetails
-        var urlSfcDetail = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + jsonResponse.Orders[k].sfc;
+        var urlSfcDetail = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + jsonResponse.orders[k].sfc;
         var responseGetSfc = await callGet(urlSfcDetail);
         var routing = responseGetSfc.routing.routing;
         var routingVersion = responseGetSfc.routing.version;
@@ -33,7 +33,7 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
                 }
             }
             // Scrivo in z_marking_recap per ogni operazione
-            await insertZMarkingRecap(plant, jsonResponse.Orders[k].project, jsonResponse.Orders[k].wbe, currentOperation.operation, jsonResponse.Orders[k].order, currentOperation.confirmationNumber, currentOperation.duration, 
+            await insertZMarkingRecap(plant, jsonResponse.orders[k].project, jsonResponse.orders[k].wbe, currentOperation.operation, jsonResponse.orders[k].order, currentOperation.confirmationNumber, currentOperation.duration, 
                 currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.duration, currentOperation.uomDuration, 0, currentOperation.uomDuration, currentOperation.operationDescription, false)
         }
         // Step 4. aggiorno routing
