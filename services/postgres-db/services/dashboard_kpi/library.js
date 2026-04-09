@@ -735,7 +735,7 @@ async function getMancantiDetails(plant, wbe, orderClassification) {
         { key: "stato",                label: "Stato",                width: "120px" }
     ];
 
-    var rows = await postgresdbService.query(queryDashKPI.getMancantiForDashboardQuery, [plant, wbe, gruppiOrders]);
+    var rows = await postgresdbService.executeQuery(queryDashKPI.getMancantiForDashboardQuery, [plant, wbe, gruppiOrders]);
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -784,7 +784,55 @@ async function getMancantiDetails(plant, wbe, orderClassification) {
         });
     });
 
-    return { columns: columns, data: data, totalMissing: totalMissing, gruppiCount: gruppiOrders.length, orderMap: orderMap };
+    return { columns: columns, data: data, totalMissing: totalMissing, totalComponentQty: await _getTotalComponentQty(plant, gruppiOrders), gruppiCount: gruppiOrders.length, orderMap: orderMap };
+}
+
+/**
+ * Interroga MDO per ottenere SUM(QUANTITY_TOTAL) dei componenti BOM associati agli ordini.
+ * Step 1: /mdo/ORDER per ottenere BOM e BOM_VERSION per plant+orders
+ * Step 2: /mdo/BOM_COMPONENT per sommare QUANTITY_TOTAL dove IS_DELETED = false
+ */
+async function _getTotalComponentQty(plant, orders) {
+    try {
+        // Step 1: Recupera BOM e BOM_VERSION dagli ordini
+        var orderFilter = orders.map(function(o) { return "MFG_ORDER eq '" + o + "'"; }).join(" or ");
+        var reqOrder = {
+            path: "/mdo/ORDER",
+            query: { $apply: "filter(PLANT eq '" + plant + "' and (" + orderFilter + "))" },
+            method: "GET"
+        };
+        var resOrder = await dispatch(reqOrder);
+        var orderRows = (resOrder && resOrder.data && resOrder.data.value) || [];
+
+        // Raccogli coppie BOM + BOM_VERSION uniche
+        var bomSet = {};
+        orderRows.forEach(function(row) {
+            if (row.BOM && row.BOM_VERSION) {
+                var key = row.BOM + "|" + row.BOM_VERSION;
+                bomSet[key] = { bom: row.BOM, version: row.BOM_VERSION };
+            }
+        });
+        var bomPairs = Object.keys(bomSet).map(function(k) { return bomSet[k]; });
+        if (bomPairs.length === 0) return 0;
+
+        // Step 2: Query BOM_COMPONENT con aggregate SUM(QUANTITY_TOTAL)
+        var bomFilter = bomPairs.map(function(p) {
+            return "(BOM eq '" + p.bom + "' and BOM_VERSION eq '" + p.version + "')";
+        }).join(" or ");
+        var reqBom = {
+            path: "/mdo/BOM_COMPONENT",
+            query: {
+                $apply: "filter(PLANT eq '" + plant + "' and IS_DELETED eq false and (" + bomFilter + "))/aggregate(QUANTITY_TOTAL with sum as TOTAL_COMPONENT_QTY)"
+            },
+            method: "GET"
+        };
+        var resBom = await dispatch(reqBom);
+        var bomRows = (resBom && resBom.data && resBom.data.value) || [];
+        return (bomRows.length > 0 && bomRows[0].TOTAL_COMPONENT_QTY) ? parseFloat(bomRows[0].TOTAL_COMPONENT_QTY) : 0;
+    } catch (e) {
+        console.log("Error fetching total component qty from MDO: " + e.message);
+        return 0;
+    }
 }
 
 /**
@@ -1078,13 +1126,13 @@ function _calcScostamentoChart(aData) {
 }
 
 /**
- * Calcola summary mancanti: percentuale = totalMissing / 2000 * 100, totale = "totalMissing / gruppiCount"
+ * Calcola summary mancanti: percentuale = totalMissing / totalComponentQty * 100, totale = "totalMissing / totalComponentQty"
  */
 function _calcMancantiSummary(mancantiDetails) {
     var totalMissing = mancantiDetails.totalMissing || 0;
-    var gruppiCount = mancantiDetails.gruppiCount || 0;
-    var pct = gruppiCount > 0 ? (totalMissing / 2000 * 100).toFixed(1).replace(".", ",") : "0";
-    return { percentuale: pct + "%", totale: totalMissing + "/" + gruppiCount };
+    var totalComponentQty = mancantiDetails.totalComponentQty || 0;
+    var pct = totalComponentQty > 0 ? (totalMissing / totalComponentQty * 100).toFixed(1).replace(".", ",") : "0";
+    return { percentuale: pct + "%", totale: totalMissing + "/" + totalComponentQty };
 }
 
 /**
