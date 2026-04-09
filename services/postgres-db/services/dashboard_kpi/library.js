@@ -841,12 +841,10 @@ async function _getTotalComponentQty(plant, orders) {
 function _getReceiptDate(row) {
     var cover = (row.cover_element || "").toUpperCase();
     var dateStr = null;
-    if (cover === "PURCHASE REQUISITION" || cover === "PURCHASE ORDER") {
+    if (cover === "PURCHASE REQUISITION" || cover === "PURCHASE ORDER" || cover === "PURCHASE ORDER SUBCO") {
         dateStr = row.receipt_expected_date || row.first_conf_date || row.mrp_date;
     } else if (cover === "PROD" || cover === "PLANNED ORDER") {
         dateStr = row.date_from_workshop || row.mrp_date;
-    } else {
-        dateStr = row.receipt_expected_date || row.first_conf_date || row.mrp_date || row.date_from_workshop;
     }
     if (!dateStr) return null;
     var d = new Date(dateStr);
