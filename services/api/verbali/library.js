@@ -1,4 +1,5 @@
 const { callPost, callPatch, callGet, callPut } = require("../../../utility/CommonCallApi");
+const { getErpPlantFromDMPlant } = require("../../../utility/MappingPlant");
 const { dispatch } = require("../../mdo/library");
 const { ordersChildrenRecursion, getVerbaleLev2ByOrder, getVerbaleLev3ByOrder, updateVerbaleLev2, duplicateVerbaleLev2, duplicateVerbaleLev3, duplicateMarkingRecap, deleteVerbaleLev2, deleteVerbaleLev3, deleteMarkingRecap, duplicateMarkingTesting, deleteMarkingTesting, getSfcFromComments, getSafetyApprovalCommentsData, updateCommentApprovalStatus, updateCommentCancelStatus, unblockVerbaleLev2, getVerbaleLev2ToUnblock, getActivitiesTesting, getZStorageByPlantAndKey, insertZStorage, updateZStorageValue, insertZFinalCollaudoTestingSnapshot } = require("../../postgres-db/services/verbali/library");
 const { getDefectsToVerbale, updateDefectsToTesting } = require("../../postgres-db/services/defect/library");
@@ -479,6 +480,7 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
     var pathRequestConfirmationNumber = await getZSharedMemoryData(plant,"REQUEST_CONFIRMATION_NUMBER");
     if(pathRequestConfirmationNumber.length>0) pathRequestConfirmationNumber = pathRequestConfirmationNumber[0].value;
     var url = hostname + pathRequestConfirmationNumber;
+    var plantErp = await getErpPlantFromDMPlant(plant);
     
     var dataForSap = { operations: [] };
     for (let i = 0; i < listOperations.length; i++) {
@@ -488,7 +490,7 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             // Controllo che confirmation number non c'è
             if (opt.CONFIRMATION_NUMBER != null && opt.CONFIRMATION_NUMBER != "") continue;
             dataForSap.operations.push({
-                plant: plant,
+                plant: plantErp,
                 project: row.project,
                 wbe: row.wbeAssembly,
                 sfc: row.sfc,
