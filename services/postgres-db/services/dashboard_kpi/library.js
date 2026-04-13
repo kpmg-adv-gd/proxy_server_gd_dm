@@ -980,9 +980,13 @@ async function _getTotalComponentQty(plant, orders) {
             }
         });
         var bomPairs = Object.keys(bomSet).map(function(k) { return bomSet[k]; });
+        console.log("[DEBUG _getTotalComponentQty] orderRows count:", orderRows.length, "bomPairs:", JSON.stringify(bomPairs));
+        if (orderRows.length > 0) {
+            console.log("[DEBUG _getTotalComponentQty] sample ORDER row keys:", JSON.stringify(Object.keys(orderRows[0])));
+        }
         if (bomPairs.length === 0) return 0;
 
-        // Step 2: Query BOM_COMPONENT con aggregate SUM(QUANTITY_TOTAL), sempre a chunk
+        // Step 2: Query BOM_COMPONENT e somma QUANTITY_TOTAL in JS, sempre a chunk
         var totalComponentQty = 0;
         var bomChunks = _chunkArray(bomPairs, 10);
         for (var b = 0; b < bomChunks.length; b++) {
@@ -993,7 +997,7 @@ async function _getTotalComponentQty(plant, orders) {
             var reqBom = {
                 path: "/mdo/BOM_COMPONENT",
                 query: {
-                    $apply: "filter(PLANT eq '" + plant + "' and IS_DELETED eq 'false' and (" + bomFilter + "))/aggregate(QUANTITY_TOTAL with sum as TOTAL_COMPONENT_QTY)"
+                    $apply: "filter(PLANT eq '" + plant + "' and IS_DELETED eq 'false' and (" + bomFilter + "))"
                 },
                 method: "GET"
             };
@@ -1004,11 +1008,16 @@ async function _getTotalComponentQty(plant, orders) {
             }
 
             var bomRows = (resBom && resBom.data && resBom.data.value) || [];
+            console.log("[DEBUG _getTotalComponentQty] BOM_COMPONENT chunk " + b + " rows:", bomRows.length);
             if (bomRows.length > 0) {
-                totalComponentQty += _extractTotalFromAggregateRow(bomRows[0]);
+                console.log("[DEBUG _getTotalComponentQty] sample BOM_COMPONENT row:", JSON.stringify(bomRows[0]));
             }
+            bomRows.forEach(function(row) {
+                totalComponentQty += _normalizeToNumber(row.QUANTITY_TOTAL);
+            });
         }
 
+        console.log("[DEBUG _getTotalComponentQty] totalComponentQty:", totalComponentQty);
         return totalComponentQty;
     } catch (e) {
         console.log("Error fetching total component qty from MDO: " + e.message);
