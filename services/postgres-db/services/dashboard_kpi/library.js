@@ -1013,12 +1013,12 @@ async function _getTotalComponentQty(plant, orders) {
                 console.log("[DEBUG _getTotalComponentQty] sample BOM_COMPONENT row:", JSON.stringify(bomRows[0]));
             }
             bomRows.forEach(function(row) {
-                totalComponentQty += _normalizeToNumber(row.QUANTITY_TOTAL);
+                totalComponentQty += _normalizeToNumber(row.QUANTITY_PER_BASE);
             });
         }
 
         console.log("[DEBUG _getTotalComponentQty] totalComponentQty:", totalComponentQty);
-        return totalComponentQty;
+        return Math.round(totalComponentQty);
     } catch (e) {
         console.log("Error fetching total component qty from MDO: " + e.message);
         return 0;
