@@ -5,11 +5,11 @@ const getNcPresenzaQuery = `SELECT
     COUNT(*) FILTER (WHERE status = 'CLOSED') AS nc_closed,
     COUNT(*) FILTER (WHERE status = 'OPEN' AND blocking = true) AS nc_bloccanti
     FROM z_defects
-    WHERE plant = $1 AND mes_order = ANY($2)`;
+    WHERE plant = $1 AND dm_order = ANY($2)`;
 
-const getOrdersConNcQuery = `SELECT DISTINCT mes_order 
+const getOrdersConNcQuery = `SELECT DISTINCT dm_order 
     FROM z_defects 
-    WHERE plant = $1 AND mes_order = ANY($2) and status = 'OPEN'`;
+    WHERE plant = $1 AND dm_order = ANY($2) and status = 'OPEN'`;
 
 const getTipologiaVarianzeQuery = `SELECT 
     oc.reason_for_variance,

@@ -193,6 +193,11 @@ async function getModificheTestingByOrders(plant, project){
     return data;
 }
 
+async function getModificheByWbeSection(plant, wbe, section){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificheByWbeSectionQuery, [plant, wbe, section]);
+    return data;
+}
+
 // Funzione per aggiornare owner e due_date in z_modify
 // Costruisce dinamicamente la clausola WHERE basandosi sui campi non vuoti
 async function updateModifyOwnerAndDueDate(plant,modifica) {
@@ -248,4 +253,4 @@ async function updateModifyOwnerAndDueDate(plant,modifica) {
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate };
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, getModificheByWbeSection, updateModifyOwnerAndDueDate };
