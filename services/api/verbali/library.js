@@ -492,7 +492,8 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             dataForSap.operations.push({
                 plant: plantErp,
                 project: row.project,
-                wbe: row.wbeAssembly,
+                wbeMachine: row.wbe,
+                wbeAssembly: row.wbeAssembly,
                 sfc: row.sfc,
                 order: row.order,
                 material: row.material,
