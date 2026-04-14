@@ -1,9 +1,9 @@
 const insertZDefect = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, notification_type, coding_id, 
-                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code, cause, project, phase)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)`; 
+                            replaced_in_assembly, defect_note, responsible, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code, cause, project, phase, wbe_coordinamento)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, false, false, $17, $18, 'OPEN', $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)`; 
 
-const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code, cause, project, phase)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`; 
+const insertZDefectNoQN = `INSERT INTO z_defects (id, material, mes_order, assembly, title, description, priority, variance, blocking, create_qn, sfc, qn_annullata, qn_approvata, "user", operation, status, plant, wbe, type_order, "group", code, dm_order, sap_code, cause, project, phase, wbe_coordinamento)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, false, false, $12, $13, 'OPEN', $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)`; 
 const updateZDefect = `UPDATE z_defects SET title = $2, description = $3, priority = $4, create_qn = $5, variance = $6, blocking = $7, notification_type = $8,
                         coding_id = $9, replaced_in_assembly = $10, defect_note = $11, responsible = $12
                         WHERE id = $1`;
@@ -31,7 +31,7 @@ const selectZDefectByWBE = `SELECT distinct z_defects.*, z_coding.coding, z_codi
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
                     left join z_variance_type on z_defects.variance = z_variance_type.cause
-                    WHERE z_defects.wbe = $2 and z_defects.plant = $1
+                    WHERE z_defects.wbe_coordinamento = $2 and z_defects.plant = $1
                     ORDER BY z_defects.creation_date DESC`;
 
 const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
