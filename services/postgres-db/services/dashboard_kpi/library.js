@@ -20,6 +20,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     var sfcGruppi  = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent, machineDetails);
     var sfcAggr    = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent, machineDetails);
     var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent, machineDetails);
+    var sfcAll     = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails);
     var scostamentoGD       = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
     var scostamentoFornitori = getScostamentoDetails(machineDetails, "Fornitori", hierarchyResult.childrenMap);
     var mancantiDetails  = await getMancantiDetails(plant, wbe, orderClassification);
@@ -34,7 +35,8 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     result.gruppiLevels = {
         gruppi: _calcGruppiLevelChart(sfcGruppi.data),
         aggr:   _calcGruppiLevelChart(sfcAggr.data),
-        macr:   _calcGruppiLevelChart(sfcMacr.data)
+        macr:   _calcGruppiLevelChart(sfcMacr.data),
+        all:    _calcGruppiLevelChart(sfcAll.data)
     };
 
     result.mancanti = _calcMancantiSummary(mancantiDetails);
@@ -71,7 +73,8 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
         sfcProgress: {
             gruppi: sfcGruppi,
             aggr:   sfcAggr,
-            macr:   sfcMacr
+            macr:   sfcMacr,
+            all:    sfcAll
         },
         scostamento: {
             GD:        scostamentoGD,
@@ -107,6 +110,8 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
                 reportStatus: child.reportStatus || "",
                 customer: child.customer || "",
                 project_parent: child.project_parent || projectNode.project || "",
+                executionStatus: child.executionStatus || "",
+                sentToTesting: child.sentToTesting || "",
                 children: []
             };
         });
@@ -625,7 +630,8 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     var dataMap = {
         gruppi: orderClassification.gruppi,
         aggr: orderClassification.aggregati,
-        macr: orderClassification.macroaggregati
+        macr: orderClassification.macroaggregati,
+        all: orderClassification.all
     };
 
     var sLevel = level || "gruppi";
@@ -1311,9 +1317,9 @@ module.exports = {
 function _calcGruppiLevelChart(aData) {
     var total = aData.length;
     if (total === 0) return [
-        { label: "Completati", value: 0 },
-        { label: "Iniziati", value: 0 },
-        { label: "Da iniziare", value: 0 }
+        { label: "SFC Completati", value: 0 },
+        { label: "SFC Iniziati", value: 0 },
+        { label: "SFC Da Iniziare", value: 0 }
     ];
     var completati = 0, iniziati = 0, daIniziare = 0;
     aData.forEach(function(row) {
@@ -1322,10 +1328,43 @@ function _calcGruppiLevelChart(aData) {
         else if (status === "Started") iniziati++;
         else daIniziare++;
     });
+    var pctCompletati = completati / total * 100;
+    var pctIniziati = iniziati / total * 100;
+    var pctDaIniziare = daIniziare / total * 100;
+
+    // Arrotondamento che garantisce: somma = 100% e valori > 0 non diventano 0%
+    var raw = [
+        { key: "completati",  pct: pctCompletati },
+        { key: "iniziati",    pct: pctIniziati },
+        { key: "daIniziare",  pct: pctDaIniziare }
+    ];
+
+    // Step 1: se un valore è > 0 ma < 1, forza a 1 (non può diventare 0%)
+    var vals = {};
+    var locked = {};
+    raw.forEach(function(item) {
+        if (item.pct > 0 && item.pct < 1) {
+            vals[item.key] = 1;
+            locked[item.key] = true;
+        } else {
+            vals[item.key] = Math.floor(item.pct);
+            locked[item.key] = false;
+        }
+    });
+
+    // Step 2: distribuisci il resto (100 - somma) ai non-locked con decimale più alto
+    var remainder = 100 - vals.completati - vals.iniziati - vals.daIniziare;
+    var unlocked = raw.filter(function(item) { return !locked[item.key]; })
+        .map(function(item) { return { key: item.key, decimal: item.pct - Math.floor(item.pct) }; })
+        .sort(function(a, b) { return b.decimal - a.decimal; });
+    for (var r = 0; r < remainder && r < unlocked.length; r++) {
+        vals[unlocked[r].key]++;
+    }
+
     return [
-        { label: "Completati",  value: Math.round(completati / total * 100) },
-        { label: "Iniziati",    value: Math.round(iniziati / total * 100) },
-        { label: "Da iniziare", value: Math.round(daIniziare / total * 100) }
+        { label: "SFC Completati",  value: vals.completati },
+        { label: "SFC Iniziati",    value: vals.iniziati },
+        { label: "SFC Da Iniziare", value: vals.daIniziare }
     ];
 }
 
@@ -1360,19 +1399,26 @@ function _calcScostamentoChart(aData, workcenterType) {
     aData.forEach(function(row) {
         (row.children || []).forEach(function(child) {
             pianificato += (typeof child.duration === "number" ? child.duration : 0);
-            if (isFornitori) {
-                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
-            } else {
+            if (!isFornitori) {
                 secondValue += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+                varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+            } else {
+                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
             }
-            varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
         });
     });
-    return [
-        { label: "Ore pianificate", value: pianificato },
-        { label: isFornitori ? "Ore completate" : "Ore marcate", value: secondValue },
-        { label: "Ore varianza",    value: varianza }
-    ];
+    if (!isFornitori) {
+        return [
+            { label: "Ore pianificate", value: pianificato },
+            { label: "Ore marcate", value: secondValue },
+            { label: "Ore varianza", value: varianza }
+        ];
+    } else {
+        return [
+            { label: "Ore pianificate", value: pianificato },
+            { label: "Ore completate", value: secondValue }
+        ];
+    }
 }
 
 /**

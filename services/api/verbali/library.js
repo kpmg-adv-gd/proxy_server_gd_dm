@@ -51,6 +51,8 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
             data.customer = orderResponse?.customValues?.filter(item => item.attribute == "CUSTOMER")[0]?.value || "";
+            data.executionStatus = orderResponse?.executionStatus || "";
+            data.sentToTesting = orderResponse?.customValues?.filter(item => item.attribute == "SENT_TOT_TESTING")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
@@ -1522,7 +1524,9 @@ function generateTreeTable(data) {
             order: data[i].order,
             assemblyReportDate: data[i].assemblyReportDate || "",
             user: data[i].user || "",
-            customer: data[i].customer || ""
+            customer: data[i].customer || "",
+            executionStatus: data[i].executionStatus || "",
+            sentToTesting: data[i].sentToTesting || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });
