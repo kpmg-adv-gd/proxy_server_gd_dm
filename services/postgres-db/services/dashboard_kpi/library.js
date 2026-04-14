@@ -49,8 +49,8 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     result.chartData = {
         machineProgress: _calcMachineProgressChart(machineDetails.data),
         scostamentoLevels: {
-            GD:        _calcScostamentoChart(scostamentoGD.data),
-            Fornitori: _calcScostamentoChart(scostamentoFornitori.data)
+            GD:        _calcScostamentoChart(scostamentoGD.data, "GD"),
+            Fornitori: _calcScostamentoChart(scostamentoFornitori.data, "Fornitori")
         },
         mancanti: _calcMancantiChart(mancantiDetails),
         evasi:    _calcEvasiChart(evasiDetails.data),
@@ -186,7 +186,9 @@ async function _classifyOrders(plant, order) {
             try {
                 var urlSfc = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + item.sfc;
                 var sfcDetail = await callGet(urlSfc);
-                var steps = sfcDetail?.steps || [];
+                var steps = (sfcDetail?.steps || []).filter(function(s) {
+                    return (s?.plannedWorkCenter || "") !== "DUMMY_OPERATION" && (s?.operation?.operation || "") !== "DUMMY_OPERATION";
+                });
                 var totalOps = steps.length;
                 var completedOps = steps.filter(function(s) { return s.quantityDone === 1; }).length;
                 var pctOps = "0,00%";
@@ -628,7 +630,10 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
 
     var sLevel = level || "gruppi";
     var items = dataMap[sLevel] || [];
-    var data = items.map(function(item) {
+    var data = items.filter(function(item) {
+        // Escludi ordini con tutte operazioni DUMMY_OPERATION (totalOps === 0 dopo il filtro)
+        return item.totalOps > 0;
+    }).map(function(item) {
         var anc = _getAncestors(item.order);
         return {
             order: item.order,
@@ -647,7 +652,9 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     var allOps = [];
     items.forEach(function(item) {
         var anc = _getAncestors(item.order);
-        (item.routingSteps || []).forEach(function(step) {
+        (item.routingSteps || []).filter(function(step) {
+            return step.operation !== "DUMMY_OPERATION";
+        }).forEach(function(step) {
             var lookupKey = item.order + "_" + step.operation;
             var oreMarcate = oreMarcateLookup[lookupKey];
             allOps.push({
@@ -1310,10 +1317,10 @@ function _calcGruppiLevelChart(aData) {
     ];
     var completati = 0, iniziati = 0, daIniziare = 0;
     aData.forEach(function(row) {
-        var pct = row.percentualeCompletamentoOps || "0,00%";
-        if (pct === "100,00%") completati++;
-        else if (pct === "0,00%") daIniziare++;
-        else iniziati++;
+        var status = row.orderStatus || "Not Started";
+        if (status === "Completed") completati++;
+        else if (status === "Started") iniziati++;
+        else daIniziare++;
     });
     return [
         { label: "Completati",  value: Math.round(completati / total * 100) },
@@ -1347,18 +1354,23 @@ function _calcMachineProgressChart(aData) {
  * Calcola Scostamento chart (Pianificato, Marcato, Varianza) dai dati TreeTable filtrati per workcenter
  * Somma i valori dalle operazioni (children) di tutti gli ordini
  */
-function _calcScostamentoChart(aData) {
-    var pianificato = 0, marcato = 0, varianza = 0;
+function _calcScostamentoChart(aData, workcenterType) {
+    var pianificato = 0, secondValue = 0, varianza = 0;
+    var isFornitori = workcenterType === "Fornitori";
     aData.forEach(function(row) {
         (row.children || []).forEach(function(child) {
             pianificato += (typeof child.duration === "number" ? child.duration : 0);
-            marcato += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+            if (isFornitori) {
+                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+            } else {
+                secondValue += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+            }
             varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
         });
     });
     return [
         { label: "Ore pianificate", value: pianificato },
-        { label: "Ore marcate",     value: marcato },
+        { label: isFornitori ? "Ore completate" : "Ore marcate", value: secondValue },
         { label: "Ore varianza",    value: varianza }
     ];
 }
