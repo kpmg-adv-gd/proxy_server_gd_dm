@@ -52,7 +52,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
             data.customer = orderResponse?.customValues?.filter(item => item.attribute == "CUSTOMER")[0]?.value || "";
             data.executionStatus = orderResponse?.executionStatus || "";
-            data.sentToTesting = orderResponse?.customValues?.filter(item => item.attribute == "SENT_TOT_TESTING")[0]?.value || "";
+            data.sentToTesting = orderResponse?.customValues?.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
             if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
@@ -537,7 +537,8 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
             dataForSap.operations.push({
                 plant: plant,
                 projet: row.project,
-                wbe: row.wbeAssembly,
+                wbeMachine: row.wbe,
+                wbeAssembly: row.wbeAssembly,
                 sfc: row.sfc,
                 order: row.order,
                 material: row.material,

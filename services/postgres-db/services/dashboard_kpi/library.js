@@ -139,6 +139,8 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
             material: "",
             status: "",
             reportStatus: "",
+            executionStatus: "",
+            sentToTesting: "",
             children: children
         };
     });
@@ -547,17 +549,20 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         return row.children && row.children.length > 0;
     });
 
-    // Calcola summary "Visione per tipologia" dai conteggi per ORDER_TYPE e status
+    // Calcola summary "Visione per tipologia" dai conteggi per ORDER_TYPE e status (esclusi ordini con sole DUMMY_OPERATION)
     var summary = { macroaggregati: 0, macroaggregatiCompletati: 0, aggregati: 0, aggregatiCompletati: 0, gruppi: 0, gruppiCompletati: 0 };
     orderClassification.macroaggregati.forEach(function(item) {
+        if (item.totalOps === 0) return;
         summary.macroaggregati++;
         if (item.orderStatus === "Completed" ) summary.macroaggregatiCompletati++;
     });
     orderClassification.aggregati.forEach(function(item) {
+        if (item.totalOps === 0) return;
         summary.aggregati++;
         if (item.orderStatus === "Completed" ) summary.aggregatiCompletati++;
     });
     orderClassification.gruppi.forEach(function(item) {
+        if (item.totalOps === 0) return;
         summary.gruppi++;
         if (item.orderStatus === "Completed") summary.gruppiCompletati++;
     });
@@ -1271,7 +1276,9 @@ async function getActualDate(plant, wbe, machSection) {
 }
 
 async function _getNcPresenza(plant, orderClassification) {
-    var allOrders = orderClassification.all.map(function(item) { return item.order; });
+    // Escludi ordini con sole operazioni DUMMY (totalOps === 0)
+    var validOrders = orderClassification.all.filter(function(item) { return item.totalOps > 0; });
+    var allOrders = validOrders.map(function(item) { return item.order; });
     try {
         var rows = await postgresdbService.executeQuery(queryDashKPI.getNcPresenzaQuery, [plant, allOrders]);
         var ncOpen = 0, ncClosed = 0, ncBloccanti = 0;
