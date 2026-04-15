@@ -378,11 +378,12 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         { key: "description",  label: "Description",     width: "200px" },
         { key: "workCenter",   label: "Work Center",     width: "130px" },
         { key: "status",       label: "Status",          width: "100px" },
-        { key: "duration",     label: "Ore pianificate", width: "100px" },
-        { key: "oreCompletate", label: "Ore completate", width: "110px" },
-        { key: "oreEffettive", label: "Ore effettive",   width: "110px" },
-        { key: "oreMarcate",   label: "Ore marcate",     width: "110px" },
-        { key: "percentualeCompletamento", label: "% completamento", width: "120px" }
+        { key: "duration",     label: "Ore Pianificate", width: "100px" },
+        { key: "oreMarcate",   label: "Ore Marcate",     width: "110px" },
+        { key: "oreEffettive", label: "Ore Effettive",   width: "110px" },
+        { key: "percentualeCompletamento", label: "% Completamento Ore", width: "120px" },
+        { key: "oreCompletate", label: "Ore Completate", width: "110px" },
+        { key: "percentualeCompletamentoSFC", label: "% Completamento SFC", width: "110px" },
     ];
 
     // Query z_marking_recap in batch per tutti gli ordini
@@ -460,7 +461,8 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
                 oreCompletate: step.status === "Done" ? dur : 0,
                 oreEffettive: oreEffettive,
                 oreMarcate: oreMarcate,
-                oreVarianza: oreVarianza
+                oreVarianza: oreVarianza,
+                percentualeCompletamento: dur > 0 ? ((typeof oreEffettive === "number" ? oreEffettive : 0) / dur * 100).toFixed(2).replace(".", ",") + "%" : "0,00%"
             };
         });
 
@@ -475,6 +477,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
             sfc: item.sfc,
             orderStatus: item.orderStatus || "",
             percentualeCompletamento: "0,00%",
+            percentualeCompletamentoSFC: "0,00%",
             duration: cumulativeDurations[item.order] || 0,
             oreCompletate: 0,
             oreEffettive: 0,
@@ -552,8 +555,10 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         // % completamento = Ore Effettive / Ore Pianificate
         if (cumDuration > 0) {
             row.percentualeCompletamento = (cumOreEff / cumDuration * 100).toFixed(2).replace(".", ",") + "%";
+            row.percentualeCompletamentoSFC = (cumOreCompletate / cumDuration * 100).toFixed(2).replace(".", ",") + "%";
         } else {
             row.percentualeCompletamento = "0,00%";
+            row.percentualeCompletamentoSFC = "0,00%";
         }
     });
 
@@ -591,13 +596,13 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     var orderTypeMap = {};
     orderClassification.all.forEach(function(item) { orderTypeMap[item.order] = item.orderType; });
 
-    // Build ore marcate lookup from machineDetails: order_operation -> oreMarcate
-    var oreMarcateLookup = {};
+    // Build ore effettive lookup from machineDetails: order_operation -> oreEffettive
+    var oreEffettiveLookup = {};
     if (machineDetails && machineDetails.data) {
         machineDetails.data.forEach(function(row) {
             (row.children || []).forEach(function(child) {
                 var key = row.order + "_" + child.operation;
-                oreMarcateLookup[key] = child.oreMarcate;
+                oreEffettiveLookup[key] = child.oreEffettive;
             });
         });
     }
@@ -620,33 +625,34 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     }
 
     var columns = [
-        { key: "order",  label: "Order",   width: "180px" },
-        { key: "sfc",    label: "SFC",     width: "220px" },
-        { key: "orderStatus",     label: "Status Ordine",   width: "120px" },
+        { key: "macchina",        label: "Macchina",        width: "180px" },
         { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
         { key: "aggregato",       label: "Aggregato",       width: "180px" },
-        { key: "macchina",        label: "Macchina",        width: "180px" },
+        { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
+        { key: "sfc",    label: "SFC",     width: "220px" },
+        { key: "order",  label: "Order",   width: "180px" }, // todo: da togliere
+        { key: "orderStatus",     label: "Status Ordine",   width: "120px" },
         { key: "totalOps",      label: "Tot. Operazioni", width: "120px" },
         { key: "completedOps",  label: "Op. Completate",  width: "120px" },
         { key: "percentualeCompletamento", label: "% completamento", width: "120px" }
     ];
 
     var opsColumns = [
-        { key: "order",       label: "Order",       width: "180px" },
-        { key: "orderStatus",     label: "Status Ordine",  width: "120px" },
+        { key: "macchina",        label: "Macchina",        width: "180px" },
         { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
         { key: "aggregato",       label: "Aggregato",       width: "180px" },
-        { key: "macchina",        label: "Macchina",        width: "180px" },
+        { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
+        { key: "order",       label: "Order",       width: "180px" }, // todo: da togliere
         { key: "operation",   label: "Operation",   width: "140px" },
         { key: "description", label: "Description",  width: "200px" },
+        { key: "workCenter",  label: "Work Center",  width: "130px" },
+        { key: "status",      label: "Status",       width: "100px" },
+        { key: "duration",    label: "Ore Pianificate",     width: "100px" },
+        { key: "oreEffettive",  label: "Ore Effettive",       width: "110px" },
         { key: "startDate",   label: "Data Start",          width: "160px" },
         { key: "startUser",   label: "Utente Start",        width: "130px" },
         { key: "completeDate", label: "Data Complete",       width: "160px" },
         { key: "completeUser", label: "Utente Complete",    width: "130px" },
-        { key: "workCenter",  label: "Work Center",  width: "130px" },
-        { key: "status",      label: "Status",       width: "100px" },
-        { key: "duration",    label: "Ore pianificate",     width: "100px" },
-        { key: "oreMarcate",  label: "Ore marcate",         width: "110px" },
     ];
 
     var dataMap = {
@@ -663,16 +669,23 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         return item.totalOps > 0;
     }).map(function(item) {
         var anc = _getAncestors(item.order);
+        var ot = item.orderType || "";
+        // Se l'ordine stesso è di un certo tipo, valorizza la colonna corrispondente con il proprio ordine
+        var macchina = ot === "MACH" ? item.order : anc.macchina;
+        var macroaggregato = ot === "MACR" ? item.order : anc.macroaggregato;
+        var aggregato = ot === "AGGR" ? item.order : anc.aggregato;
+        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.order : "";
         return {
             order: item.order,
             sfc: item.sfc,
             orderStatus: item.orderStatus || "",
-            aggregato: anc.aggregato,
-            macroaggregato: anc.macroaggregato,
-            macchina: anc.macchina,
+            aggregato: aggregato,
+            macroaggregato: macroaggregato,
+            macchina: macchina,
+            gruppo: gruppo,
             totalOps: item.totalOps,
             completedOps: item.completedOps,
-            percentualeCompletamento: item.percentualeCompletamento || "0,00%"
+            percentualeCompletamento: item.percentualeCompletamento || "0,00%",
         };
     });
 
@@ -680,24 +693,30 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     var allOps = [];
     items.forEach(function(item) {
         var anc = _getAncestors(item.order);
+        var ot = item.orderType || "";
+        var macchina = ot === "MACH" ? item.order : anc.macchina;
+        var macroaggregato = ot === "MACR" ? item.order : anc.macroaggregato;
+        var aggregato = ot === "AGGR" ? item.order : anc.aggregato;
+        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.order : "";
         (item.routingSteps || []).filter(function(step) {
             return step.operation !== "DUMMY_OPERATION";
         }).forEach(function(step) {
             var lookupKey = item.order + "_" + step.operation;
-            var oreMarcate = oreMarcateLookup[lookupKey];
+            var oreEffettive = oreEffettiveLookup[lookupKey];
             var logEntry = (operationLogsLookup || {})[lookupKey];
             allOps.push({
                 order: item.order,
                 orderStatus: item.orderStatus || "",
-                aggregato: anc.aggregato,
-                macroaggregato: anc.macroaggregato,
-                macchina: anc.macchina,
+                aggregato: aggregato,
+                macroaggregato: macroaggregato,
+                macchina: macchina,
+                gruppo: gruppo,
                 operation: step.operation,
                 description: step.description,
                 workCenter: step.workCenter,
                 status: step.status,
                 duration: (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000,
-                oreMarcate: oreMarcate !== undefined ? oreMarcate : "",
+                oreEffettive: oreEffettive !== undefined ? oreEffettive : "",
                 startDate: logEntry ? logEntry.start_date : "",
                 startUser: logEntry ? logEntry.start_user : "",
                 completeDate: logEntry ? logEntry.complete_date : "",
@@ -738,13 +757,12 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         { key: "description",  label: "Description",     width: "200px" },
         { key: "workCenter",   label: "Work Center",     width: "130px" },
         { key: "status",       label: "Status",          width: "100px" },
+        { key: "percentualeCompletamento", label: "% Completamento Ore", width: "120px" },
         { key: "duration",     label: "Ore pianificate", width: "100px" },
         { key: "oreEffettive", label: "Ore effettive",   width: "110px" },
-        { key: "oreMarcate",   label: "Ore marcate",     width: "110px" },
         { key: "oreVarianza",  label: "Ore varianza",    width: "110px" },
-        { key: "timespent",    label: "Timespent",       width: "110px" },
+        { key: "timespent",    label: "Time Spent",      width: "110px" },
         { key: "scostamento",  label: "Scostamento",     width: "110px" },
-        { key: "percentualeCompletamento", label: "% completamento", width: "120px" },
         { key: "alert",        label: "",                width: "50px", isIcon: true }
     ];
 
@@ -766,11 +784,13 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         });
 
         var ownDuration = 0, ownOreEffettive = 0, ownOreMarcate = 0, ownOreVarianza = 0;
+        var allChildrenVarianzaEmpty = true;
         filteredChildren.forEach(function(child) {
             var dur = (typeof child.duration === "number" ? child.duration : 0);
             var eff = (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
             var marc = (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
             var vari = (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+            if (typeof child.oreVarianza === "number") allChildrenVarianzaEmpty = false;
             ownDuration += dur;
             ownOreEffettive += eff;
             ownOreMarcate += marc;
@@ -778,6 +798,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
             // Compute per-operation timespent, scostamento, alert
             child.timespent = eff + vari;
             child.scostamento = dur - eff;
+            child.percentualeCompletamento = dur > 0 ? (eff / dur * 100).toFixed(2).replace(".", ",") + "%" : "0,00%";
             child.alert = (child.status !== "Done" && child.scostamento <= 0) ? "alert" : "";
         });
 
@@ -799,6 +820,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
             timespent: 0,
             scostamento: 0,
             alert: "",
+            _allChildrenVarianzaEmpty: allChildrenVarianzaEmpty,
             children: filteredChildren
         };
     });
@@ -817,14 +839,33 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
 
     var cacheDur = {}, cacheEff = {}, cacheMarc = {}, cacheVar = {};
 
+    // Mappa order -> row per check varianza vuota ricorsivo
+    var dataByOrder = {};
+    data.forEach(function(row) { dataByOrder[row.order] = row; });
+
+    // Verifica ricorsiva se tutti i figli (propri e discendenti) hanno varianza vuota
+    var cacheAllVarEmpty = {};
+    function isAllVarianzaEmpty(orderId) {
+        if (cacheAllVarEmpty[orderId] !== undefined) return cacheAllVarEmpty[orderId];
+        var row = dataByOrder[orderId];
+        var result = row ? row._allChildrenVarianzaEmpty : true;
+        var chl = (childrenMap || {})[orderId] || [];
+        chl.forEach(function(childId) {
+            if (!isAllVarianzaEmpty(childId)) result = false;
+        });
+        cacheAllVarEmpty[orderId] = result;
+        return result;
+    }
+
     // Imposta valori cumulativi e ricalcola % completamento
     data.forEach(function(row) {
         row.duration = getCumulative(ownDurationMap, row.order, cacheDur);
         row.oreEffettive = getCumulative(ownOreEffettiveMap, row.order, cacheEff);
         row.oreMarcate = getCumulative(ownOreMarcateMap, row.order, cacheMarc);
         row.oreVarianza = getCumulative(ownOreVarianzaMap, row.order, cacheVar);
-        row.timespent = row.oreEffettive + row.oreVarianza;
-        row.scostamento = row.oreEffettive - row.duration;
+        if (isAllVarianzaEmpty(row.order)) row.oreVarianza = "";
+        row.timespent = row.oreEffettive + (typeof row.oreVarianza === "number" ? row.oreVarianza : 0);
+        row.scostamento = row.duration - row.oreEffettive;
 
         // Alert a livello ordine: se scostamento <= 0 e ordine non DONE
         if (row.orderStatus !== "Completed" && row.scostamento <= 0 && row.duration > 0) {
