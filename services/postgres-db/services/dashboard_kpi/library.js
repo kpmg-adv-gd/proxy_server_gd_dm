@@ -6,6 +6,7 @@ const { getVerbaliSupervisoreAssembly } = require("../../../api/verbali/library"
 const { ordersChildrenRecursion } = require("../verbali/library");
 const { callGet } = require("../../../../utility/CommonCallApi");
 const { dispatch } = require("../../../mdo/library");
+const { getOperationDates } = require("../logs_start_complete/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -17,10 +18,22 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     var cumulativeDurations = hierarchyResult.durations;
     var childToParent = hierarchyResult.childToParent;
     var machineDetails = await getMachineProgressDetails(plant, wbe, orderClassification, cumulativeDurations, hierarchyResult.childrenMap);
-    var sfcGruppi  = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent, machineDetails);
-    var sfcAggr    = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent, machineDetails);
-    var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent, machineDetails);
-    var sfcAll     = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails);
+
+    // Fetch operation log dates for all orders
+    var uniqueOrders = [...new Set(orderClassification.all.map(function(item) { return item.order; }))].filter(Boolean);
+    var logResults = await Promise.all(uniqueOrders.map(function(ord) { return getOperationDates(plant, ord).then(function(rows) { return { order: ord, rows: rows }; }); }));
+    var operationLogsLookup = {};
+    logResults.forEach(function(entry) {
+        (entry.rows || []).forEach(function(row) {
+            var key = entry.order + "_" + row.operation_activity;
+            operationLogsLookup[key] = row;
+        });
+    });
+
+    var sfcGruppi  = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent, machineDetails, operationLogsLookup);
+    var sfcAggr    = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent, machineDetails, operationLogsLookup);
+    var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent, machineDetails, operationLogsLookup);
+    var sfcAll     = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails, operationLogsLookup);
     var scostamentoGD       = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
     var scostamentoFornitori = getScostamentoDetails(machineDetails, "Fornitori", hierarchyResult.childrenMap);
     var mancantiDetails  = await getMancantiDetails(plant, wbe, orderClassification);
@@ -573,7 +586,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
 /**
  * 2.2.2 SFC Progress Details per livello (gruppi/aggr/macr) dalla classificazione
  */
-function _getSFCProgressFromClassification(orderClassification, level, childToParent, machineDetails) {
+function _getSFCProgressFromClassification(orderClassification, level, childToParent, machineDetails, operationLogsLookup) {
     // Mappa order -> orderType per risalire la gerarchia
     var orderTypeMap = {};
     orderClassification.all.forEach(function(item) { orderTypeMap[item.order] = item.orderType; });
@@ -626,10 +639,14 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         { key: "macchina",        label: "Macchina",        width: "180px" },
         { key: "operation",   label: "Operation",   width: "140px" },
         { key: "description", label: "Description",  width: "200px" },
+        { key: "startDate",   label: "Data Start",          width: "160px" },
+        { key: "startUser",   label: "Utente Start",        width: "130px" },
+        { key: "completeDate", label: "Data Complete",       width: "160px" },
+        { key: "completeUser", label: "Utente Complete",    width: "130px" },
         { key: "workCenter",  label: "Work Center",  width: "130px" },
         { key: "status",      label: "Status",       width: "100px" },
         { key: "duration",    label: "Ore pianificate",     width: "100px" },
-        { key: "oreMarcate",  label: "Ore marcate",         width: "110px" }
+        { key: "oreMarcate",  label: "Ore marcate",         width: "110px" },
     ];
 
     var dataMap = {
@@ -668,6 +685,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         }).forEach(function(step) {
             var lookupKey = item.order + "_" + step.operation;
             var oreMarcate = oreMarcateLookup[lookupKey];
+            var logEntry = (operationLogsLookup || {})[lookupKey];
             allOps.push({
                 order: item.order,
                 orderStatus: item.orderStatus || "",
@@ -679,7 +697,11 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
                 workCenter: step.workCenter,
                 status: step.status,
                 duration: (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000,
-                oreMarcate: oreMarcate !== undefined ? oreMarcate : ""
+                oreMarcate: oreMarcate !== undefined ? oreMarcate : "",
+                startDate: logEntry ? logEntry.start_date : "",
+                startUser: logEntry ? logEntry.start_user : "",
+                completeDate: logEntry ? logEntry.complete_date : "",
+                completeUser: logEntry ? logEntry.complete_user : ""
             });
         });
     });
