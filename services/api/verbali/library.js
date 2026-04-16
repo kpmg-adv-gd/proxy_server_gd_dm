@@ -46,16 +46,18 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
             var orderResponse = await callGet(url);
             data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
-            data.material = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.section = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
             data.customer = orderResponse?.customValues?.filter(item => item.attribute == "CUSTOMER")[0]?.value || "";
             data.executionStatus = orderResponse?.executionStatus || "";
             data.sentToTesting = orderResponse?.customValues?.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
+            data.phase = orderResponse?.customValues?.filter(item => item.attribute == "PHASE")[0]?.value || "";
+            data.material = orderResponse?.material?.description || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
-            if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
+            if (data.wbs == "" || data.section == "" || data.project == "" || data.sfc == "") continue;
             // Recupero status con api sfcdetail
             try {
                 var urlStatus = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + data.sfc;
@@ -64,7 +66,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             } catch (error) {
                 continue;
             }
-            // Filtri su progetto e wbs
+            // Filtri su progetto, wbs e phase
             if (project != "" && data.project != project) continue;
             if (wbs != "" && data.wbs != wbs) continue;
             // Aggiungo elemento
@@ -1518,6 +1520,7 @@ function generateTreeTable(data) {
             project_parent: data[i].project,
             wbs: data[i].wbs,
             sfc: data[i].sfc,
+            section: data[i].section,
             material: data[i].material,
             status: data[i].status,
             reportStatus: data[i].reportStatus,
@@ -1527,7 +1530,8 @@ function generateTreeTable(data) {
             user: data[i].user || "",
             customer: data[i].customer || "",
             executionStatus: data[i].executionStatus || "",
-            sentToTesting: data[i].sentToTesting || ""
+            sentToTesting: data[i].sentToTesting || "",
+            phase: data[i].phase || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });

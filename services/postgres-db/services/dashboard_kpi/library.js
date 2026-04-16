@@ -36,7 +36,8 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     var sfcAll     = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails, operationLogsLookup);
     var scostamentoGD       = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
     var scostamentoFornitori = getScostamentoDetails(machineDetails, "Fornitori", hierarchyResult.childrenMap);
-    var mancantiDetails  = await getMancantiDetails(plant, wbe, orderClassification);
+    var scostamentoAll       = getScostamentoDetails(machineDetails, "All", hierarchyResult.childrenMap);
+    var mancantiDetails  = await getMancantiDetails(plant, project, orderClassification);
     var evasiDetails     = getEvasiDetails(orderClassification);
     var modificheDetails = await getModificheDetails(plant, project, wbe, sfc, section, material);
     var varianzeDetails  = await getVarianzeDetails(plant, order);
@@ -64,6 +65,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     result.chartData = {
         machineProgress: _calcMachineProgressChart(machineDetails.data),
         scostamentoLevels: {
+            All:       _calcScostamentoChart(scostamentoAll.data, "All"),
             GD:        _calcScostamentoChart(scostamentoGD.data, "GD"),
             Fornitori: _calcScostamentoChart(scostamentoFornitori.data, "Fornitori")
         },
@@ -90,6 +92,7 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
             all:    sfcAll
         },
         scostamento: {
+            All:       scostamentoAll,
             GD:        scostamentoGD,
             Fornitori: scostamentoFornitori
         },
@@ -115,7 +118,7 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
             return {
                 project: "",
                 wbe: child.wbs || "",
-                section: child.material || "",
+                section: child.section || "",
                 sfc: child.sfc || "",
                 order: child.order || "",
                 material: child.material || "",
@@ -141,7 +144,11 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
                 return item.customer === customer;
             });
         }
-        // todo: il filtro phase attualmente non è in uso, poichè è attiva solo la scelta "Assembly"
+        if (phase) {
+            children = children.filter(function(item) {
+                return item.phase === phase || (item.phase === "" && phase == "Assembly");
+            });
+        }
 
         return {
             project: projectNode.project || "",
@@ -409,6 +416,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
     var ownOreMarcateMap = {};
     var ownOreVarianzaMap = {};
     var ownOreCompletateMap = {};
+    var hasNumericOreMarcateMap = {};
 
     var data = orderClassification.all.map(function(item) {
         var type = "Gruppo";
@@ -420,6 +428,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         var ownOreMarcate = 0;
         var ownOreVarianza = 0;
         var ownOreCompletate = 0;
+        var hasNumericOreMarcate = false;
 
         var children = (item.routingSteps || []).filter(function(step) {
             return step.workCenter !== "DUMMY_WORKCENTER";
@@ -450,6 +459,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
             ownOreEffettive += (typeof oreEffettive === "number" ? oreEffettive : 0);
             ownOreMarcate += (typeof oreMarcate === "number" ? oreMarcate : 0);
             ownOreVarianza += (typeof oreVarianza === "number" ? oreVarianza : 0);
+            if (typeof oreMarcate === "number") hasNumericOreMarcate = true;
             ownOreCompletate += (step.status === "Done" ? dur : 0);
 
             return {
@@ -470,6 +480,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         ownOreMarcateMap[item.order] = ownOreMarcate;
         ownOreVarianzaMap[item.order] = ownOreVarianza;
         ownOreCompletateMap[item.order] = ownOreCompletate;
+        hasNumericOreMarcateMap[item.order] = hasNumericOreMarcate;
 
         return {
             type: type,
@@ -513,6 +524,21 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         return total;
     }
 
+    // Verifica se un ordine o i suoi discendenti hanno almeno un figlio con ore marcate numeriche
+    var cacheHasMarc = {};
+    function hasCumulativeNumericOreMarcate(orderId) {
+        if (cacheHasMarc[orderId] !== undefined) return cacheHasMarc[orderId];
+        var result = hasNumericOreMarcateMap[orderId] || false;
+        if (!result) {
+            var chl = (childrenMap || {})[orderId] || [];
+            for (var i = 0; i < chl.length; i++) {
+                if (hasCumulativeNumericOreMarcate(chl[i])) { result = true; break; }
+            }
+        }
+        cacheHasMarc[orderId] = result;
+        return result;
+    }
+
     // Calcolo cumulativo ore varianza (proprie + discendenti)
     var cacheVar = {};
     function getCumulativeOreVarianza(orderId) {
@@ -549,7 +575,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
 
         row.oreCompletate = cumOreCompletate;
         row.oreEffettive = cumOreEff;
-        row.oreMarcate = cumOreMarcate;
+        row.oreMarcate = hasCumulativeNumericOreMarcate(row.order) ? cumOreMarcate : "";
         row.oreVarianza = cumOreVarianza;
 
         // % completamento = Ore Effettive / Ore Pianificate
@@ -767,6 +793,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     ];
 
     var isGD = workcenter === "GD";
+    var isAll = workcenter === "All";
 
     // Mappa order -> somme proprie (solo operazioni filtrate per workcenter)
     var ownDurationMap = {};
@@ -778,6 +805,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     var data = machineDetails.data.map(function(row) {
         var filteredChildren = (row.children || []).filter(function(child) {
             if (child.workCenter === "DUMMY_WORKCENTER") return false;
+            if (isAll) return true;
             var wc = child.workCenter || "";
             if (isGD) return !wc.startsWith("F_");
             return wc.startsWith("F_");
@@ -892,7 +920,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
  *   - Con mancanti: ordine presente, data di ricezione >= oggi
  *   - Mancanti scaduti: ordine presente, data di ricezione < oggi
  */
-async function getMancantiDetails(plant, wbe, orderClassification) {
+async function getMancantiDetails(plant, project, orderClassification) {
     var gruppiOrders = orderClassification.gruppi.map(function(item) { return item.order; });
     if (gruppiOrders.length === 0) {
         return { columns: [], data: [], totalMissing: 0, gruppiCount: 0 };
@@ -908,7 +936,7 @@ async function getMancantiDetails(plant, wbe, orderClassification) {
         { key: "stato",                label: "Stato",                width: "120px" }
     ];
 
-    var rows = await postgresdbService.executeQuery(queryDashKPI.getMancantiForDashboardQuery, [plant, wbe, gruppiOrders]);
+    var rows = await postgresdbService.executeQuery(queryDashKPI.getMancantiForDashboardQuery, [plant, project, gruppiOrders]);
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -1466,10 +1494,14 @@ function _calcMachineProgressChart(aData) {
 function _calcScostamentoChart(aData, workcenterType) {
     var pianificato = 0, secondValue = 0, varianza = 0;
     var isFornitori = workcenterType === "Fornitori";
+    var isAll = workcenterType === "All";
     aData.forEach(function(row) {
         (row.children || []).forEach(function(child) {
             pianificato += (typeof child.duration === "number" ? child.duration : 0);
-            if (!isFornitori) {
+            if (isAll) {
+                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+                varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+            } else if (!isFornitori) {
                 secondValue += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
                 varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
             } else {
@@ -1477,7 +1509,13 @@ function _calcScostamentoChart(aData, workcenterType) {
             }
         });
     });
-    if (!isFornitori) {
+    if (isAll) {
+        return [
+            { label: "Ore pianificate", value: pianificato },
+            { label: "Ore effettive", value: secondValue },
+            { label: "Ore varianza", value: varianza }
+        ];
+    } else if (!isFornitori) {
         return [
             { label: "Ore pianificate", value: pianificato },
             { label: "Ore marcate", value: secondValue },
@@ -1498,7 +1536,7 @@ function _calcMancantiSummary(mancantiDetails) {
     var totalMissing = mancantiDetails.totalMissing || 0;
     var totalComponentQty = mancantiDetails.totalComponentQty || 0;
     var pct = totalComponentQty > 0 ? (totalMissing / totalComponentQty * 100).toFixed(1).replace(".", ",") : "0";
-    return { percentuale: pct + "%", totale: totalMissing + "/" + totalComponentQty };
+    return { percentuale: pct + "%", totale: parseFloat(totalMissing.toFixed(3)) + "/" + parseFloat(totalComponentQty.toFixed(3)) };
 }
 
 /**
