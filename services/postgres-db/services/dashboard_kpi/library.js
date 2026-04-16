@@ -1281,14 +1281,11 @@ async function getModificheDetails(plant, project, wbe, sfc, section, material) 
         { key: "child_material",    label: "Child Material",  width: "120px" },
         { key: "quantity",          label: "Qty",             width: "60px"  },
         { key: "flux_type",         label: "Flux",            width: "90px"  },
-        { key: "resolution",        label: "Resolution",      width: "100px" },
-        { key: "status",            label: "Status",          width: "80px"  },
         { key: "statusDescription", label: "Status Desc.",    width: "120px" },
-        { key: "owner",             label: "Owner",           width: "130px" },
-        { key: "due_date",          label: "Due Date",        width: "100px" },
+        { key: "resolution",        label: "Resolution",      width: "100px" },
+        { key: "note",              label: "Note",            width: "150px" },
         { key: "sfc",               label: "SFC",             width: "120px" },
         { key: "order",             label: "Order",           width: "100px" },
-        { key: "note",              label: "Note",            width: "150px" }
     ];
 
     return { parentColumns: parentColumns, childColumns: childColumns, data: treeData, isTree: true };
