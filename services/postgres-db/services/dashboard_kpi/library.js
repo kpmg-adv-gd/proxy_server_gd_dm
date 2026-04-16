@@ -268,7 +268,7 @@ async function _classifyOrders(plant, order) {
                 // Calcola % completamento ponderata su DURATION
                 var totalDuration = 0, completedDuration = 0;
                 routingSteps.forEach(function(rs) {
-                    var dur = (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 1000;
+                    var dur = (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 100000;
                     totalDuration += dur;
                     if (rs.status === "Done") completedDuration += dur;
                 });
@@ -334,7 +334,7 @@ async function _calcCumulativeDurations(plant, enrichedOrders) {
     var ownDurationMap = {};
     enrichedOrders.forEach(function(item) {
         var sum = 0;
-        (item.routingSteps || []).forEach(function(rs) { sum += (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 1000; });
+        (item.routingSteps || []).forEach(function(rs) { sum += (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 100000; });
         ownDurationMap[item.order] = sum;
     });
 
@@ -404,8 +404,8 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         (markingRows || []).forEach(function(row) {
             var key = row.mes_order + "_" + row.operation;
             if (!markingLookup[key]) markingLookup[key] = { marked: 0, variance: 0 };
-            markingLookup[key].marked += (parseFloat(row.marked_labor) || 0);
-            markingLookup[key].variance += (parseFloat(row.variance_labor) || 0);
+            markingLookup[key].marked += (parseFloat(row.marked_labor) || 0) / 100;
+            markingLookup[key].variance += (parseFloat(row.variance_labor) || 0) / 100;
         });
     } catch (e) {
         console.log("Error fetching marking recap for dashboard: " + e.message);
@@ -433,7 +433,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         var children = (item.routingSteps || []).filter(function(step) {
             return step.workCenter !== "DUMMY_WORKCENTER";
         }).map(function(step) {
-            var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000;
+            var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
             var oreEffettive = 0;
             var oreMarcate = "";
             var oreVarianza = "";
@@ -741,7 +741,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
                 description: step.description,
                 workCenter: step.workCenter,
                 status: step.status,
-                duration: (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000,
+                duration: (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000,
                 oreEffettive: oreEffettive !== undefined ? oreEffettive : "",
                 startDate: logEntry ? logEntry.start_date : "",
                 startUser: logEntry ? logEntry.start_user : "",
@@ -1304,9 +1304,9 @@ async function getVarianzeDetails(plant, order) {
         console.error("Errore getVarianzeDetails:", e);
     }
 
-    // Calcolo totale ore per percentuali
+    // Calcolo totale ore per percentuali (HCN -> ore: /100)
     var totalOre = 0;
-    data.forEach(function(row) { totalOre += parseFloat(row.variance_labor) || 0; });
+    data.forEach(function(row) { totalOre += (parseFloat(row.variance_labor) || 0) / 100; });
 
     // Details Tipologia: reason_for_variance, description, variance_labor, percentuale
     var tipologiaColumns = [
@@ -1316,7 +1316,7 @@ async function getVarianzeDetails(plant, order) {
         { key: "percentuale",         label: "Percentuale",   width: "120px" }
     ];
     var tipologiaData = data.map(function(row) {
-        var ore = parseFloat(row.variance_labor) || 0;
+        var ore = (parseFloat(row.variance_labor) || 0) / 100;
         var pct = totalOre > 0 ? (ore / totalOre * 100).toFixed(1) : "0";
         return {
             reason_for_variance: row.reason_for_variance || "",
@@ -1330,7 +1330,7 @@ async function getVarianzeDetails(plant, order) {
     var attrGroups = {};
     data.forEach(function(row) {
         var attr = row.attribution || "Non attribuita";
-        var ore = parseFloat(row.variance_labor) || 0;
+        var ore = (parseFloat(row.variance_labor) || 0) / 100;
         attrGroups[attr] = (attrGroups[attr] || 0) + ore;
     });
     var responsabilitaColumns = [
@@ -1471,7 +1471,7 @@ function _calcMachineProgressChart(aData) {
     var durCompletati = 0, durIniziati = 0, durDaIniziare = 0;
     aData.forEach(function(row) {
         (row.children || []).forEach(function(step) {
-            var dur = typeof step.duration === "number" ? step.duration : (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 1000;
+            var dur = typeof step.duration === "number" ? step.duration : (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
             if (step.status === "Done") durCompletati += dur;
             else if (step.status === "In Work") durIniziati += dur;
             else durDaIniziare += dur;
@@ -1640,7 +1640,7 @@ function _calcModificheChart(aData, sStatusFilter) {
  */
 function _calcTipologiaVarianzeChart(aData) {
     return aData.map(function(row) {
-        return { label: row.reason_for_variance || "NA", value: parseFloat(row.variance_labor) || 0 };
+        return { label: row.reason_for_variance || "NA", value: (parseFloat(row.variance_labor) || 0) / 100 };
     }).sort(function(a, b) { return b.value - a.value; });
 }
 
@@ -1651,7 +1651,7 @@ function _calcResponsabilitaVarianzeChart(aData) {
     var groups = {};
     aData.forEach(function(row) {
         var key = row.attribution || "Non attribuita";
-        groups[key] = (groups[key] || 0) + (parseFloat(row.variance_labor) || 0);
+        groups[key] = (groups[key] || 0) + (parseFloat(row.variance_labor) || 0) / 100;
     });
     return Object.keys(groups).map(function(key) {
         return { label: key, value: groups[key] };
