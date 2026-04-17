@@ -488,7 +488,7 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
         for (let j = 0; j < listOperations[i].operations.length; j++) {
             var opt = listOperations[i].operations[j];
             // Controllo che confirmation number non c'è
-            if (opt.CONFIRMATION_NUMBER != null && opt.CONFIRMATION_NUMBER != "") continue;
+            if (opt.CONFIRMATION_NUMBER != null && opt.CONFIRMATION_NUMBER != "" && opt.CONFIRMATION_NUMBER != "0000000000") continue;
             dataForSap.operations.push({
                 plant: plantErp,
                 project: row.project,
