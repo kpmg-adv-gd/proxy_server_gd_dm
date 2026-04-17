@@ -19,6 +19,7 @@ const getTipologiaVarianzeQuery = `SELECT
     FROM z_op_confirmations oc
     LEFT JOIN z_variance_type vt ON vt.cause = oc.reason_for_variance AND vt.plant = oc.plant
     WHERE oc.plant = $1 AND oc.mes_order = ANY($2) AND oc.variance_labor > 0 AND oc.reason_for_variance IS NOT NULL
+    AND oc.cancellation_flag = false AND oc.cancelled_confirmation IS NULL
     GROUP BY oc.reason_for_variance, vt.description, vt.attribution
     ORDER BY variance_labor DESC`;
 

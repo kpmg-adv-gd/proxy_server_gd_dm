@@ -1533,7 +1533,7 @@ function _calcMancantiSummary(mancantiDetails) {
     var totalMissing = mancantiDetails.totalMissing || 0;
     var totalComponentQty = mancantiDetails.totalComponentQty || 0;
     var pct = totalComponentQty > 0 ? (totalMissing / totalComponentQty * 100).toFixed(1).replace(".", ",") : "0";
-    return { percentuale: pct + "%", totale: parseFloat(totalMissing.toFixed(3)) + "/" + parseFloat(totalComponentQty.toFixed(3)) };
+    return { percentuale: pct + "%", totale: Math.ceil(totalMissing) + "/" + Math.ceil(totalComponentQty) };
 }
 
 /**
