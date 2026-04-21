@@ -194,12 +194,13 @@ async function _classifyOrders(plant, order) {
             var unloadPoint = unloadPointField?.value || null;
             var plannedStartDate = orderResp?.plannedStartDate || null;
             var sfcValue = orderResp?.sfcs?.[0] || "";
+            var material = orderResp?.material?.description || "";
             var execStatus = orderResp?.executionStatus || "";
             var orderStatus = execStatus === "COMPLETED" ? "Completed" : execStatus === "ACTIVE" ? "Started" : execStatus === "NOT_IN_EXECUTION" ? "Not Started" : execStatus;
-            return { order: ord, orderType: orderType, orderStatus: orderStatus, unloadPoint: unloadPoint, plannedStartDate: plannedStartDate, sfc: sfcValue };
+            return { order: ord, orderType: orderType, orderStatus: orderStatus, unloadPoint: unloadPoint, plannedStartDate: plannedStartDate, sfc: sfcValue, material: material };
         } catch (e) {
             console.log("Error fetching order detail for " + ord + ": " + e.message);
-            return { order: ord, orderType: "", orderStatus: "", unloadPoint: null, plannedStartDate: null, sfc: "" };
+            return { order: ord, orderType: "", orderStatus: "", unloadPoint: null, plannedStartDate: null, sfc: "", material: "" };
         }
     }));
 
@@ -291,6 +292,7 @@ async function _classifyOrders(plant, order) {
             order: item.order,
             orderType: item.orderType,
             sfc: item.sfc,
+            material: item.material,
             totalOps: resolvedTotalOps,
             completedOps: resolvedCompletedOps,
             percentualeCompletamento: pct,
@@ -385,7 +387,6 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
     var parentColumns = [
         { key: "type",                     label: "Type",            width: "120px" },
         { key: "order",                    label: "Order",           width: "180px" },
-        { key: "sfc",                      label: "SFC",             width: "220px" },
         { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
     ];
     var childColumns = [
@@ -494,6 +495,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
             type: type,
             order: item.order,
             sfc: item.sfc,
+            material: item.material,
             orderStatus: item.orderStatus || "",
             percentualeCompletamento: "0,00%",
             percentualeCompletamentoSFC: "0,00%",
@@ -665,7 +667,6 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
         { key: "aggregato",       label: "Aggregato",       width: "180px" },
         { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
-        { key: "sfc",    label: "SFC",     width: "220px" },
         { key: "order",  label: "Order",   width: "180px" }, // todo: da togliere
         { key: "orderStatus",     label: "Status Ordine",   width: "120px" },
         { key: "totalOps",      label: "Tot. Operazioni", width: "120px" },
@@ -678,7 +679,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
         { key: "aggregato",       label: "Aggregato",       width: "180px" },
         { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
-        { key: "order",       label: "Order",       width: "180px" }, // todo: da togliere
+        { key: "order",       label: "Order",       width: "180px" },
         { key: "operation",   label: "Operation",   width: "140px" },
         { key: "description", label: "Description",  width: "200px" },
         { key: "workCenter",  label: "Work Center",  width: "130px" },
@@ -714,6 +715,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         return {
             order: item.order,
             sfc: item.sfc,
+            material: item.material,
             orderStatus: item.orderStatus || "",
             aggregato: aggregato,
             macroaggregato: macroaggregato,
@@ -742,6 +744,8 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
             var logEntry = (operationLogsLookup || {})[lookupKey];
             allOps.push({
                 order: item.order,
+                sfc: item.sfc,
+                material: item.material,
                 orderStatus: item.orderStatus || "",
                 aggregato: aggregato,
                 macroaggregato: macroaggregato,
@@ -785,7 +789,6 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     var parentColumns = [
         { key: "type",                     label: "Type",            width: "120px" },
         { key: "order",                    label: "Order",           width: "180px" },
-        { key: "sfc",                      label: "SFC",             width: "220px" },
         { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
     ];
     var childColumns = [
@@ -1205,6 +1208,8 @@ function getEvasiDetails(orderClassification) {
 
             return {
                 order: item.order,
+                sfc: item.sfc,
+                material: item.material,
                 unloadPoint: item.unloadPoint,
                 plannedStartDate: formattedDate,
                 stato: stato
