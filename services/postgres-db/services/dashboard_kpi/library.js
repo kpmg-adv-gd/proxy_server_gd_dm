@@ -497,7 +497,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
             orderStatus: item.orderStatus || "",
             percentualeCompletamento: "0,00%",
             percentualeCompletamentoSFC: "0,00%",
-            duration: cumulativeDurations[item.order] || 0,
+            duration: Math.round((cumulativeDurations[item.order] || 0) * 100) / 100,
             oreCompletate: 0,
             oreEffettive: 0,
             oreMarcate: 0,
