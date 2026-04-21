@@ -100,7 +100,7 @@ async function getModificheToTesting(plant, project){
 
         if (data[i].type == "MK") {
             if (linkModifiche != "") {
-                data[i].link = linkModifiche + data[i].material;
+                data[i].link = linkModifiche + data[i].child_material;
              }
         }
         
@@ -116,6 +116,8 @@ async function getModificheToTesting(plant, project){
             note: data[i].note,
             mark: data[i].type == "MA",
             order: data[i].order,
+            link: data[i].link || "",
+            parentType: data[i].type,
             childId: childId++
         }
         if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
@@ -125,7 +127,6 @@ async function getModificheToTesting(plant, project){
                 progEco: progEcoFormatted,
                 processId: processIdFormatted,  
                 material: data[i].material,
-                link: data[i].link || "",
                 materialDescription: data[i].material_description,
                 mark: data[i].type == "MT" || data[i].type == "MK",
                 project: data[i].project,

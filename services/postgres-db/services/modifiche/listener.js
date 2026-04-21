@@ -30,7 +30,7 @@ module.exports.listenerSetup = (app) => {
             if (linkModifiche != "") {
                 modificheMT_MK.forEach(modifica => {
                     if (modifica.type === "MK") { 
-                        modifica.link = linkModifiche + modifica.material;
+                        modifica.link = linkModifiche + modifica.child_material;
                     }
                 });
             }
