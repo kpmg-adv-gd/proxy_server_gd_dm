@@ -573,13 +573,15 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         return total;
     }
 
+    var r2 = function(n) { return Math.round(n * 100) / 100; };
+
     // Imposta valori cumulativi e ricalcola % completamento
     data.forEach(function(row) {
-        var cumOreEff = getCumulativeOreEffettive(row.order);
-        var cumOreMarcate = getCumulativeOreMarcate(row.order);
-        var cumOreVarianza = getCumulativeOreVarianza(row.order);
-        var cumOreCompletate = getCumulativeOreCompletate(row.order);
-        var cumDuration = cumulativeDurations[row.order] || 0;
+        var cumOreEff = r2(getCumulativeOreEffettive(row.order));
+        var cumOreMarcate = r2(getCumulativeOreMarcate(row.order));
+        var cumOreVarianza = r2(getCumulativeOreVarianza(row.order));
+        var cumOreCompletate = r2(getCumulativeOreCompletate(row.order));
+        var cumDuration = r2(cumulativeDurations[row.order] || 0);
 
         row.oreCompletate = cumOreCompletate;
         row.oreEffettive = cumOreEff;
@@ -893,15 +895,17 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         return result;
     }
 
+    var r2s = function(n) { return Math.round(n * 100) / 100; };
+
     // Imposta valori cumulativi e ricalcola % completamento
     data.forEach(function(row) {
-        row.duration = getCumulative(ownDurationMap, row.order, cacheDur);
-        row.oreEffettive = getCumulative(ownOreEffettiveMap, row.order, cacheEff);
-        row.oreMarcate = getCumulative(ownOreMarcateMap, row.order, cacheMarc);
-        row.oreVarianza = getCumulative(ownOreVarianzaMap, row.order, cacheVar);
+        row.duration = r2s(getCumulative(ownDurationMap, row.order, cacheDur));
+        row.oreEffettive = r2s(getCumulative(ownOreEffettiveMap, row.order, cacheEff));
+        row.oreMarcate = r2s(getCumulative(ownOreMarcateMap, row.order, cacheMarc));
+        row.oreVarianza = r2s(getCumulative(ownOreVarianzaMap, row.order, cacheVar));
         if (isAllVarianzaEmpty(row.order)) row.oreVarianza = "";
-        row.timespent = row.oreEffettive + (typeof row.oreVarianza === "number" ? row.oreVarianza : 0);
-        row.scostamento = row.duration - row.oreEffettive;
+        row.timespent = r2s(row.oreEffettive + (typeof row.oreVarianza === "number" ? row.oreVarianza : 0));
+        row.scostamento = r2s(row.duration - row.oreEffettive);
 
         // Alert a livello ordine: se scostamento <= 0 e ordine non DONE
         if (row.orderStatus !== "Completed" && row.scostamento <= 0 && row.duration > 0) {
