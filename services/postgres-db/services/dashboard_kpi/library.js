@@ -279,15 +279,23 @@ async function _classifyOrders(plant, order) {
                 console.log("Error fetching sfc detail for " + item.sfc + ": " + e.message);
             }
         }
+        // Fix: se alcune operazioni completate ma non tutte → forza "Started" indipendentemente dallo status SAP
+        var resolvedTotalOps = totalOps || 0;
+        var resolvedCompletedOps = completedOps || 0;
+        var effectiveOrderStatus = item.orderStatus;
+        if (resolvedCompletedOps > 0 && resolvedCompletedOps < resolvedTotalOps) {
+            effectiveOrderStatus = "Started";
+        }
+
         return {
             order: item.order,
             orderType: item.orderType,
             sfc: item.sfc,
-            totalOps: totalOps || 0,
-            completedOps: completedOps || 0,
+            totalOps: resolvedTotalOps,
+            completedOps: resolvedCompletedOps,
             percentualeCompletamento: pct,
             percentualeCompletamentoOps: pctOps || "0,00%",
-            orderStatus: item.orderStatus,
+            orderStatus: effectiveOrderStatus,
             unloadPoint: item.unloadPoint,
             plannedStartDate: item.plannedStartDate,
             routingSteps: routingSteps
