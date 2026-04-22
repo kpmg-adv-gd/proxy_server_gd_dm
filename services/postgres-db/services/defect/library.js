@@ -75,8 +75,11 @@ async function updateZDefect(idDefect, title, description, priority, variance, c
     return data;
 }
 
-async function selectZDefect(listDefect, plant) {
-    const data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect, plant]);
+async function selectZDefect(listDefect, plant, id_lev_2) {
+    var data = await postgresdbService.executeQuery(queryDefect.selectZDefect, [listDefect, plant]);
+    if (id_lev_2) {
+        data = data.filter(defect => defect.id_lev_2 == id_lev_2);
+    }
     return data;
 }
 

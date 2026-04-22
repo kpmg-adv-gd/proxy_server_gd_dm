@@ -28,9 +28,9 @@ module.exports.listenerSetup = (app) => {
     })
 
     app.post("/db/selectZDefect", async (req, res) => {
-        const { listDefect, plant } = req.body;
+        const { listDefect, plant, id_lev_2 } = req.body;
         try {
-            const result = await postgresdbService.selectZDefect(listDefect, plant);
+            const result = await postgresdbService.selectZDefect(listDefect, plant, id_lev_2);
             res.status(200).json(result);
         } catch (error) {
             console.log("Error executing query: "+error);
