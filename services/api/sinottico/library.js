@@ -31,8 +31,10 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
         getProgressStatusMachineOrder(plant,childOrder,routing,routingVersion,routingType)
     ]);
 
-    const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
-    const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+    const ordersMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "ORDINI MANCANTI");
+    const ordersMancantiValue = (ordersMancantiField?.value || "").toString().toLowerCase();
+    const componentsMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "COMPONENTI MANCANTI");
+    const componentsMancantiValue = (componentsMancantiField?.value || "").toString().toLowerCase();
     const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
     const hasModificheValue = (hasModificheField?.value || "");
     const hasDefectsFields = orderDetail?.customValues.find(obj => obj.attribute === "DEFECTS");
@@ -51,7 +53,8 @@ async function getSinotticoBomMultilivelloReportData(plant, project, machineMate
         Order: childOrder,
         OrderType: "MACH",
         ParentAssembly: false,
-        MissingParts: hasMancantiValue,
+        MissingOrders: ordersMancantiValue,
+        MissingComponents: componentsMancantiValue,
         EngChanges: hasModificheValue,
         Defects: hasDefectsValue,
         ProgressStatus: progressStatusOrder,
@@ -76,7 +79,8 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                         Order: comp.child_order,
                         OrderType: "",
                         ParentAssembly: false,
-                        MissingParts: "",
+                        MissingOrders: "",
+                        MissingComponents: "",
                         EngChanges: "",
                         Defects: "",
                         ProgressStatus: "",
@@ -97,8 +101,10 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
 
                 const orderTypeField = orderDetail?.customValues.find(obj => obj.attribute === "ORDER_TYPE");
                 const orderTypeValue = orderTypeField?.value || "";
-                const hasMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "MANCANTI");
-                const hasMancantiValue = (hasMancantiField?.value || "").toString().toLowerCase();
+                const ordersMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "ORDINI MANCANTI");
+                const ordersMancantiValue = (ordersMancantiField?.value || "").toString().toLowerCase();
+                const componentsMancantiField = orderDetail?.customValues.find(obj => obj.attribute === "COMPONENTI MANCANTI");
+                const componentsMancantiValue = (componentsMancantiField?.value || "").toString().toLowerCase();
                 const hasModificheField = orderDetail?.customValues.find(obj => obj.attribute === "ECO_TYPE");
                 const hasModificheValue = (hasModificheField?.value || "");
                 const hasDefectsFields = orderDetail?.customValues.find(obj => obj.attribute === "DEFECTS");
@@ -119,7 +125,8 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
                     Order: comp.child_order || "",
                     OrderType: orderTypeValue,
                     ParentAssembly: isParentAssembly,
-                    MissingParts: hasMancantiValue,
+                    MissingOrders: ordersMancantiValue,
+                    MissingComponents: componentsMancantiValue,
                     EngChanges: hasModificheValue,
                     Defects: hasDefectsValue,
                     ProgressStatus: progressStatusOrder,
@@ -142,15 +149,18 @@ async function getChildrenOrder(plant, project, parentOrder, highlightOrder) {
         //if (!orderTypeValue.startsWith("GRP")) return [];
         const bomComponents = await getBomComponents(plant, orderDetail?.bom?.bom, orderDetail?.bom?.type);
         const childrenComponents = bomComponents.map(comp => {
-            const isMancantiField = (comp?.customValues || []).find(obj => obj.attribute === "COMPONENTE MANCANTE");
-            const isMancantiValue = (isMancantiField?.value || "").toString().toLowerCase();
+            const ordersMancanteField = (comp?.customValues || []).find(obj => obj.attribute === "ORDINE MANCANTE");
+            const ordersMancantiValue = (ordersMancanteField?.value || "").toString().toLowerCase();
+            const componentsMancanteField = (comp?.customValues || []).find(obj => obj.attribute === "COMPONENTE MANCANTE");
+            const componentsMancantiValue = (componentsMancanteField?.value || "").toString().toLowerCase();
             return {
                 Material: comp?.material?.material || "",
                 SFC: "",
                 Order: "",
                 OrderType: "COMP",
                 ParentAssembly: false,
-                MissingParts: isMancantiValue,
+                MissingOrders: ordersMancantiValue,
+                MissingComponents: componentsMancantiValue,
                 EngChanges: "",
                 Defects: "",
                 isHighlighted: false,

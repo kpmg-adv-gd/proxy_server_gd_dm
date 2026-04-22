@@ -170,7 +170,7 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
     if(bomDetailBody.length == 0) return;
     for(let obj of bomDetailBody[0]?.components){
         const foundMaterial = materialsArray.find(mat => mat?.MissingMaterial?.[0] === obj?.material?.material);
-        var missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
+        const missingMaterial = ( foundMaterial?.Missing?.[0] == "X" || foundMaterial?.Missing?.[0] == "true" ) ? "true" : "false";
         if (obj?.material && obj.material.plant === plant && !!foundMaterial ) {
             if(checkMissingQuantityParentAssembly && (missingMaterial=="false"||!missingMaterial) && obj.quantity > 1){
                 let checkQuantityComponentResponse = false;
@@ -179,11 +179,15 @@ async function updateBodyBomComponentMaterials(parentOrder,child_order,bomDetail
                 } else {
                     checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,child_order,grand_child_order);
                 }
-                missingMaterial = checkQuantityComponentResponse ? "false" : "true";
+                missingComponents = checkQuantityComponentResponse.missingComponents ? "true" : "false";
+                missingOrders = checkQuantityComponentResponse.missingOrders ? "true" : "false";
             }
             for(let customValueObj of obj.customValues){
                 if (customValueObj.attribute === "COMPONENTE MANCANTE") {
-                    customValueObj.value = missingMaterial;
+                    customValueObj.value = missingComponents;
+                }
+                if (customValueObj.attribute === "ORDINE MANCANTE") {
+                    customValueObj.value = missingOrders;
                 }
             }
         }
@@ -268,29 +272,32 @@ async function manageSpecialGroups(projectsArray) {
 
 async function checkQuantityDoneComponent(quantity,plant,material,order,childOrder){
     let response = await getZOrderLinkChildOrdersMultipleMaterial(plant,order,material,childOrder);
-    var allDone = false;
+    let missingOrders = true;
+    let missingComponents = true;
     if(response.length == quantity-1){
-        allDone = true;
+        missingOrders = false;
+        missingComponents = false;
         for(let rowZOrderLink of response){
             let orderStatus = await getOrderStatusMancanti(rowZOrderLink.plant,rowZOrderLink.child_order);
-            if(orderStatus!=="false") allDone = false;
+            if(orderStatus.areMissingComponents !=="false" ) missingComponents = true;
+            if(orderStatus.areNotCompleted !=="false") missingOrders = true;
         }
     }
-    return allDone;
+    return { missingOrders, missingComponents };
 }
 
 async function getOrderStatusMancanti(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     const orderResponse = await callGet(url);
-    var output = "";
+    var output = {"areMissingComponents": "false", "areNotCompleted": "false"};
 
     let isParentAssembly = orderResponse?.customValues.some(obj => obj.attribute == "PARENT_ASSEMBLY" && (obj.value=="true" || obj.value=="X") );
     if(isParentAssembly){
         let mancantiField = orderResponse?.customValues.find(obj => obj.attribute == "COMPONENTI MANCANTI");
-        let mancanti = mancantiField?.value || "";
-        output=mancanti;
+        let areMissingComponents = mancantiField?.value || "";
+        output={"areMissingComponents": areMissingComponents, "areNotCompleted": "false"};
     } else{
-        output=orderResponse?.executionStatus == "COMPLETED" ? "false" : "true";
+        output={"areMissingComponents": "false", "areNotCompleted": orderResponse?.executionStatus == "COMPLETED" ? "false" : "true"};
     }
     
     return output;

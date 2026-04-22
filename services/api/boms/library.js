@@ -12,14 +12,15 @@ const bomComponentsCache = new Map();
 // --------------------
 function extractComponentFields(comp) {
     const descr = comp?.customValues?.find(o => o.attribute === "DESCRIZIONE COMPONENTE")?.value || "";
-    const missingParts = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
+    const missingOrders = comp?.customValues?.find(o => o.attribute === "ORDINE MANCANTE" && o.value === "true") ? "X" : "";
+    const missingComponents = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
     const fluxType = comp?.customValues?.find(o => o.attribute === "FLUX_TYPE")?.value || "";
 
-    return { descr, missingParts, fluxType };
+    return { descr, missingOrders, missingComponents, fluxType };
 }
 
 function sortMissingFirst(a, b) {
-    return (b.MissingParts === "X") - (a.MissingParts === "X");
+    return (b.MissingComponents === "X") - (a.MissingComponents === "X");
 }
 
 // --------------------
@@ -86,14 +87,15 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const comps = await getBomComponents(plant, bomInfo.bom, bomInfo.bomType);
 
             const mapped = comps.map(comp => {
-                const { descr, missingParts, fluxType } = extractComponentFields(comp);
+                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
 
                 return {
                     Material: comp.material.material,
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
-                    MissingParts: missingParts,
+                    MissingOrders: missingOrders,
+                    MissingComponents: missingComponents,
                     FluxType: fluxType
                 };
             });
@@ -136,7 +138,7 @@ async function getBomMultilivelloTreeTableData(order, plant) {
 
         const firstLevelChildren = await Promise.all(
             comps.map(async comp => {
-                const { descr, missingParts, fluxType } = extractComponentFields(comp);
+                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
 
                 const children = await getChildMaterials(
                     bomInfo.customValueCommessa,
@@ -150,7 +152,8 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
-                    MissingParts: missingParts,
+                    MissingOrders: missingOrders,
+                    MissingComponents: missingComponents,
                     FluxType: fluxType,
                     Children: children
                 };

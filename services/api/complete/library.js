@@ -197,9 +197,11 @@ async function hasMancanti(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
-    let mancantiField = customValuesOrder.find(obj => obj.attribute == "MANCANTI");
-    let mancantiValue = mancantiField?.value || "";
-    if(mancantiValue=="true"){
+    let ordiniMancantiField = customValuesOrder.find(obj => obj.attribute == "ORDINI MANCANTI");
+    let ordiniMancantiValue = ordiniMancantiField?.value || "";
+    let componentsMancantiField = customValuesOrder.find(obj => obj.attribute == "COMPONENTI MANCANTI");
+    let componentiMancantiValue = componentsMancantiField?.value || "";
+    if(ordiniMancantiValue=="true" || componentiMancantiValue=="true"){
         let errorMessage = "The sfc has mancanti. Impossible to complete it.";
         throw { status: 500, message: errorMessage};
     }

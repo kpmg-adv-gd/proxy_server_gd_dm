@@ -175,7 +175,7 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
             },
             {
                 "attribute":"ORDINE MANCANTE",
-                "value": modificaType=="MA"? "true":"false"
+                "value": modificaType=="MA"? "true":"false" //Se è tecnica allora è un componente quindi è sempre false
             },
             {
                 "attribute":"COMPONENTE MANCANTE",
@@ -188,9 +188,21 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
             "assemblyQuantityAsRequired": false,
             "alternatesEnabled": false
         };
+
+        //Se il componente inserito è un gruppo (MA) allora il campo custom "ordini mancanti" è sempre true poichè avrà per forza ordine mancante a true la sua bom component.
+        if(modificaType=="MA"){
+            await updateCustomMancanteOrder(plant,order,"true");
+            if(isParentAssembly){
+                let parentOrderBomResponse = await getBomComponents(plant,parentOrderValue);
+                parentOrderBomResponse = updateBodyBomComponentMaterial(plant,parentOrderBomResponse,orderMaterial,"true");
+                await updateCustomMancanteOrder(plant,parentOrderValue,"true");
+            }
+        }
+
         bomComponentResponse[0].components.push(newComponent);
     } else{
-        for (const obj of bomComponentResponse[0].components) {
+        for (const obj of bomComponentResponse[0].components) { 
+            //sONO NEL componente dELLA bom DA MODIFICARE
             if(obj?.material?.material == childMaterial){
                 obj.customValues.push({
                     "attribute":"FLUX_TYPE",
@@ -200,16 +212,28 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
                 //Gestione mancanti in caso di modifica di assieme per rimozione gruppo
                 if(modificaType=="MA" && fluxType=="D"){
                     let mancantiField = obj.customValues.find(obj => obj.attribute == "ORDINE MANCANTE");
+                    let mancantiComponentiField = obj.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE");
                     if(mancantiField?.value =="true"){
                         mancantiField.value = "false";
-                        if(!hasComponentMancante(bomComponentResponse[0].components)){
+                        if(!hasOrdineMancante(bomComponentResponse[0].components)){
                             await updateCustomMancanteOrder(plant,order,"false");
                             if(isParentAssembly){
                                 let parentOrderBomResponse = await getBomComponents(plant,parentOrderValue);
                                 parentOrderBomResponse = updateBodyBomComponentMaterial(plant,parentOrderBomResponse,orderMaterial,"false");
-                                if(!hasComponentMancante(parentOrderBomResponse[0].components)) await updateCustomMancanteOrder(plant,parentOrderValue,"false");
+                                if(!hasOrdineMancante(parentOrderBomResponse[0].components)) await updateCustomMancanteOrder(plant,parentOrderValue,"false");
                             }
                         } 
+                    }
+                    if(mancantiComponentiField?.value =="true"){
+                        mancantiComponentiField.value = "false";
+                        if(!hasComponentMancante(bomComponentResponse[0].components)){
+                            await updateCustomComponentMancanteOrder(plant,order,"false");
+                        }
+                        if(isParentAssembly){
+                            let parentOrderBomResponse = await getBomComponents(plant,parentOrderValue);
+                            parentOrderBomResponse = updateBodyBomComponentMaterialComponentMancante(plant,parentOrderBomResponse,orderMaterial,"false");
+                            if(!hasComponentMancante(parentOrderBomResponse[0].components)) await updateCustomComponentMancanteOrder(plant,parentOrderValue,"false");
+                        }
                     }
                 }
             }
@@ -234,12 +258,41 @@ async function updateCustomMancanteOrder(plant,order,value){
     await callPatch(url,body);
 }
 
+async function updateCustomComponentMancanteOrder(plant,order,value){
+    let url = hostname + "/order/v1/orders/customValues";
+    let customValue={
+        "attribute":"COMPONENTI MANCANTI",
+        "value": value
+    };
+    let body={
+        "plant":plant,
+        "order":order,
+        "customValues": [customValue]
+    };
+    await callPatch(url,body);
+}
+
 function updateBodyBomComponentMaterial(plant,bomDetailBody,material,value){
     if(bomDetailBody.length == 0) return;
     for(let obj of bomDetailBody[0]?.components){
         if (obj?.material?.material == material && obj.material.plant === plant ) {
             for(let customValueObj of obj.customValues){
                 if (customValueObj.attribute === "ORDINE MANCANTE") {
+                    customValueObj.value = value;
+                }
+            }
+        }
+    }
+    return bomDetailBody;
+}
+
+
+function updateBodyBomComponentMaterialComponentMancante(plant,bomDetailBody,material,value){
+    if(bomDetailBody.length == 0) return;
+    for(let obj of bomDetailBody[0]?.components){
+        if (obj?.material?.material == material && obj.material.plant === plant ) {
+            for(let customValueObj of obj.customValues){
+                if (customValueObj.attribute === "COMPONENTE MANCANTE") {
                     customValueObj.value = value;
                 }
             }
@@ -309,10 +362,18 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
 }
 
 
+function hasOrdineMancante(components) {
+    return components.some(obj =>
+        obj.customValues.some(cv =>
+            cv.attribute === "ORDINE MANCANTE" && cv.value === "true"
+        )
+    );
+}
+
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>
-            cv.attribute === "ORDINI MANCANTI" && cv.value === "true"
+            cv.attribute === "COMPONENTE MANCANTE" && cv.value === "true"
         )
     );
 }

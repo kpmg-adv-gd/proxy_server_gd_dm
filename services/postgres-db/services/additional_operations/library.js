@@ -3,6 +3,7 @@ const queryAdditionalOperations = require("./queries");
 const { dispatch } = require("../../../mdo/library");
 const { hasMancanti, modificheHasDone } = require("../../../api/complete/library");
 const { callGet, callPost } = require("../../../../utility/CommonCallApi");
+const { getOrderInfoByOrder } = require("../../../../utility/CommonFunction");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
@@ -19,12 +20,14 @@ async function getAdditionalOperations(plant, order) {
         if (orderMancantiMap[data[i].order] !== undefined) {
             data[i].mancanti = orderMancantiMap[data[i].order];
         } else {
-            try {
-                await hasMancanti(plant, data[i].order);
-                data[i].mancanti = false;
-            } catch (error) {
-                data[i].mancanti = true;
-            }
+            let orderResponse = await getOrderInfoByOrder(plant, data[i].order);
+            let customValuesOrder = orderResponse?.customValues || [];
+            let ordiniMancantiField = customValuesOrder.find(obj => obj.attribute == "ORDINI MANCANTI");
+            let ordiniMancantiValue = ordiniMancantiField?.value || "";
+            let componentsMancantiField = customValuesOrder.find(obj => obj.attribute == "COMPONENTI MANCANTI");
+            let componentiMancantiValue = componentsMancantiField?.value || "";
+            data[i].ordiniMancanti = (ordiniMancantiValue == "true");
+            data[i].componentiMancanti = (componentiMancantiValue == "true");
             orderMancantiMap[data[i].order] = data[i].mancanti;
         }
     }
