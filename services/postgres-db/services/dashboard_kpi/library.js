@@ -387,6 +387,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
     var parentColumns = [
         { key: "type",                     label: "Type",            width: "120px" },
         { key: "order",                    label: "Order",           width: "180px" },
+        { key: "sfc",                      label: "SFC",             width: "180px" },
         { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
     ];
     var childColumns = [
@@ -667,6 +668,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
         { key: "aggregato",       label: "Aggregato",       width: "180px" },
         { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
+        { key: "sfc",    label: "SFC",     width: "220px" },
         { key: "order",  label: "Order",   width: "180px" }, // todo: da togliere
         { key: "orderStatus",     label: "Status Ordine",   width: "120px" },
         { key: "totalOps",      label: "Tot. Operazioni", width: "120px" },
@@ -789,6 +791,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     var parentColumns = [
         { key: "type",                     label: "Type",            width: "120px" },
         { key: "order",                    label: "Order",           width: "180px" },
+        { key: "sfc",    label: "SFC",     width: "220px" },
         { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
     ];
     var childColumns = [
