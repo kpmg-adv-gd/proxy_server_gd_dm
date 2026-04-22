@@ -2400,8 +2400,10 @@ async function getCollaudoProgressTreeTable(plant, order) {
             const description = step.description || '';
             const workCenter = step.workCenter?.workCenter || '';
             
-            // Filtra i dati di livello 2 che corrispondono a questo stepId
-            const matchingLev2 = lev2Data.filter(l2 => l2.id_lev_1 === stepId && l2.active === true);
+            // Filtra i dati di livello 2 che corrispondono a questo stepId (tutti, per il calcolo della percentuale)
+            const allMatchingLev2 = lev2Data.filter(l2 => l2.id_lev_1 === stepId);
+            // Solo quelli active vengono ritornati nella treeTable
+            const matchingLev2 = allMatchingLev2.filter(l2 => l2.active === true);
             
             // Calcolo Status livello 1 (simile a POD Operations)
             let level1Status = '';
@@ -2416,17 +2418,18 @@ async function getCollaudoProgressTreeTable(plant, order) {
                 }
             }
             
-            // Calcolo percentuale: (somma time_lev_2 con status_lev_2='Done' e Active=true) / (somma time_lev_2 con Active=true)
+            // Calcolo percentuale: (somma time_lev_2 con status_lev_2='Done') / (somma time_lev_2) su TUTTI i lev2 (anche non active)
             let totalTimeDone = 0;
             let totalTime = 0;
-            matchingLev2.forEach(l2 => {
+            allMatchingLev2.forEach(l2 => {
                 const time = parseFloat(l2.time_lev_2) || 0;
                 totalTime += time;
                 if (l2.status_lev_2 === 'Done') {
                     totalTimeDone += time;
                 }
             });
-            const percentage = totalTime === 0 ? 0 : Math.round((totalTimeDone / totalTime) * 100);
+            let percentage = totalTime === 0 ? 0 : ((totalTimeDone / totalTime) * 100);
+            percentage = Math.floor(Math.round(percentage * 100) / 100);
             
             // Calcolo NC livello 1: se almeno un figlio ha NC, il padre è valorizzato
             let hasNC = false;
