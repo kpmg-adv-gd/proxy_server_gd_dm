@@ -100,6 +100,7 @@ async function getModificheToTesting(plant, project){
                 data[i].material_description = "";
             }
         }
+
         
         var child = {
             level: 2,
@@ -113,6 +114,10 @@ async function getModificheToTesting(plant, project){
             note: data[i].note,
             mark: data[i].type == "MA",
             order: data[i].order,
+            parentType: data[i].type,
+            parentPorgEco: progEcoFormatted,
+            parentProcessId: processIdFormatted,
+            parentMaterial: data[i].material,
             childId: childId++
         }
         if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
