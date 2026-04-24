@@ -12,14 +12,14 @@ async function getZSpecialGroupsNotElbaoratedByWBS(pojectsArray){
     return data;
 }
 
-async function upsertZReportMancanti(plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing){
+async function upsertZReportMancanti(plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing,required_quantity){
     // Applicare formattazione data per ogni data
     receipt_expected_date = formatDate(receipt_expected_date);
     first_conf_date = formatDate(first_conf_date);
     mrp_date = formatDate(mrp_date);
     date_from_workshop = formatDate(date_from_workshop);
 
-    const data = await postgresdbService.executeQuery(queryLoipro.upsertZReportMancantiQuery, [plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing]);
+    const data = await postgresdbService.executeQuery(queryLoipro.upsertZReportMancantiQuery, [plant,project,wbs_element,order,material,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing,required_quantity]);
     return data;
 }
 
@@ -89,4 +89,11 @@ async function updateMancantiOwnerAndDueDate(mancante) {
     return data;
 }
 
-module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, getZMancantiReportDataToVerbale, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate }
+// Funzione per aggiornare required_quantity in z_report_mancanti
+async function updateMancantiRequiredQuantity(plant, order, missingComponent, qty) {
+    const data = await postgresdbService.executeQuery(queryLoipro.updateMancantiRequiredQuantityQuery,
+        [qty, plant, order, missingComponent]);
+    return data;
+}
+
+module.exports = { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, getZMancantiReportDataToVerbale, upsertZReportMancanti, getZMancantiReportData, getMancantiInfoData, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDate, updateMancantiRequiredQuantity }

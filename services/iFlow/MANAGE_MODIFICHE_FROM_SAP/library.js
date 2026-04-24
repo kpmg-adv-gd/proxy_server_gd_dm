@@ -1,5 +1,6 @@
 const { callGet, callPost, callPatch } = require("../../../utility/CommonCallApi");
 const { insertZModifiche } = require("../../postgres-db/services/modifiche/library");
+const { updateMancantiRequiredQuantity } = require("../../postgres-db/services/mancanti/library");
 const { getZOrdersLinkByPlantProjectOrderType } = require("../../postgres-db/services/orders_link/library");
 const { getZSharedMemoryData } = require("../../postgres-db/services/shared_memory/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
@@ -192,7 +193,10 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
                     "attribute":"FLUX_TYPE",
                     "value": fluxType
                 });
-                if(fluxType=="M") obj.quantity = qty;
+                if(fluxType=="M") {
+                    obj.quantity = qty;
+                    await updateMancantiRequiredQuantity(plant, order, childMaterial, qty);
+                }
                 //Gestione mancanti in caso di modifica di assieme per rimozione gruppo
                 if(modificaType=="MA" && fluxType=="D"){
                     let mancantiField = obj.customValues.find(obj => obj.attribute == "COMPONENTE MANCANTE");

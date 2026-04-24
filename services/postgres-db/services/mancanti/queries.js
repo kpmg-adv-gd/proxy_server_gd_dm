@@ -24,7 +24,8 @@ const upsertZReportMancantiQuery =  `INSERT INTO z_report_mancanti (
                                         cover_element,
                                         storage_location,
                                         component_order,
-                                        active
+                                        active,
+                                        required_quantity
                                     ) VALUES (
                                         $1,  -- plant
                                         $2,  -- project
@@ -41,7 +42,8 @@ const upsertZReportMancantiQuery =  `INSERT INTO z_report_mancanti (
                                         $13, -- cover_element
                                         $14, -- storage_location
                                         $15, -- component_order
-                                        $16  -- active
+                                        $16, -- active
+                                        $17  -- required_quantity
                                     )
                                     ON CONFLICT (plant,project,wbs_element,"order",material,missing_component)
                                     DO UPDATE SET
@@ -56,7 +58,8 @@ const upsertZReportMancantiQuery =  `INSERT INTO z_report_mancanti (
                                         cover_element = EXCLUDED.cover_element,
                                         storage_location = EXCLUDED.storage_location,
                                         component_order = EXCLUDED.component_order,
-                                        active = EXCLUDED.active;
+                                        active = EXCLUDED.active,
+                                        required_quantity = EXCLUDED.required_quantity;
                                     `;
 
 const getZMancantiReportDataQuery = `WITH MANCANTI_REPORT as ( SELECT 
@@ -135,4 +138,6 @@ const getTotalQuantityFromOrders = `select count(*) as counter
 
 const updateMancantiOwnerAndDueDateQuery = `UPDATE z_report_mancanti SET owner = $1, due_date = $2 WHERE plant = $3 AND "order" = $4 AND project = $5 AND material = $6 AND missing_component = $7 AND active = true`;
 
-module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDateQuery };
+const updateMancantiRequiredQuantityQuery = `UPDATE z_report_mancanti SET required_quantity = $1 WHERE plant = $2 AND "order" = $3 AND missing_component = $4 AND active = true`;
+
+module.exports = { updateZSpecialGroupsQuery, getZSpecialGroupsNotElbaoratedByWBSQuery, upsertZReportMancantiQuery, getZMancantiReportDataQuery, getMancantiInfoDataQuery, getTotalQuantityFromOrders, updateMancantiOwnerAndDueDateQuery, updateMancantiRequiredQuantityQuery };

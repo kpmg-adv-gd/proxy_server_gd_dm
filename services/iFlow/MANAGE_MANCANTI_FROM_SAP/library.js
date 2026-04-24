@@ -2,6 +2,7 @@ const { callGet, callPatch } = require("../../../utility/CommonCallApi");
 const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
 
 const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti } = require("../../postgres-db/services/mancanti/library");
+const { getBomComponentQuantityTotal } = require("../../mdo/queriesSQL/queries");
 const { getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
@@ -309,7 +310,16 @@ async function manageZReportMancanti(plant,project,wbe,orderNumber,orderMaterial
         let cover_element = mat?.CoverElement?.[0] || "";
         let storage_location = mat?.StorageLocation?.[0] || "";
         let component_order = mat?.ComponentOrder?.[0] || "";
-        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing);
+
+        let required_quantity = null;
+        try {
+            const mdoResult = await getBomComponentQuantityTotal(plant, orderNumber, missing_material);
+            required_quantity = mdoResult?.[0]?.QUANTITY_TOTAL ?? null;
+        } catch(e) {
+            console.error("Error getBomComponentQuantityTotal: " + e);
+        }
+
+        await upsertZReportMancanti(plant,project,wbe,orderNumber,orderMaterial,missing_material,materialDescription,missing_quantity,receipt_expected_date,first_conf_date,mrp_date,date_from_workshop,cover_element,storage_location,component_order,isMissing,required_quantity);
     }
 }
 module.exports = { manageNewMancanti }
