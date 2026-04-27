@@ -6,7 +6,6 @@ const hostname = credentials.DM_API_URL;
 
 async function manageReceiveConfirmationNumber(jsonResponse) {
     var plant = await getPlantFromERPPlant(jsonResponse.plant);
-    console.log("INPUT DA SAP: " + JSON.stringify(jsonResponse));
     for (let k = 0; k < jsonResponse.orders.length; k++) {
         var operations = jsonResponse.orders[k].operations;
         // Step 1. chiamo api sfcdetails
@@ -27,7 +26,6 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
                     var customValues = steps[m].routingOperation.customValues;
                     var confirmationNumberIndex = customValues.findIndex(obj => obj.attribute == "CONFIRMATION_NUMBER");
                     if (confirmationNumberIndex != -1) {
-                        console.log("Custom trovato, aggiorno valore: " + customValues[confirmationNumberIndex].value + " con " + currentOperation.confirmation_number);
                         customValues[confirmationNumberIndex].value = currentOperation.confirmation_number;
                     } else {
                         customValues.push({ attribute: "CONFIRMATION_NUMBER", value: currentOperation.confirmation_number });
@@ -35,13 +33,20 @@ async function manageReceiveConfirmationNumber(jsonResponse) {
                 }
             }
             // Scrivo in z_marking_recap per ogni operazione
-            await insertZMarkingRecap(plant, jsonResponse.orders[k].project, jsonResponse.orders[k].wbe, currentOperation.operation, jsonResponse.orders[k].order, currentOperation.confirmation_number, currentOperation.duration, 
-                currentOperation.uom_duration, 0, currentOperation.uom_duration, currentOperation.duration, currentOperation.uom_duration, 0, currentOperation.uom_duration, currentOperation.operation_description, false)
+            try {
+                await insertZMarkingRecap(plant, jsonResponse.orders[k].project, jsonResponse.orders[k].wbe, currentOperation.operation, jsonResponse.orders[k].order, currentOperation.confirmation_number, currentOperation.duration, 
+                    currentOperation.uom_duration, 0, currentOperation.uom_duration, currentOperation.duration, currentOperation.uom_duration, 0, currentOperation.uom_duration, currentOperation.operation_description, false)
+            } catch (error) {
+                console.log("Errore inserimento Z_MARKING_RECAP: " + error);
+            }
         }
         // Step 4. aggiorno routing
-        var urlUpdateRouting = hostname + "/routing/v1/routings";
-        console.log("ROUTING DA AGGIORNARE: " + JSON.stringify(responseRouting));
-        await callPut(urlUpdateRouting, responseRouting);
+        try {
+            var urlUpdateRouting = hostname + "/routing/v1/routings";
+            await callPut(urlUpdateRouting, responseRouting);
+        } catch (error) {
+            console.log("Errore aggiornamento routing: " + error);
+        }
     }
     // Tutto ok!
     return { result: true, message: "Custom Values managed successfully" };
