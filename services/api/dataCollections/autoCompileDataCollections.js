@@ -18,7 +18,7 @@ async function autoCompileFieldsDataCollectionDispatcher(plant, data, parametriA
     var outMock = await dispatch(mockReq);
     var dcData = (outMock?.data?.value && outMock.data.value.length > 0) ? outMock.data.value : [];
     var ordersList = await ordersChildrenRecursion(plant, selected.order);
-    var optDaConsiderare = await getIncompleteOperations(plant, selected, ordersList);
+    var optDaConsiderare = await getIncompleteOperations(plant, selected, ordersList, selected.order, selected.sfc);
     for (var i = 0; i < parametriAuto.length; i++) {
         var numParametro = parametriAuto[i].parametro;
         var group = parametriAuto[i].group;
@@ -494,7 +494,53 @@ async function ruleParameter5Testing(data, group, parameterName, selected, plant
 
 // utils
 // Funzione per estrarre operazioni non concluse
-async function getIncompleteOperations(plant, selected, ordersList) {
+async function getIncompleteOperations(plant, selected, ordersList, orderMacchina, sfcMacchina) {
+    // Esclusione MF6
+    // STEP 1 - Recupero del routing dell'ordine macchina
+    var mf6Operations = [];
+    if (sfcMacchina) {
+        try {
+            var urlSfcDetail = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + sfcMacchina;
+            var sfcDetailResponse = await callGet(urlSfcDetail);
+            
+            if (sfcDetailResponse && sfcDetailResponse.routing) {
+                var routingMacchina = sfcDetailResponse.routing.routing;
+                var versionMacchina = sfcDetailResponse.routing.version;
+                var typeMacchina = sfcDetailResponse.routing.type;
+                
+                // Controllo type: se SHOPORDER_SPECIFIC -> SHOP_ORDER
+                if (typeMacchina === 'SHOPORDER_SPECIFIC') {
+                    typeMacchina = 'SHOP_ORDER';
+                }
+                
+                // STEP 2 - Identificazione operazioni di MF6
+                var urlRoutingSteps = hostname + "/routing/v1/routings/routingSteps?plant=" + plant + 
+                    "&routing=" + routingMacchina + "&type=" + typeMacchina + "&version=" + versionMacchina;
+                var routingStepsResponse = await callGet(urlRoutingSteps);
+                
+                // La risposta ha la struttura { routingSteps: [...] }
+                var routingStepsArray = routingStepsResponse?.routingSteps || [];
+                if (Array.isArray(routingStepsArray)) {
+                    for (var step of routingStepsArray) {
+                        if (step.routingOperation && step.routingOperation.customValues) {
+                            var customValues = step.routingOperation.customValues;
+                            var mfValue = customValues.find(cv => cv.attribute === 'MF');
+                            if (mfValue && mfValue.value === 'MF6') {
+                                // Salvo l'operationActivity
+                                if (step.routingOperation.operationActivity && step.routingOperation.operationActivity.operationActivity) {
+                                    mf6Operations.push(step.routingOperation.operationActivity.operationActivity);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            console.log("MF6 operations to exclude:", mf6Operations);
+        } catch (error) {
+            console.error("Error retrieving MF6 operations:", error);
+        }
+    }
+
     var optDaConsiderare = [];
     // Ricavo routing e routing_version
     for (var i = 0; i < ordersList.length; i++) {
@@ -507,11 +553,15 @@ async function getIncompleteOperations(plant, selected, ordersList) {
                 var routingVersion = response.routing.version, routing = response.routing.routing, routingType = response.routing.type; // estraggo routing da ramo principale
                 var stepNotDoneAndActual = response?.steps?.filter(step => step.stepDone == false && step.stepRouting.version == routingVersion && step.stepRouting.routing == routing && step.stepRouting.type == routingType) || [];
                 stepNotDoneAndActual.forEach(element => {
-                    optDaConsiderare.push({
-                        order: ordersList[i],
-                        operation: element.operation.operation,
-                        routing: element.stepRouting.routing
-                    });
+                    // STEP 3 - Esclusione delle operazioni MF6 recuperate
+                    var operationActivity = element.operation.operation;
+                    if (!mf6Operations.includes(operationActivity)) {
+                        optDaConsiderare.push({
+                            order: ordersList[i],
+                            operation: operationActivity,
+                            routing: element.stepRouting.routing
+                        });
+                    }
                 });
             }
         }         

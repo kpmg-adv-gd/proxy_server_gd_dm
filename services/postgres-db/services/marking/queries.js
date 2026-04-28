@@ -36,13 +36,15 @@ const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
                                             cancelled_by = $3
                                             WHERE confirmation_number=$1 AND confirmation_counter=$2`;
 
-const getModificationsBySfcQuery = `SELECT prog_eco,process_id,flux_type,"type"
-                                    FROM z_modify
-                                    WHERE plant=$1 AND (child_order = $2 OR sfc=$3)`;
+const getModificationsBySfcQuery = `SELECT zm.prog_eco,zm.process_id,zm.flux_type,zm."type",zm.variance,zvt.description as variance_description
+                                    FROM z_modify zm
+                                    LEFT JOIN z_variance_type zvt ON zm.variance = zvt.cause AND zvt.plant = zm.plant
+                                    WHERE zm.plant=$1 AND (zm.child_order = $2 OR zm.sfc=$3)`;
 
-const getModificationsByWBEQuery = `SELECT prog_eco,process_id,flux_type,"type"
-                                    FROM z_modify   
-                                    WHERE plant=$1 AND wbe = $2`;
+const getModificationsByWBEQuery = `SELECT zm.prog_eco,zm.process_id,zm.flux_type,zm."type",zm.variance,zvt.description as variance_description
+                                    FROM z_modify zm
+                                    LEFT JOIN z_variance_type zvt ON zm.variance = zvt.cause AND zvt.plant = zm.plant
+                                    WHERE zm.plant=$1 AND zm.wbe = $2`;
 
 const getProjectDataQuery = `SELECT DISTINCT project FROM z_op_confirmations WHERE plant = $1 and project IS NOT NULL AND project <> '' ORDER BY project`;
 

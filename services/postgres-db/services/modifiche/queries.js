@@ -1,6 +1,6 @@
 
-const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project, phase) 
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, $21); `;
+const insertZModificheQuery = `INSERT INTO z_modify (prog_eco, process_id, plant, wbe, "type", sfc, "order", material,child_order, child_material, qty, flux_type, status, send_to_sap,timestamp_sent,last_update,co2, wbe_machine, machine_section, project, phase, variance, progressive) 
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, $21, $22, $23); `;
 
 const getModificheDataQuery = `SELECT *
                                 FROM z_modify
@@ -92,7 +92,9 @@ const updateZModifyByOrderQuery = `UPDATE z_modify
                                     last_update = $4
                                     WHERE plant = $1 AND sfc=$3 `;
 
-const getModificheToTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND project = $2 AND ( (sent_to_testing = true AND sent_to_installation = false) OR (phase = 'Testing' AND sent_to_installation = false) ) ORDER BY prog_eco ASC;`;                             
+const getModificheToTestingQuery = `SELECT zm.*, zvt.description AS variance_description FROM z_modify zm 
+                                    LEFT JOIN z_variance_type zvt ON zvt.plant = zm.plant AND zvt.cause = zm.variance
+                                    WHERE zm.plant = $1 AND zm.project = $2 AND ( (zm.sent_to_testing = true AND zm.sent_to_installation = false) OR (zm.phase = 'Testing' AND zm.sent_to_installation = false) ) ORDER BY zm.prog_eco ASC;`;                             
 
 const getModificheToVerbaleTestingQuery = `SELECT * FROM z_modify zm WHERE plant = $1 AND wbe_machine = $2 AND machine_section = $3 AND project = $4 and status != '1' ORDER BY prog_eco ASC;`;
 
@@ -118,4 +120,8 @@ const getModificheByWbeSectionQuery = `SELECT zm.*,
 
 const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, getModificheByWbeSectionQuery, updateModifyOwnerAndDueDateQuery };
+const getModificaDetailQuery = `SELECT zm.*
+                                FROM z_modify zm
+                                WHERE zm.plant = $1 AND zm.process_id = $2 AND zm.material = $3`;
+
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery, getModificaDetailQuery };

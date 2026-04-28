@@ -4,13 +4,19 @@ const { getZSharedMemoryData } = require("../../services/shared_memory/library")
 const { dispatch } = require("../../../mdo/library");
 const { link } = require('pdfkit');
 
-async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase) {
+async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase, variance, progressive){
     let dateNow = new Date();
     if(!prog_eco) prog_eco="";
     if(!process_id) process_id="";
     if(!qty) qty=0;
     if(!status) status=0;
-    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project, phase]);
+
+    const data = await postgresdbService.executeQuery(queryModifiche.insertZModificheQuery, [prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap,dateNow,dateNow,isCO2, wbeMachine, section, project, phase, variance, progressive]);
+    return data;
+}
+
+async function getModificaDetail(plant, process_id, material){
+    const data = await postgresdbService.executeQuery(queryModifiche.getModificaDetailQuery, [plant, process_id, material]);
     return data;
 }
 
@@ -118,6 +124,11 @@ async function getModificheToTesting(plant, project){
             order: data[i].order,
             link: data[i].link || "",
             parentType: data[i].type,
+            parentPorgEco: progEcoFormatted,
+            parentProcessId: processIdFormatted,
+            parentMaterial: data[i].material,
+            variance: data[i].variance,
+            varianceDescription: data[i].variance_description,
             childId: childId++
         }
         if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
@@ -132,6 +143,8 @@ async function getModificheToTesting(plant, project){
                 project: data[i].project,
                 machineSection: data[i].machine_section,
                 wbe: data[i].wbe,
+                variance: data[i].variance,
+                varianceDescription: data[i].variance_description,
                 Children: [child]
             });
         }else{

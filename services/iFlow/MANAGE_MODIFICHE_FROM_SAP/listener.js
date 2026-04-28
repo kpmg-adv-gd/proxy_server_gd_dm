@@ -7,7 +7,6 @@ module.exports.listenerSetup = (app) => {
 
         try {
             
-            console.log("MANAGE_MODIFICHE_FROM_SAP= "+JSON.stringify(req.body))
             let jsonModifiche = req.body;
             await manageNewModifiche(jsonModifiche);
             res.set('Content-Type', 'text/xml; charset=utf-8');

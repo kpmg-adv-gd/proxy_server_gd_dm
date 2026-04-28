@@ -1,4 +1,8 @@
 const postgresdbService = require('./library');
+const { callGet } = require('../../../../utility/CommonCallApi');
+
+const credentials = JSON.parse(process.env.CREDENTIALS);
+const hostname = credentials.DM_API_URL;
 
 module.exports.listenerSetup = (app) => {
 
@@ -59,7 +63,7 @@ module.exports.listenerSetup = (app) => {
         }
     })
 
-        app.post("/db/updateResolutionModificaMA", async (req, res) => {
+    app.post("/db/updateResolutionModificaMA", async (req, res) => {
         const { plant, process_id, userId } = req.body;
 
         if (!plant || !process_id ) {
@@ -100,6 +104,32 @@ module.exports.listenerSetup = (app) => {
         try {
             const modificheToTesting = await postgresdbService.getModificheToTesting(plant, project);
             res.status(200).json(modificheToTesting);
+        } catch (error) {
+            console.log("Error executing query: "+error);
+            res.status(500).json({ error: "Error while executing query" });
+        }
+    })
+
+    app.post("/db/getModificaDetail", async (req, res) => {
+        const { plant, process_id, material } = req.body;
+        if (!plant || !process_id || !material) {
+            return res.status(400).json({ error: "Missing required query parameter: plant, process_id or material" });
+        }
+        try {
+            const modificaDetail = await postgresdbService.getModificaDetail(plant, process_id, material);
+            const enrichedDetail = await Promise.all(
+                modificaDetail.map(async (obj) => {
+                    try {
+                        const url = hostname + "/material/v2/materials?plant=" + plant + "&material=" + obj.child_material;
+                        const materialData = await callGet(url);
+                        const description = materialData && materialData.content && materialData.content .length > 0 ? materialData.content[0].description : null;
+                        return { ...obj, child_material_description: description };
+                    } catch (err) {
+                        return { ...obj, child_material_description: null };
+                    }
+                })
+            );
+            res.status(200).json(enrichedDetail);
         } catch (error) {
             console.log("Error executing query: "+error);
             res.status(500).json({ error: "Error while executing query" });
