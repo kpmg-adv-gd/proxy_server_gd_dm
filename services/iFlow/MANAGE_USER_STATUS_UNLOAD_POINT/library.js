@@ -7,10 +7,10 @@ const hostname = credentials.DM_API_URL;
 const plantMappingCache = new Map();
 
 async function manageUserStatusUnloadPoint(jsonCustomValues) {
-    var projects = jsonCustomValues.projects || [];
-    for (var p=0; p<projects.length; p++) {
-        var plant = await getPlantFromERPPlant(projects[p].plant);
-        var orders = projects[p].orders || [];
+    var wbeList = jsonCustomValues.wbeList || [];
+    for (var p=0; p<wbeList.length; p++) {
+        var plant = await getPlantFromERPPlant(wbeList[p].plant);
+        var orders = wbeList[p].orders || [];
         for (var o=0; o<orders.length; o++) {
             var mesOrder = orders[o].mesOrder;
             var userStatus = orders[o].userStatus;
@@ -56,35 +56,35 @@ async function upadateCustomValue(plant, order, attribute, value){
 
 /* Esempio di struttura dati in ingresso:
 {
-   "projects": [
-      {
-         "projectId": "LV_STATUS-PROJECT",
-         "plant": "LV_STATUS-PLANT",
-         "orders": [
-            {
-               "mesOrder": "LV_STATUS-MES_ORDER",
-               "userStatus": "LV_STATUS-USER_STATUS",
-               "unloadPoint": "LV_STATUS-UNLOAD_POINT"
-            },
-            {
-               "mesOrder": "LV_STATUS-MES_ORDER",
-               "userStatus": "LV_STATUS-USER_STATUS",
-               "unloadPoint": "LV_STATUS-UNLOAD_POINT"
-            }
-         ]
-      },
-      {
-         "projectId": "LV_STATUS-PROJECT",
-         "plant": "LV_STATUS-PLANT",
-         "orders": [
-            {
-               "mesOrder": "LV_STATUS-MES_ORDER",
-               "userStatus": "LV_STATUS-USER_STATUS",
-               "unloadPoint": "LV_STATUS-UNLOAD_POINT"
-            }
-         ]
-      }
-   ]
+  "wbeList": [
+     {
+        "wbe": "LV_STATUS-WBE_ASSEMBLY",
+        "plant": " CEDCLNT100:GD01",
+        "orders": [
+           {
+              "mesOrder": "LV_STATUS-MES_ORDER",
+              "userStatus": "LV_STATUS-USER_STATUS",
+              "unloadPoint": "LV_STATUS-UNLOAD_POINT"
+           },
+           {
+              "mesOrder": "LV_STATUS-MES_ORDER",
+              "userStatus": "LV_STATUS-USER_STATUS",
+              "unloadPoint": "LV_STATUS-UNLOAD_POINT"
+           }
+        ]
+     },
+     {
+        "wbe": "LV_STATUS-WBE_ASSEMBLY",
+        "plant": " CEDCLNT100:GD01",
+        "orders": [
+           {
+              "mesOrder": "LV_STATUS-MES_ORDER",
+              "userStatus": "LV_STATUS-USER_STATUS",
+              "unloadPoint": "LV_STATUS-UNLOAD_POINT"
+           }
+        ]
+     }
+  ]
 }
 */
 
