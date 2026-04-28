@@ -17,7 +17,7 @@ const selectZDefect = `SELECT distinct z_defects.*, z_coding.coding, z_coding.co
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     WHERE z_defects.id = ANY($1) and z_defects.plant = $2
                     ORDER BY z_defects.creation_date DESC`;
@@ -31,7 +31,7 @@ const selectZDefectByWBE = `SELECT distinct z_defects.*, z_coding.coding, z_codi
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     WHERE z_defects.wbe_coordinamento = $2 and z_defects.plant = $1
                     ORDER BY z_defects.creation_date DESC`;
 
@@ -73,7 +73,7 @@ const getDefectsTI = `SELECT distinct z_defects.*, z_coding.coding, z_coding.cod
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
                     left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
@@ -91,7 +91,7 @@ const getDefectsTIOpen = `SELECT distinct z_defects.*, z_coding.coding, z_coding
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
                     left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
@@ -110,7 +110,7 @@ const getDefectsToVerbale = `SELECT distinct z_defects.*, z_coding.coding, z_cod
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
                     left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
@@ -127,7 +127,7 @@ const getDefectsFromAdditionalOperationsTI = `SELECT distinct z_defects.*, z_cod
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
-                    left join z_variance_type on z_defects.variance = z_variance_type.cause
+                    left join z_variance_type on z_defects.variance = z_variance_type.cause and z_variance_type.plant = z_defects.plant
                     left join z_defect_testing zdt on zdt.defect_id = z_defects.id
                     left join z_verbale_lev_2 zvl2 on zvl2.id_lev_1 = zdt.id_lev_1 and zvl2.id_lev_2 = zdt.id_lev_2 and zvl2.sfc = z_defects.sfc
                     left join z_verbale_lev_3 zvl3 on zvl3.id_lev_2 = zvl2.id_lev_2 and zvl3.sfc = z_defects.sfc and zdt.id_lev_3 = zvl3.id_lev_3
