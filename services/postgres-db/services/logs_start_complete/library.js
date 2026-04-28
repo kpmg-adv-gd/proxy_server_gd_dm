@@ -11,4 +11,9 @@ async function logCompleteOperation(plant, sfc, operation, user){
     return data;
 }
 
-module.exports = { logStartOperation, logCompleteOperation }
+async function getOperationDates(plant, order){
+    const data = await postgresdbService.executeQuery(queryLog.getOperationDatesQuery, [plant, order]);
+    return data;
+}
+
+module.exports = { logStartOperation, logCompleteOperation, getOperationDates }

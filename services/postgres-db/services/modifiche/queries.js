@@ -109,6 +109,13 @@ const getModificheTestingByOrdersQuery = `SELECT zm.*,
                                         WHERE zm.plant = $1 AND zm.project = $2 AND zm.status != '1' 
                                         ORDER BY zm.prog_eco, zm.process_id`;
 
+const getModificheByWbeSectionQuery = `SELECT zm.*, 
+                                        COALESCE((zsm.value::json->>zm.status), zm.status) as status_description
+                                        FROM z_modify zm
+                                        LEFT JOIN z_shared_memory zsm ON zsm.plant = zm.plant AND zsm.key = 'STATUS_MODIFICHE'
+                                        WHERE zm.plant = $1 AND zm.wbe_machine = $2 AND zm.machine_section = $3
+                                        ORDER BY zm.prog_eco, zm.process_id`;
+
 const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_date = $2 WHERE plant = $3`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery };
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, getModificheByWbeSectionQuery, updateModifyOwnerAndDueDateQuery };

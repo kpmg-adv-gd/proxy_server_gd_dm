@@ -47,13 +47,18 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             var url = hostname + "/order/v1/orders?order=" + mfg_order + "&plant=" + plant;
             var orderResponse = await callGet(url);
             data.wbs = orderResponse?.customValues?.filter(item => item.attribute == "WBE")[0]?.value || "";
-            data.material = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
+            data.section = orderResponse?.customValues?.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
             data.project = orderResponse?.customValues?.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
             data.reportStatus = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_STATUS")[0]?.value || "";
             data.idReportWeight = orderResponse?.customValues?.filter(item => item.attribute == "ASSEMBLY_REPORT_WEIGHT_ID")[0]?.value || "";
+            data.customer = orderResponse?.customValues?.filter(item => item.attribute == "CUSTOMER")[0]?.value || "";
+            data.executionStatus = orderResponse?.executionStatus || "";
+            data.sentToTesting = orderResponse?.customValues?.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
+            data.phase = orderResponse?.customValues?.filter(item => item.attribute == "PHASE")[0]?.value || "";
+            data.material = orderResponse?.material?.description || "";
             if (!showAll && data.reportStatus === "DONE") continue;
             data.sfc = orderResponse?.sfcs?.length > 0 ? orderResponse.sfcs[0] : "";
-            if (data.wbs == "" || data.material == "" || data.project == "" || data.sfc == "") continue;
+            if (data.wbs == "" || data.section == "" || data.project == "" || data.sfc == "") continue;
             // Recupero status con api sfcdetail
             try {
                 var urlStatus = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + data.sfc;
@@ -62,7 +67,7 @@ async function getVerbaliSupervisoreAssembly(plant, project, wbs, showAll) {
             } catch (error) {
                 continue;
             }
-            // Filtri su progetto e wbs
+            // Filtri su progetto, wbs e phase
             if (project != "" && data.project != project) continue;
             if (wbs != "" && data.wbs != wbs) continue;
             // Aggiungo elemento
@@ -114,6 +119,50 @@ async function getWBEVerbaliSupervisoreAssembly(plant) {
                 wbe.push({ wbe: wbeData.DATA_FIELD_VALUE });
         }
         return wbe;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Funzione per ottenere i Customer per filtro su supervisore assembly
+async function getCustomersVerbaliSupervisoreAssembly(plant) {
+    var customers = [];
+    try {
+        var customerFilter = `(DATA_FIELD eq 'CUSTOMER' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqCustomer = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${customerFilter})` },
+            method: "GET"
+        };
+        var outMockCustomer = await dispatch(mockReqCustomer);
+        for (var i = 0; i < outMockCustomer.data.value.length; i++) {
+            var customerData = outMockCustomer.data.value[i];
+            if (!customers.some(p => p.customer === customerData.DATA_FIELD_VALUE))
+                customers.push({ customer: customerData.DATA_FIELD_VALUE });
+        }
+        return customers;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Funzione per ottenere le Sezioni Macchina per filtro su supervisore assembly
+async function getSectionsVerbaliSupervisoreAssembly(plant) {
+    var sections = [];
+    try {
+        var sectionFilter = `(DATA_FIELD eq 'SEZIONE MACCHINA' and PLANT eq '${plant}' AND IS_DELETED eq 'false')`;
+        var mockReqSection = {
+            path: "/mdo/ORDER_CUSTOM_DATA",
+            query: { $apply: `filter(${sectionFilter})` },
+            method: "GET"
+        };
+        var outMockSection = await dispatch(mockReqSection);
+        for (var i = 0; i < outMockSection.data.value.length; i++) {
+            var sectionData = outMockSection.data.value[i];
+            if (!sections.some(p => p.section === sectionData.DATA_FIELD_VALUE))
+                sections.push({ section: sectionData.DATA_FIELD_VALUE });
+        }
+        return sections;
     } catch (error) {
         return false;
     }
@@ -1473,13 +1522,18 @@ function generateTreeTable(data) {
             project_parent: data[i].project,
             wbs: data[i].wbs,
             sfc: data[i].sfc,
+            section: data[i].section,
             material: data[i].material,
             status: data[i].status,
             reportStatus: data[i].reportStatus,
             idReportWeight: data[i].idReportWeight,
             order: data[i].order,
             assemblyReportDate: data[i].assemblyReportDate || "",
-            user: data[i].user || ""
+            user: data[i].user || "",
+            customer: data[i].customer || "",
+            executionStatus: data[i].executionStatus || "",
+            sentToTesting: data[i].sentToTesting || "",
+            phase: data[i].phase || ""
         }
         if (!tree.some(e => e.project === data[i].project)) {
             tree.push({ project: data[i].project, Children: [child] });
@@ -4234,4 +4288,4 @@ async function freezeFinalTestingData(plant, project, order, sfc, treeDefects, t
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getCustomersVerbaliSupervisoreAssembly, getSectionsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };

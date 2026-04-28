@@ -96,7 +96,7 @@ async function getModificheTestingData(plant, project) {
                 flux_type: modifica.flux_type || "",
                 resolution: modifica.resolution || "",
                 note: modifica.note || "",
-                status: modifica.status || "",
+                status: modifica.status != null ? String(modifica.status) : "",
                 statusDescription: modifica.status_description || "",
                 owner: modifica.owner || "", // nuova colonna
                 due_date: modifica.due_date || "", // nuova colonna
