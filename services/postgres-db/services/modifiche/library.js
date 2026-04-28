@@ -118,6 +118,8 @@ async function getModificheToTesting(plant, project){
             parentPorgEco: progEcoFormatted,
             parentProcessId: processIdFormatted,
             parentMaterial: data[i].material,
+            variance: data[i].variance,
+            varianceDescription: data[i].variance_description,
             childId: childId++
         }
         if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
@@ -132,6 +134,8 @@ async function getModificheToTesting(plant, project){
                 project: data[i].project,
                 machineSection: data[i].machine_section,
                 wbe: data[i].wbe,
+                variance: data[i].variance,
+                varianceDescription: data[i].variance_description,
                 Children: [child]
             });
         }else{
