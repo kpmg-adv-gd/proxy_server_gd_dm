@@ -51,13 +51,23 @@ async function insertZDefect(idDefect, material, mesOrder, assembly, title, desc
         sapCode = null;
     }
 
+    // Ricava WBE Coordinamento dal campo custom "WBE_ASSEMBLY" dell'ordine presente in dmOrder
+    if (dmOrder) {
+        var url = hostname + "/order/v1/orders?order=" + dmOrder + "&plant=" + plant;
+        var orderResponse = await callGet(url);
+        var wbeAssembly = orderResponse?.customValues?.filter(item => item.attribute == "WBE_ASSEMBLY")[0]?.value || null;
+    }else{
+        var wbeAssembly = null;
+    }
+
+
     if (createQN) {
         var data = await postgresdbService.executeQuery(queryDefect.insertZDefect, 
             [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN,
-                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase]);
+                notificationType, coding, replaceInAssembly, defectNote, responsible, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase, wbeAssembly]);
     }else{
         var data = await postgresdbService.executeQuery(queryDefect.insertZDefectNoQN, 
-            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase]);
+            [idDefect, material, mesOrder, assembly, title, description, priority, variance, blocking, createQN, sfc, user, operation, plant, wbe, typeOrder, group, code, dmOrder, sapCode, cause, project, phase, wbeAssembly]);
     }
 
     if (phase == "Testing") {
