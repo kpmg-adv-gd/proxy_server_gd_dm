@@ -583,6 +583,17 @@ async function getDefectsTesting(orders) {
     return data;
 }
 
+async function getInfoDefectToPDF(infoDefect) {
+    const data = await postgresdbService.executeQuery(queryDefect.getInfoDefectToPDFQuery, [infoDefect.id]);
+    if (data.length > 0) {
+        var response = data[0];
+        // Posso eventualmente aggiungere informazioni standard all'output
+        // ...
+        return response;
+    }
+    return [];
+}
+
 // Funzione per aggiornare owner e due_date in z_defects
 async function updateDefectsOwnerAndDueDate(defect) {
     const { id, owner, due_date } = defect;
@@ -591,4 +602,4 @@ async function updateDefectsOwnerAndDueDate(defect) {
     return data;
 }
 
-module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, selectZDefectByWBE, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale };
+module.exports = { insertZDefect, getDefectsWBE, setNonconformanceField, updateZDefect, selectZDefectByWBE, getOrderCustomDataDefectType, selectZDefect, selectDefectToApprove, cancelDefectQN, sendApproveDefectQN, selectDefectForReport, getOrderCustomDataDefect, closeDefect, sendApproveQNToSap, checkAllDefectClose, receiveStatusByQNCode, getCauses, getDefectsTI, getDefectsFromAdditionalOperationsTI, getFiltersDefectsTI, updateDefectsToTesting, getDefectsTesting, updateDefectsOwnerAndDueDate, getDefectsToVerbale, getInfoDefectToPDF };

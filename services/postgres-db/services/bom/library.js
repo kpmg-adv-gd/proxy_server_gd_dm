@@ -1,5 +1,6 @@
 const postgresdbService = require('../../connection');
 const queryBom = require("./queries");
+const queryMancanti = require("..//mancanti/queries");
 const { getOrderInfoByOrder } = require("../../../../utility/CommonFunction");
 
 async function getZOrdersLinkByProjectParentOrderChildOrderFlagQuery(project, parentOrder, childOrder, parentAssemblyFlag) {
@@ -61,7 +62,10 @@ async function getOrdersByMaterialTI(plant, material, project) {
     return results;
 }
 
+async function getMissingPartsDate(plant, order, material, childMaterial) {
+    const data = await postgresdbService.executeQuery(queryMancanti.getMissingPartsDateQuery, [plant, order, material, childMaterial]);
+    return data?.[0]?.delivery_date || "";
+}
 
 
-
-module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterial, getZOrdersLinkByPlantProjectChildOrderChildMaterial, getZOrderLinkChildOrdersMultipleMaterial, getMaterialsTI, getOrdersByMaterialTI }
+module.exports = { getZOrdersLinkByProjectParentOrderChildOrderFlagQuery, getZOrdersLinkByPlantProjectParentOrderChildMaterial, getZOrdersLinkByPlantProjectChildOrderChildMaterial, getZOrderLinkChildOrdersMultipleMaterial, getMaterialsTI, getOrdersByMaterialTI, getMissingPartsDate }

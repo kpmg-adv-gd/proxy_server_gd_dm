@@ -1,6 +1,8 @@
 const postgresdbService = require('../../connection');
 const queryModifiche = require("./queries");
+const { getZSharedMemoryData } = require("../../services/shared_memory/library");
 const { dispatch } = require("../../../mdo/library");
+const { link } = require('pdfkit');
 
 async function insertZModifiche(prog_eco, process_id, plant, wbe, type, sfc, order, material,child_order, child_material, qty, flux_type, status, send_to_sap, isCO2, wbeMachine, section, project, phase) {
     let dateNow = new Date();
@@ -71,6 +73,7 @@ async function getModificheToDataCollections(plant,project,wbe,section, type){
 
 async function getModificheToTesting(plant, project){
     const data = await postgresdbService.executeQuery(queryModifiche.getModificheToTestingQuery, [plant, project]);
+    var linkModifiche = await getLinkModifiche(plant);
     // Creazione TreeTable
     var treeTable = [], childId = 0;
     for (var i=0;i<data.length;i++) {
@@ -94,6 +97,12 @@ async function getModificheToTesting(plant, project){
                 data[i].material_description = "";
             }
         }
+
+        if (data[i].type == "MK") {
+            if (linkModifiche != "") {
+                data[i].link = linkModifiche + data[i].child_material;
+             }
+        }
         
         var child = {
             level: 2,
@@ -107,6 +116,8 @@ async function getModificheToTesting(plant, project){
             note: data[i].note,
             mark: data[i].type == "MA",
             order: data[i].order,
+            link: data[i].link || "",
+            parentType: data[i].type,
             childId: childId++
         }
         if (treeTable.filter(item => item.progEco == progEcoFormatted && item.processId == processIdFormatted && item.material == data[i].material).length == 0) {
@@ -248,4 +259,13 @@ async function updateModifyOwnerAndDueDate(plant,modifica) {
     return data;
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate };
+//Esporta la funzione
+async function getLinkModifiche(plant){
+    var linkModifiche = await getZSharedMemoryData(plant, "LINK_MODIFICHE_MK");
+    if(linkModifiche.length > 0){
+        return linkModifiche[0].value;
+    }
+    return "";
+}
+
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate, getLinkModifiche };

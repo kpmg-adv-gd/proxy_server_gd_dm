@@ -46,6 +46,7 @@ const markingDbService = require("./services/postgres-db/services/marking/listen
 const varianceDbService = require("./services/postgres-db/services/variance/listener");
 const priorityDbService = require("./services/postgres-db/services/priority/listener");
 const codingDbService = require("./services/postgres-db/services/coding/listener");
+const workcentersDbService = require("./services/postgres-db/services/workcenters/listener");
 const responsibleDbService = require("./services/postgres-db/services/responsible/listener");
 const notificationTypeDbService = require("./services/postgres-db/services/notification_type/listener");
 const defectDbService = require("./services/postgres-db/services/defect/listener");
@@ -55,7 +56,10 @@ const bomDbService = require("./services/postgres-db/services/bom/listener");
 const additionalOperationsService = require("./services/postgres-db/services/additional_operations/listener");
 const markgingTestingService = require("./services/postgres-db/services/marking_testing/listener");
 const apiServiceReportWeight = require("./services/postgres-db/services/report_weights/listener");
-
+const macrophaseDbService = require("./services/postgres-db/services/macrophase/listener");
+const logStartCompleteDbService = require("./services/postgres-db/services/logs_start_complete/listener");
+const iFlowManageUserStatusUnloadPointService = require("./services/iFlow/MANAGE_USER_STATUS_UNLOAD_POINT/listener");
+const iFlowManageReceiveConfirmationNumberService = require("./services/iFlow//MANAGE_RECEIVE_CONFIRMATION_NUMBER/listener");
 
 const app = express();
 
@@ -120,6 +124,7 @@ priorityDbService.listenerSetup(app);
 priorityDbService.listenerSetup(app);
 priorityDbService.listenerSetup(app);
 codingDbService.listenerSetup(app);
+workcentersDbService.listenerSetup(app);
 responsibleDbService.listenerSetup(app);
 notificationTypeDbService.listenerSetup(app);
 defectDbService.listenerSetup(app);
@@ -129,6 +134,10 @@ bomDbService.listenerSetup(app);
 additionalOperationsService.listenerSetup(app);
 markgingTestingService.listenerSetup(app);
 apiServiceReportWeight.listenerSetup(app);
+macrophaseDbService.listenerSetup(app);
+logStartCompleteDbService.listenerSetup(app);
+iFlowManageUserStatusUnloadPointService.listenerSetup(app);
+iFlowManageReceiveConfirmationNumberService.listenerSetup(app);
 
 // Avvia il server
 app.listen(port, () => {
