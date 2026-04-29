@@ -447,7 +447,6 @@ async function sendToTestingAdditionalOperations(plant, selectedData) {
         var url = hostname + "/order/v1/orders?order=" + childOrders[index].child_order + "&plant=" + childOrders[index].plant;
         var selectedOrder = await callGet(url); 
         if (selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
-        if (selectedOrder.executionStatus != 'DISCARDED' && selectedOrder.executionStatus != 'HOLD') {
             var orderType = selectedOrder?.customValues?.find(obj => obj.attribute == "ORDER_TYPE")?.value || "";
             var ecoType = selectedOrder?.customValues?.find(obj => obj.attribute == "ECO_TYPE")?.value || "";
             var wbe = selectedOrder?.customValues?.find(obj => obj.attribute == "WBE")?.value || "";
@@ -4289,4 +4288,10 @@ async function freezeFinalTestingData(plant, project, order, sfc, treeDefects, t
 }
 
 // Esporta la funzione
-module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getCustomersVerbaliSupervisoreAssembly, getSectionsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder, generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField, getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData, sendToSAPConfirmationNumberAdditionalOperations };
+module.exports = { getVerbaliSupervisoreAssembly, getProjectsVerbaliSupervisoreAssembly, getWBEVerbaliSupervisoreAssembly, getCustomersVerbaliSupervisoreAssembly, getSectionsVerbaliSupervisoreAssembly, getVerbaliTileSupervisoreTesting,getProjectsVerbaliTileSupervisoreTesting, generateTreeTable, updateCustomAssemblyReportStatusOrderDone, updateCustomAssemblyReportStatusOrderInWork, updateCustomSentTotTestingOrder,
+     generateInspectionPDF, sendToTestingAdditionalOperations, updateTestingDefects, updateTestingModifiche, getFilterVerbalManagement, getVerbalManagementTable, 
+     getVerbalManagementTreeTable, getCollaudoProgressTreeTable, saveVerbalManagementTreeTableChanges, releaseVerbalManagement, getFilterSafetyApproval, 
+     getSafetyApprovalData, doSafetyApproval, doCancelSafety, getFilterFinalCollaudo, getFinalCollaudoData, getActivitiesTestingData, 
+     updateCustomTestingReportStatusOrderInWork, updateCustomAssemblyReportStatusIdReportWeight, generatePdfFineCollaudo, updateCustomField,
+      getCollaudoProgressTreeTable, getRiepilogoTextFinalCollaudo, saveRiepilogoTextFinalCollaudo, freezeFinalTestingData,
+    sendToSAPConfirmationNumberAdditionalOperations };
