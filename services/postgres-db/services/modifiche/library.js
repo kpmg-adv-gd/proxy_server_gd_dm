@@ -286,4 +286,4 @@ async function getLinkModifiche(plant){
     return "";
 }
 
-module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate, getLinkModifiche };
+module.exports = { insertZModifiche, getModificheData, getModificheDataGroupMA, getAllModificaMA, updateStatusModifica, updateStatusModificaMA, getOperationModificheBySfc, getModificheToDo, updateZModifyByOrder, updateZModifyCO2ByOrder, getModificheToTesting, getModificheToVerbaleTesting, getModificheToDataCollections, updateModificheToTesting, getModificheTestingByOrders, updateModifyOwnerAndDueDate, getLinkModifiche, getModificheByWbeSection };

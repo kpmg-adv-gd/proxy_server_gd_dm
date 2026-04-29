@@ -124,4 +124,6 @@ const getModificaDetailQuery = `SELECT zm.*
                                 FROM z_modify zm
                                 WHERE zm.plant = $1 AND zm.process_id = $2 AND zm.material = $3`;
 
-module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery, getModificaDetailQuery };
+module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, 
+    updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, 
+    getModificheToDataCollections, updateModificheToTestingQuery, getModificheTestingByOrdersQuery, updateModifyOwnerAndDueDateQuery, getModificaDetailQuery, getModificheByWbeSectionQuery };
