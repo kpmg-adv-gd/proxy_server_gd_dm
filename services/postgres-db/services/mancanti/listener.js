@@ -1,5 +1,4 @@
 const postgresdbService = require('./library');
-
 module.exports.listenerSetup = (app) => {
 
     app.post("/db/getZMancantiReportData", async (req, res) => {
@@ -22,14 +21,14 @@ module.exports.listenerSetup = (app) => {
         const { plant, project, order } = req.body;
 
         if (!plant || !project || !order ) {
-            return res.status(400).json({ error: "Missing required query parameter: plant, project or group" });
+            return res.status(400).json({ error: "Missing required query parameter: plant, project or order" });
         }
 
         try {
             const mancantiInfoResponse = await postgresdbService.getMancantiInfoData(plant, project, order );
             res.status(200).json(mancantiInfoResponse); 
         } catch (error) {
-            console.log("Error executing query getZMancantiReportData: "+error);
+            console.log("Error executing query getMancantiInfo: "+error);
             res.status(500).json({ error: "Error while executing query getMancantiInfo" });
         }
     })

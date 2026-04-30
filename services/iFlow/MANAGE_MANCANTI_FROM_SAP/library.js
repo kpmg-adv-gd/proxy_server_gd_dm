@@ -4,6 +4,7 @@ const { getPlantFromERPPlant } = require("../../../utility/MappingPlant");
 const { updateZSpecialGroups, getZSpecialGroupsNotElbaoratedByWBS, upsertZReportMancanti } = require("../../postgres-db/services/mancanti/library");
 const { getBomComponentQuantityTotal } = require("../../mdo/queriesSQL/queries");
 const { getZOrderLinkChildOrdersMultipleMaterial } = require("../../postgres-db/services/bom/library");
+const { getBomComponentQuantityTotal } = require("../../mdo/queriesSQL/custom_data/library");
 const credentials = JSON.parse(process.env.CREDENTIALS);
 const hostname = credentials.DM_API_URL;
 
