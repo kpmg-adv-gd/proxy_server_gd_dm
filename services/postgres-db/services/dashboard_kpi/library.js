@@ -587,13 +587,36 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
     var rootOrderIds = allOrderIds.filter(function (id) { return !childSet.has(id); });
 
     // Costruisci l'albero per ogni radice
-    var data = rootOrderIds.map(_buildOrderNode).filter(Boolean).reduce(function(acc, node) {
+    var data = rootOrderIds.map(_buildOrderNode).filter(Boolean).reduce(function (acc, node) {
         if (node._isHidden) {
             return acc.concat(node.children || []);
         }
         if (node.children && node.children.length > 0) acc.push(node);
         return acc;
     }, []);
+    // Ordinamento
+    var typeOrder = { "MACH": 1, "MACR": 2, "AGGR": 3 };
+    function _sortChildren(nodes) {
+        nodes.sort(function(a, b) {
+            // Le operazioni vengono sempre prima degli ordini figli
+            var aIsOp = a._isOperation ? 0 : 1;
+            var bIsOp = b._isOperation ? 0 : 1;
+            if (aIsOp !== bIsOp) return aIsOp - bIsOp;
+            // Tra ordini figli: ordina per type
+            var typeOrder = { "MACH": 1, "MACR": 2, "AGGR": 3 };
+            var pa = typeOrder[a.type] || 99;
+            var pb = typeOrder[b.type] || 99;
+            return pa - pb;
+        });
+        // Ricorsione solo sui nodi-ordine
+        nodes.forEach(function(node) {
+            if (!node._isOperation && node.children && node.children.length > 0) {
+                _sortChildren(node.children);
+            }
+        });
+    }
+
+    _sortChildren(data);
 
     // --- Summary "Visione per tipologia" (invariata) ---
     var summary = { macroaggregati: 0, macroaggregatiCompletati: 0, aggregati: 0, aggregatiCompletati: 0, gruppi: 0, gruppiCompletati: 0 };
@@ -775,38 +798,43 @@ function getSFCProgressDetails(plant, project, wbe, sfc, level) {
 function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
 
     var parentColumns = [
-        { key: "material", label: "Material", width: "200px" },
-        { key: "type", label: "Type", width: "120px" },
-        { key: "order", label: "Order", width: "180px" },
-        { key: "sfc", label: "SFC", width: "220px" },
+        { key: "material",    label: "Material",      width: "200px" },
+        { key: "type",        label: "Type",          width: "120px" },
+        { key: "order",       label: "Order",         width: "180px" },
+        { key: "sfc",         label: "SFC",           width: "220px" },
         { key: "orderStatus", label: "Status Ordine", width: "120px" },
     ];
     var childColumns = [
-        { key: "operation", label: "Operation", width: "140px" },
-        { key: "description", label: "Description", width: "200px" },
-        { key: "workCenter", label: "Work Center", width: "130px" },
-        { key: "status", label: "Status", width: "100px" },
+        { key: "operation",    label: "Operation",           width: "140px" },
+        { key: "description",  label: "Description",         width: "200px" },
+        { key: "workCenter",   label: "Work Center",         width: "130px" },
+        { key: "status",       label: "Status",              width: "100px" },
         { key: "percentualeCompletamento", label: "% Completamento Ore", width: "120px" },
-        { key: "duration", label: "Ore pianificate", width: "100px" },
-        { key: "oreEffettive", label: "Ore effettive", width: "110px" },
-        { key: "oreVarianza", label: "Ore varianza", width: "110px" },
-        { key: "timespent", label: "Time Spent", width: "110px" },
-        { key: "scostamento", label: "Scostamento", width: "110px" },
-        { key: "alert", label: "", width: "50px", isIcon: true }
+        { key: "duration",     label: "Ore pianificate",     width: "100px" },
+        { key: "oreEffettive", label: "Ore effettive",       width: "110px" },
+        { key: "oreVarianza",  label: "Ore varianza",        width: "110px" },
+        { key: "timespent",    label: "Time Spent",          width: "110px" },
+        { key: "scostamento",  label: "Scostamento",         width: "110px" },
+        { key: "alert",        label: "",                    width: "50px", isIcon: true }
     ];
 
     var isGD = workcenter === "GD";
     var isAll = workcenter === "All";
 
-    // Mappa order -> somme proprie (solo operazioni filtrate per workcenter)
     var ownDurationMap = {};
     var ownOreEffettiveMap = {};
     var ownOreMarcateMap = {};
     var ownOreVarianzaMap = {};
 
-    // Filtra children per workcenter e calcola somme proprie
-    var data = machineDetails.data.map(function (row) {
-        var filteredChildren = (row.children || []).filter(function (child) {
+    // Funzione ricorsiva che processa un nodo machineDetails (ordine)
+    // e restituisce il nodo scostamento corrispondente
+    function _buildScostamentoNode(row) {
+        // Separa operazioni proprie da ordini figli
+        var ownOpChildren = (row.children || []).filter(function(child) { return child._isOperation; });
+        var childOrderNodes = (row.children || []).filter(function(child) { return !child._isOperation; });
+
+        // Filtra operazioni per workcenter
+        var filteredOps = ownOpChildren.filter(function(child) {
             if (child.workCenter === "DUMMY_WORKCENTER") return false;
             if (isAll) return true;
             var wc = child.workCenter || "";
@@ -814,106 +842,104 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
             return wc.startsWith("F_");
         });
 
+        // Calcola metriche proprie dalle operazioni filtrate
         var ownDuration = 0, ownOreEffettive = 0, ownOreMarcate = 0, ownOreVarianza = 0;
-        var allChildrenVarianzaEmpty = true;
-        filteredChildren.forEach(function (child) {
-            var dur = (typeof child.duration === "number" ? child.duration : 0);
-            var eff = (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
-            var marc = (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+        var allOpsVarianzaEmpty = true;
+
+        filteredOps.forEach(function(child) {
+            var dur  = (typeof child.duration    === "number" ? child.duration    : 0);
+            var eff  = (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+            var marc = (typeof child.oreMarcate  === "number" ? child.oreMarcate  : 0);
             var vari = (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
-            if (typeof child.oreVarianza === "number") allChildrenVarianzaEmpty = false;
-            ownDuration += dur;
-            ownOreEffettive += eff;
-            ownOreMarcate += marc;
-            ownOreVarianza += vari;
-            // Compute per-operation timespent, scostamento, alert
-            child.timespent = eff + vari;
+            if (typeof child.oreVarianza === "number") allOpsVarianzaEmpty = false;
+            ownDuration      += dur;
+            ownOreEffettive  += eff;
+            ownOreMarcate    += marc;
+            ownOreVarianza   += vari;
+            // Metriche per-operazione
+            child.timespent  = eff + vari;
             child.scostamento = dur - eff;
             child.percentualeCompletamento = dur > 0 ? (eff / dur * 100).toFixed(2).replace(".", ",") + "%" : "0,00%";
             child.alert = (child.status !== "Done" && child.scostamento <= 0) ? "alert" : "";
         });
 
-        ownDurationMap[row.order] = ownDuration;
-        ownOreEffettiveMap[row.order] = ownOreEffettive;
-        ownOreMarcateMap[row.order] = ownOreMarcate;
-        ownOreVarianzaMap[row.order] = ownOreVarianza;
+        // Costruisci ricorsivamente i nodi ordine figlio
+        var builtChildOrderNodes = childOrderNodes.map(_buildScostamentoNode).filter(Boolean);
+
+        // Accumula metriche cumulative dai figli
+        var cumDuration     = ownDuration;
+        var cumOreEffettive = ownOreEffettive;
+        var cumOreMarcate   = ownOreMarcate;
+        var cumOreVarianza  = ownOreVarianza;
+        var allVarianzaEmpty = allOpsVarianzaEmpty;
+
+        builtChildOrderNodes.forEach(function(childNode) {
+            cumDuration     += (typeof childNode.duration     === "number" ? childNode.duration     : 0);
+            cumOreEffettive += (typeof childNode.oreEffettive === "number" ? childNode.oreEffettive : 0);
+            cumOreMarcate   += (typeof childNode.oreMarcate   === "number" ? childNode.oreMarcate   : 0);
+            if (typeof childNode.oreVarianza === "number") {
+                cumOreVarianza += childNode.oreVarianza;
+                allVarianzaEmpty = false;
+            }
+        });
+
+        var r2s = function(n) { return Math.round(n * 100) / 100; };
+
+        cumDuration     = r2s(cumDuration);
+        cumOreEffettive = r2s(cumOreEffettive);
+        cumOreMarcate   = r2s(cumOreMarcate);
+        cumOreVarianza  = r2s(cumOreVarianza);
+
+        var timespent   = r2s(cumOreEffettive + (allVarianzaEmpty ? 0 : cumOreVarianza));
+        var scostamento = r2s(cumDuration - cumOreEffettive);
+        var pct = cumDuration > 0 ? (cumOreEffettive / cumDuration * 100).toFixed(2).replace(".", ",") + "%" : "0,00%";
+        var alert = (row.orderStatus !== "Completed" && scostamento <= 0 && cumDuration > 0) ? "alert" : "";
+
+        // Children del nodo scostamento: operazioni filtrate prima, poi ordini figli
+        var children = filteredOps.concat(builtChildOrderNodes);
+
+        // Nodo vuoto (nessuna operazione propria né nei discendenti): restituisci null
+        if (filteredOps.length === 0 && builtChildOrderNodes.length === 0) return null;
 
         return {
-            type: row.type,
-            order: row.order,
-            sfc: row.sfc,
-            orderStatus: row.orderStatus || "",
-            percentualeCompletamento: "0,00%",
-            duration: 0,
-            oreEffettive: 0,
-            oreMarcate: 0,
-            oreVarianza: 0,
-            timespent: 0,
-            scostamento: 0,
-            alert: "",
-            _allChildrenVarianzaEmpty: allChildrenVarianzaEmpty,
-            children: filteredChildren
+            _isOperation: false,
+            type:         row.type,
+            material:     row.material,
+            order:        row.order,
+            sfc:          row.sfc,
+            orderStatus:  row.orderStatus || "",
+            duration:     cumDuration,
+            oreEffettive: cumOreEffettive,
+            oreMarcate:   cumOreMarcate,
+            oreVarianza:  allVarianzaEmpty ? "" : cumOreVarianza,
+            timespent:    timespent,
+            scostamento:  scostamento,
+            percentualeCompletamento: pct,
+            alert:        alert,
+            children:     children
         };
-    });
-
-    // Calcolo cumulativo (proprie + discendenti) per ogni metrica
-    function getCumulative(ownMap, orderId, cache) {
-        if (cache[orderId] !== undefined) return cache[orderId];
-        var total = ownMap[orderId] || 0;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function (childId) {
-            total += getCumulative(ownMap, childId, cache);
-        });
-        cache[orderId] = total;
-        return total;
     }
 
-    var cacheDur = {}, cacheEff = {}, cacheMarc = {}, cacheVar = {};
+    // Costruisci i nodi radice
+    var data = machineDetails.data.map(_buildScostamentoNode).filter(Boolean);
 
-    // Mappa order -> row per check varianza vuota ricorsivo
-    var dataByOrder = {};
-    data.forEach(function (row) { dataByOrder[row.order] = row; });
-
-    // Verifica ricorsiva se tutti i figli (propri e discendenti) hanno varianza vuota
-    var cacheAllVarEmpty = {};
-    function isAllVarianzaEmpty(orderId) {
-        if (cacheAllVarEmpty[orderId] !== undefined) return cacheAllVarEmpty[orderId];
-        var row = dataByOrder[orderId];
-        var result = row ? row._allChildrenVarianzaEmpty : true;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function (childId) {
-            if (!isAllVarianzaEmpty(childId)) result = false;
+    // Ordinamento ricorsivo: operazioni prima, poi ordini figli per typeOrder
+    function _sortChildren(nodes) {
+        nodes.sort(function(a, b) {
+            var aIsOp = a._isOperation ? 0 : 1;
+            var bIsOp = b._isOperation ? 0 : 1;
+            if (aIsOp !== bIsOp) return aIsOp - bIsOp;
+            var typeOrder = { "MACH": 1, "MACR": 2, "AGGR": 3 };
+            return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
         });
-        cacheAllVarEmpty[orderId] = result;
-        return result;
+        nodes.forEach(function(node) {
+            if (!node._isOperation && node.children && node.children.length > 0) {
+                _sortChildren(node.children);
+            }
+        });
     }
 
-    var r2s = function (n) { return Math.round(n * 100) / 100; };
-
-    // Imposta valori cumulativi e ricalcola % completamento
-    data.forEach(function (row) {
-        row.duration = r2s(getCumulative(ownDurationMap, row.order, cacheDur));
-        row.oreEffettive = r2s(getCumulative(ownOreEffettiveMap, row.order, cacheEff));
-        row.oreMarcate = r2s(getCumulative(ownOreMarcateMap, row.order, cacheMarc));
-        row.oreVarianza = r2s(getCumulative(ownOreVarianzaMap, row.order, cacheVar));
-        if (isAllVarianzaEmpty(row.order)) row.oreVarianza = "";
-        row.timespent = r2s(row.oreEffettive + (typeof row.oreVarianza === "number" ? row.oreVarianza : 0));
-        row.scostamento = r2s(row.duration - row.oreEffettive);
-
-        // Alert a livello ordine: se scostamento <= 0 e ordine non DONE
-        if (row.orderStatus !== "Completed" && row.scostamento <= 0 && row.duration > 0) {
-            row.alert = "alert";
-        }
-
-        if (row.duration > 0) {
-            row.percentualeCompletamento = (row.oreEffettive / row.duration * 100).toFixed(2).replace(".", ",") + "%";
-        }
-    });
-
-    // Rimuovi ordini senza operazioni proprie E senza discendenti con operazioni
-    data = data.filter(function (row) {
-        return row.children.length > 0 || row.duration > 0;
-    });
+    _sortChildren(data);
 
     return { parentColumns: parentColumns, childColumns: childColumns, data: data, isTree: true };
 }
@@ -1476,14 +1502,23 @@ function _calcGruppiLevelChart(aData) {
  */
 function _calcMachineProgressChart(aData) {
     var durCompletati = 0, durIniziati = 0, durDaIniziare = 0;
-    aData.forEach(function (row) {
-        (row.children || []).forEach(function (step) {
-            var dur = typeof step.duration === "number" ? step.duration : (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
-            if (step.status === "Done") durCompletati += dur;
-            else if (step.status === "In Work") durIniziati += dur;
-            else durDaIniziare += dur;
+
+    function _visitNode(node) {
+        (node.children || []).forEach(function (child) {
+            if (child._isOperation) {
+                var dur = typeof child.duration === "number" ? child.duration : (parseFloat(String(child.duration || "").replace(/\./g, "")) || 0) / 100000;
+                if (child.status === "Done") durCompletati += dur;
+                else if (child.status === "In Work") durIniziati += dur;
+                else durDaIniziare += dur;
+            } else {
+                // Nodo ordine figlio: scendi ricorsivamente
+                _visitNode(child);
+            }
         });
-    });
+    }
+
+    aData.forEach(_visitNode);
+
     return [
         { label: "Ore completate", value: durCompletati },
         { label: "Ore iniziate", value: durIniziati },
@@ -1499,20 +1534,28 @@ function _calcScostamentoChart(aData, workcenterType) {
     var pianificato = 0, secondValue = 0, varianza = 0;
     var isFornitori = workcenterType === "Fornitori";
     var isAll = workcenterType === "All";
-    aData.forEach(function (row) {
-        (row.children || []).forEach(function (child) {
-            pianificato += (typeof child.duration === "number" ? child.duration : 0);
-            if (isAll) {
-                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
-                varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
-            } else if (!isFornitori) {
-                secondValue += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
-                varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+
+    function _visitNode(node) {
+        (node.children || []).forEach(function (child) {
+            if (child._isOperation) {
+                pianificato += (typeof child.duration === "number" ? child.duration : 0);
+                if (isAll) {
+                    secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+                    varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+                } else if (!isFornitori) {
+                    secondValue += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+                    varianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+                } else {
+                    secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+                }
             } else {
-                secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+                _visitNode(child);
             }
         });
-    });
+    }
+
+    aData.forEach(_visitNode);
+
     if (isAll) {
         return [
             { label: "Ore pianificate", value: pianificato },
