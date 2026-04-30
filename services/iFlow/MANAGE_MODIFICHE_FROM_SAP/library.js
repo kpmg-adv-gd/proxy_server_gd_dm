@@ -195,7 +195,7 @@ async function updateBomComponent(bomComponentResponse,plant,order,orderMaterial
                 });
                 if(fluxType=="M") {
                     obj.quantity = qty;
-                    await updateMancantiRequiredQuantity(plant, order, childMaterial, qty);
+                    //await updateMancantiRequiredQuantity(plant, order, childMaterial, qty);
                 }
                 //Gestione mancanti in caso di modifica di assieme per rimozione gruppo
                 if(modificaType=="MA" && fluxType=="D"){
