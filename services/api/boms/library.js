@@ -90,7 +90,7 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
                 const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
 
                 if (missingParts === "X") {
-                    var MissingPartsDate = await getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
+                    var MissingPartsDate = getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
                 }else{
                     var MissingPartsDate = "";
                 }
@@ -158,14 +158,14 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                 );
 
                 if (missingParts) {
-                    var MissingPartsDate = await getMissingPartsDate(plant, order, bomInfo.material, comp.material.material);
+                    var MissingPartsDate = getMissingPartsDate(plant, order, bomInfo.material, comp.material.material);
                 }else{
                     var MissingPartsDate = "";
                 }
 
                 for (var i = 0; i < children.length; i++){
                     if (children[i].MissingParts === "X") {
-                        children[i].MissingPartsDate = await getMissingPartsDate(plant, children[i].ChildOrder, comp.material.material, children[i].Material);
+                        children[i].MissingPartsDate = getMissingPartsDate(plant, children[i].ChildOrder, comp.material.material, children[i].Material);
                     }else{
                         children[i].MissingPartsDate = "";
                     }
