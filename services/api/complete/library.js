@@ -110,7 +110,7 @@ async function updateBomComponentParentOrder(plant, parentOrder,parentMaterial, 
     for(let obj of bomDetailBodyParentOrder[0]?.components){
         if (obj?.material && obj.material.plant === plant && obj.material.material === childMaterial) {
             for(let customValueObj of obj.customValues){
-                if (!componentFound && customValueObj.attribute === "COMPONENTE MANCANTE" && customValueObj.value == "true" ) {
+                if (!componentFound && customValueObj.attribute === "ORDINE MANCANTE" && customValueObj.value == "true" ) {
                     componentFound = true;
                     if(obj.quantity > 1){
                         let checkQuantityComponentResponse = await checkQuantityDoneComponent(obj.quantity,obj.material.plant,obj.material.material,parentOrder,childOrder);
@@ -147,7 +147,7 @@ async function checkQuantityDoneComponent(quantity,plant,material,order,childOrd
 async function updateCustomMancanteOrder(plant,order,value){
     let url = hostname + "/order/v1/orders/customValues";
     let customValue={
-        "attribute":"MANCANTI",
+        "attribute":"ORDINI MANCANTI",
         "value": value
     };
     let body={
@@ -182,7 +182,7 @@ async function updateCustomModificaOrder(plant,order,ecoType,value){
 function hasComponentMancante(components) {
     return components.some(obj =>
         obj.customValues.some(cv =>
-            cv.attribute === "COMPONENTE MANCANTE" && cv.value === "true"
+            cv.attribute === "ORDINE MANCANTE" && cv.value === "true"
         )
     );
 }
@@ -197,9 +197,11 @@ async function hasMancanti(plant,order){
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
     let customValuesOrder = orderResponse?.customValues;
-    let mancantiField = customValuesOrder.find(obj => obj.attribute == "MANCANTI");
-    let mancantiValue = mancantiField?.value || "";
-    if(mancantiValue=="true"){
+    let ordiniMancantiField = customValuesOrder.find(obj => obj.attribute == "ORDINI MANCANTI");
+    let ordiniMancantiValue = ordiniMancantiField?.value || "";
+    let componentsMancantiField = customValuesOrder.find(obj => obj.attribute == "COMPONENTI MANCANTI");
+    let componentiMancantiValue = componentsMancantiField?.value || "";
+    if(ordiniMancantiValue=="true" || componentiMancantiValue=="true"){
         let errorMessage = "The sfc has mancanti. Impossible to complete it.";
         throw { status: 500, message: errorMessage};
     }
