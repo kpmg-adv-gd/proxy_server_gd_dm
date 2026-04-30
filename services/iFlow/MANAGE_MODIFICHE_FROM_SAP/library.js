@@ -52,7 +52,7 @@ async function manageModifica(objModifica){
     var project = orderResponse.customValues.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
 
     if(isCO2){
-        await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, variance, progressive);
+        await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, wbeMachine, section, variance, progressive);
         return;
     }
 
@@ -64,9 +64,8 @@ async function manageModifica(objModifica){
     else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing";
     else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
 
-    console.log("Gestione modifica - plant: "+plant+", order: "+order+", childOrder: "+childOrder+", modificaType: "+modificaType+", material: "+material+", childMaterial: "+childMaterial+", qty: "+qty+", fluxType: "+fluxType+", status: "+status+", isCO2: "+isCO2+", phase: "+phase);
-
     await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive);
+    
     
     console.log("Modifica inserita su DB - order: "+order+", childOrder: "+childOrder+", modificaType: "+modificaType);
     if(!modificaValue){
@@ -251,8 +250,7 @@ function updateBodyBomComponentMaterial(plant,bomDetailBody,material,value){
     return bomDetailBody;
 }
 
-async function manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, variance, progressive){
-    console.log("1");
+async function manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, wbeMachine, section, variance, progressive){
     const orderResponse = await getOrderFromApi(plant, order);
     const executionStatus = orderResponse?.executionStatus;
     const baseSfc = orderResponse?.sfcs?.[0] || "";
@@ -260,10 +258,10 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
     const project = orderResponse?.customValues.find(obj => obj.attribute === "COMMESSA")?.value || "";
     var sentToTesting = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
     var sentToInstallation = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_INSTALLATION")[0]?.value || "";
-    if (sentToTesting == "" && sentToInstallation == "") var phase = "Assembly";
-    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
-    else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
-    console.log("2");
+    let phase =  "Assembly";
+    if (sentToTesting != "" && sentToInstallation == "") phase = "Testing";
+    else if (sentToTesting != "" && sentToInstallation != "") phase = "Installation";
+
     if (executionStatus === "COMPLETED") {
         const linkedOrders = await getZOrdersLinkByPlantProjectOrderType(plant, project, "MACH");
 
@@ -291,16 +289,10 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
         }
 
     } else {
-        console.log("3");
         // SFC e modificaValue dell’ordine principale
         let modificaValue = orderResponse?.customValues?.find(obj => obj.attribute === "ECO_TYPE")?.value || "";
-        console.log("4");
         // Insert modifica
-        await insertZModifiche(
-            progEco, processId, plant, wbe, modificaType, baseSfc,
-            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive
-        );
-        console.log("5");
+        await insertZModifiche(progEco, processId, plant, wbe, modificaType, baseSfc,order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive);
 
         // Update modifica value
         if (!modificaValue) {
