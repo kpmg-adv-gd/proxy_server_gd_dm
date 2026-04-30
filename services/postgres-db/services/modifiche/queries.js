@@ -122,7 +122,7 @@ const updateModifyOwnerAndDueDateQuery = `UPDATE z_modify SET owner = $1, due_da
 
 const getModificaDetailQuery = `SELECT zm.*
                                 FROM z_modify zm
-                                WHERE zm.plant = $1 AND zm.process_id = $2 AND zm.material = $3`;
+                                WHERE zm.plant = $1 AND zm.process_id = $2 AND zm.material = $3 ;`;
 
 module.exports = { insertZModificheQuery, getModificheDataQuery, getModificheDataGroupMAQuery, getAllModificaMAQuery, updateStatusModificaQuery, updateZModifyCO2ByOrderQuery, 
     updateStatusModificaMAQuery, getOperationModificheBySfcQuery, getModificheToDoQuery, updateZModifyByOrderQuery, getModificheToTestingQuery, getModificheToVerbaleTestingQuery, 
