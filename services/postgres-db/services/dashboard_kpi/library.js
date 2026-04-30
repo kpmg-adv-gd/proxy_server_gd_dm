@@ -212,6 +212,7 @@ async function _classifyOrders(plant, order) {
         var routingSteps = [];
         var totalOps = 0, completedOps = 0;
         var pctOps = "0,00%";
+        var sfcStatus = "";
         if (item.sfc) {
             try {
                 var urlSfc = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + item.sfc;
@@ -229,6 +230,10 @@ async function _classifyOrders(plant, order) {
                 var routing = sfcDetail?.routing?.routing;
                 var routingVersion = sfcDetail?.routing?.version;
                 var routingType = sfcDetail?.routing?.type === "SHOPORDER_SPECIFIC" ? "SHOP_ORDER" : sfcDetail?.routing?.type;
+                if (sfcDetail?.status.description == "NEW") sfcStatus = "New";
+                else if (sfcDetail?.status.description == "IN_QUEUE") sfcStatus = "In Queue";
+                else if (sfcDetail?.status.description == "ACTIVE") sfcStatus = "In Work";
+                else if (sfcDetail?.status.description == "DONE") sfcStatus = "Completed";
                 var routingStepsData = [];
                 if (routing) {
                     try {
@@ -246,7 +251,9 @@ async function _classifyOrders(plant, order) {
                     var status = "New";
                     if (sfcStep.quantityDone === 1) status = "Done";
                     else if (sfcStep.quantityInWork === 1) status = "In Work";
-                    else if (sfcStep.quantityInQueue === 1) status = "In Queue";
+                    else if (sfcStep.quantityInQueue === 1 && sfcStatus == "New") status = "New";
+                    else if (sfcStep.quantityInQueue === 1 && sfcStatus != "New") status = "In Queue";
+                    else status = "New"
 
                     // Cerca DURATION nel routing step corrispondente
                     var duration = "";
@@ -301,6 +308,7 @@ async function _classifyOrders(plant, order) {
             percentualeCompletamento: pct,
             percentualeCompletamentoOps: pctOps || "0,00%",
             orderStatus: effectiveOrderStatus,
+            sfcStatus: sfcStatus,
             unloadPoint: item.unloadPoint,
             plannedStartDate: item.plannedStartDate,
             routingSteps: routingSteps
@@ -393,7 +401,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         { key: "type", label: "Type", width: "120px" },
         { key: "order", label: "Order", width: "180px" },
         { key: "sfc", label: "SFC", width: "180px" },
-        { key: "orderStatus", label: "Status Ordine", width: "120px" },
+        { key: "sfcStatus", label: "SFC Status", width: "120px" },
     ];
     var childColumns = [
         { key: "operation", label: "Operation", width: "140px" },
@@ -566,6 +574,7 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
             sfc: item.sfc,
             material: item.material,
             orderStatus: item.orderStatus || "",
+            sfcStatus: item.sfcStatus || "",
             duration: r2(cumDuration),
             oreCompletate: r2(cumOreCompletate),
             oreEffettive: r2(cumOreEffettive),
@@ -683,9 +692,9 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         { key: "macroaggregato", label: "Macroaggregato", width: "180px" },
         { key: "aggregato", label: "Aggregato", width: "180px" },
         { key: "gruppo", label: "Gruppo", width: "180px" },
-        { key: "sfc", label: "SFC", width: "220px" },
         { key: "order", label: "Order", width: "180px" },
-        { key: "orderStatus", label: "Status Ordine", width: "120px" },
+        { key: "sfc", label: "SFC", width: "220px" },
+        { key: "sfcStatus", label: "SFC Status", width: "120px" },
         { key: "totalOps", label: "Tot. Operazioni", width: "120px" },
         { key: "completedOps", label: "Op. Completate", width: "120px" },
         { key: "percentualeCompletamento", label: "% completamento", width: "120px" }
@@ -733,6 +742,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
             sfc: item.sfc,
             material: item.material,
             orderStatus: item.orderStatus || "",
+            sfcStatus: item.sfcStatus || "",
             aggregato: aggregato,
             macroaggregato: macroaggregato,
             macchina: macchina,
@@ -802,7 +812,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         { key: "type",        label: "Type",          width: "120px" },
         { key: "order",       label: "Order",         width: "180px" },
         { key: "sfc",         label: "SFC",           width: "220px" },
-        { key: "orderStatus", label: "Status Ordine", width: "120px" },
+        { key: "sfcStatus", label: "SFC Status", width: "120px" },
     ];
     var childColumns = [
         { key: "operation",    label: "Operation",           width: "140px" },
@@ -908,6 +918,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
             order:        row.order,
             sfc:          row.sfc,
             orderStatus:  row.orderStatus || "",
+            sfcStatus:    row.sfcStatus || "",
             duration:     cumDuration,
             oreEffettive: cumOreEffettive,
             oreMarcate:   cumOreMarcate,
