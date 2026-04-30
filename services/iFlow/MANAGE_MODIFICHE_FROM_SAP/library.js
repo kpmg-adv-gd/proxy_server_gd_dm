@@ -25,6 +25,7 @@ async function manageNewModifiche(jsonModifiche) {
 
 
 async function manageModifica(objModifica){
+
     var plant = await getPlantFromERPPlant(objModifica?.Plant?.[0]);
     var order = objModifica?.Order?.[0] || "";
     var childOrder = objModifica?.ChildOrder?.[0] || "";
@@ -41,25 +42,26 @@ async function manageModifica(objModifica){
     var progressive = objModifica?.Progressive?.[0] || "";
     var isCO2 = await isOrderCO2(plant,order);
 
+
     // Recupero campi custom ordine
     var url = hostname + "/order/v1/orders?order=" + order + "&plant=" + plant;
     var orderResponse = await callGet(url);
+
     var wbeMachine = orderResponse.customValues.filter(item => item.attribute == "WBE")[0]?.value || "";
     var section = orderResponse.customValues.filter(item => item.attribute == "SEZIONE MACCHINA")[0]?.value || "";
     var project = orderResponse.customValues.filter(item => item.attribute == "COMMESSA")[0]?.value || "";
 
     if(isCO2){
-        await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2);
+        await manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, variance, progressive);
         return;
     }
 
     var { podOrder, modificaValue, sfc } = await getPodOrder(plant,order) || "";
     var { bom, bomType, materialOrder, parentOrderValue,isParentAssembly} = await getOrderInfo(plant,podOrder);
-
     var sentToTesting = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
     var sentToInstallation = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_INSTALLATION")[0]?.value || "";
     if (sentToTesting == "" && sentToInstallation == "") var phase = "Assembly";
-    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
+    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing";
     else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
 
     console.log("Gestione modifica - plant: "+plant+", order: "+order+", childOrder: "+childOrder+", modificaType: "+modificaType+", material: "+material+", childMaterial: "+childMaterial+", qty: "+qty+", fluxType: "+fluxType+", status: "+status+", isCO2: "+isCO2+", phase: "+phase);
@@ -249,13 +251,19 @@ function updateBodyBomComponentMaterial(plant,bomDetailBody,material,value){
     return bomDetailBody;
 }
 
-async function manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2) {
+async function manageCO2(progEco, processId, plant, wbe, modificaType, order, material, childOrder, childMaterial, qty, fluxType, status, isCO2, variance, progressive){
+    console.log("1");
     const orderResponse = await getOrderFromApi(plant, order);
     const executionStatus = orderResponse?.executionStatus;
     const baseSfc = orderResponse?.sfcs?.[0] || "";
     const materialOrder = orderResponse?.material?.material || "";
     const project = orderResponse?.customValues.find(obj => obj.attribute === "COMMESSA")?.value || "";
-
+    var sentToTesting = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_TESTING")[0]?.value || "";
+    var sentToInstallation = orderResponse.customValues.filter(item => item.attribute == "SENT_TO_INSTALLATION")[0]?.value || "";
+    if (sentToTesting == "" && sentToInstallation == "") var phase = "Assembly";
+    else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
+    else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
+    console.log("2");
     if (executionStatus === "COMPLETED") {
         const linkedOrders = await getZOrdersLinkByPlantProjectOrderType(plant, project, "MACH");
 
@@ -265,11 +273,11 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
             const sfc = childOrderResponse?.sfcs?.[0] || "";
 
             let modificaValue = childOrderResponse?.customValues?.find(obj => obj.attribute === "ECO_TYPE")?.value || "";
-
+            
             // Insert modifica
             await insertZModifiche(
                 progEco, processId, plant, wbe, modificaType, sfc,
-                order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project
+                order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive
             );
 
             // Update modifica value
@@ -283,14 +291,16 @@ async function manageCO2(progEco, processId, plant, wbe, modificaType, order, ma
         }
 
     } else {
+        console.log("3");
         // SFC e modificaValue dell’ordine principale
         let modificaValue = orderResponse?.customValues?.find(obj => obj.attribute === "ECO_TYPE")?.value || "";
-
+        console.log("4");
         // Insert modifica
         await insertZModifiche(
             progEco, processId, plant, wbe, modificaType, baseSfc,
-            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project
+            order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive
         );
+        console.log("5");
 
         // Update modifica value
         if (!modificaValue) {
@@ -385,9 +395,7 @@ async function checkOrCreateMaterial(plant,childMaterial){
             }];
             let url = hostname + "/material/v1/materials";
             await callPost(url, bodyCreateMaterial);
-    }  
+    }
 }
 
-module.exports = { manageNewModifiche }
-
-
+module.exports = { manageNewModifiche };
