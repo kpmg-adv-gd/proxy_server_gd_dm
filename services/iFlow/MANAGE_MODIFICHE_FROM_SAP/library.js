@@ -62,8 +62,11 @@ async function manageModifica(objModifica){
     else if (sentToTesting != "" && sentToInstallation == "") var phase = "Testing"
     else if (sentToTesting != "" && sentToInstallation != "") var phase = "Installation";
 
-    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive);
+    console.log("Gestione modifica - plant: "+plant+", order: "+order+", childOrder: "+childOrder+", modificaType: "+modificaType+", material: "+material+", childMaterial: "+childMaterial+", qty: "+qty+", fluxType: "+fluxType+", status: "+status+", isCO2: "+isCO2+", phase: "+phase);
 
+    await insertZModifiche(progEco, processId, plant, wbe, modificaType, sfc, order, material, childOrder, childMaterial, qty, fluxType, status, false, isCO2, wbeMachine, section, project, phase, variance, progressive);
+    
+    console.log("Modifica inserita su DB - order: "+order+", childOrder: "+childOrder+", modificaType: "+modificaType);
     if(!modificaValue){
         modificaValue = modificaType;
     } else if(!modificaValue.split(',').includes(modificaType)) {
