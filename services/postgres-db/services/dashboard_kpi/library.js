@@ -20,37 +20,37 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     var machineDetails = await getMachineProgressDetails(plant, wbe, orderClassification, cumulativeDurations, hierarchyResult.childrenMap);
 
     // Fetch operation log dates for all orders
-    var uniqueOrders = [...new Set(orderClassification.all.map(function(item) { return item.order; }))].filter(Boolean);
-    var logResults = await Promise.all(uniqueOrders.map(function(ord) { return getOperationDates(plant, ord).then(function(rows) { return { order: ord, rows: rows }; }); }));
+    var uniqueOrders = [...new Set(orderClassification.all.map(function (item) { return item.order; }))].filter(Boolean);
+    var logResults = await Promise.all(uniqueOrders.map(function (ord) { return getOperationDates(plant, ord).then(function (rows) { return { order: ord, rows: rows }; }); }));
     var operationLogsLookup = {};
-    logResults.forEach(function(entry) {
-        (entry.rows || []).forEach(function(row) {
+    logResults.forEach(function (entry) {
+        (entry.rows || []).forEach(function (row) {
             var key = entry.order + "_" + row.operation_activity;
             operationLogsLookup[key] = row;
         });
     });
 
-    var sfcGruppi  = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent, machineDetails, operationLogsLookup);
-    var sfcAggr    = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent, machineDetails, operationLogsLookup);
-    var sfcMacr    = _getSFCProgressFromClassification(orderClassification, "macr", childToParent, machineDetails, operationLogsLookup);
-    var sfcAll     = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails, operationLogsLookup);
-    var scostamentoGD       = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
+    var sfcGruppi = _getSFCProgressFromClassification(orderClassification, "gruppi", childToParent, machineDetails, operationLogsLookup);
+    var sfcAggr = _getSFCProgressFromClassification(orderClassification, "aggr", childToParent, machineDetails, operationLogsLookup);
+    var sfcMacr = _getSFCProgressFromClassification(orderClassification, "macr", childToParent, machineDetails, operationLogsLookup);
+    var sfcAll = _getSFCProgressFromClassification(orderClassification, "all", childToParent, machineDetails, operationLogsLookup);
+    var scostamentoGD = getScostamentoDetails(machineDetails, "GD", hierarchyResult.childrenMap);
     var scostamentoFornitori = getScostamentoDetails(machineDetails, "Fornitori", hierarchyResult.childrenMap);
-    var scostamentoAll       = getScostamentoDetails(machineDetails, "All", hierarchyResult.childrenMap);
-    var mancantiDetails  = await getMancantiDetails(plant, project, orderClassification);
-    var evasiDetails     = getEvasiDetails(orderClassification);
+    var scostamentoAll = getScostamentoDetails(machineDetails, "All", hierarchyResult.childrenMap);
+    var mancantiDetails = await getMancantiDetails(plant, project, orderClassification);
+    var evasiDetails = getEvasiDetails(orderClassification);
     var modificheDetails = await getModificheDetails(plant, project, wbe, sfc, section, material);
-    var varianzeDetails  = await getVarianzeDetails(plant, order);
-    var ncPresenzaData   = await _getNcPresenza(plant, orderClassification);
+    var varianzeDetails = await getVarianzeDetails(plant, order);
+    var ncPresenzaData = await _getNcPresenza(plant, orderClassification);
 
     // 2. Calcola valori chart dai dati delle tabelle
     var result = {};
 
     result.gruppiLevels = {
         gruppi: _calcGruppiLevelChart(sfcGruppi.data),
-        aggr:   _calcGruppiLevelChart(sfcAggr.data),
-        macr:   _calcGruppiLevelChart(sfcMacr.data),
-        all:    _calcGruppiLevelChart(sfcAll.data)
+        aggr: _calcGruppiLevelChart(sfcAggr.data),
+        macr: _calcGruppiLevelChart(sfcMacr.data),
+        all: _calcGruppiLevelChart(sfcAll.data)
     };
 
     result.mancanti = _calcMancantiSummary(mancantiDetails);
@@ -65,20 +65,20 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
     result.chartData = {
         machineProgress: _calcMachineProgressChart(machineDetails.data),
         scostamentoLevels: {
-            All:       _calcScostamentoChart(scostamentoAll.data, "All"),
-            GD:        _calcScostamentoChart(scostamentoGD.data, "GD"),
+            All: _calcScostamentoChart(scostamentoAll.data, "All"),
+            GD: _calcScostamentoChart(scostamentoGD.data, "GD"),
             Fornitori: _calcScostamentoChart(scostamentoFornitori.data, "Fornitori")
         },
         mancanti: _calcMancantiChart(mancantiDetails),
-        evasi:    _calcEvasiChart(evasiDetails.data),
+        evasi: _calcEvasiChart(evasiDetails.data),
         ncPresenza: [
             { label: "NC open", value: ncPresenzaData.ncOpen },
             { label: "NC bloccanti", value: ncPresenzaData.ncBloccanti },
             { label: "NC closed", value: ncPresenzaData.ncClosed }
         ],
-        modificheOpen:   _calcModificheChart(modificheDetails.data, "Open"),
+        modificheOpen: _calcModificheChart(modificheDetails.data, "Open"),
         modificheClosed: _calcModificheChart(modificheDetails.data, "Closed"),
-        tipologiaVarianze:      _calcTipologiaVarianzeChart(varianzeDetails.data),
+        tipologiaVarianze: _calcTipologiaVarianzeChart(varianzeDetails.data),
         responsabilitaVarianze: _calcResponsabilitaVarianzeChart(varianzeDetails.data)
     };
 
@@ -87,19 +87,19 @@ async function getDashboardKPI(plant, project, wbe, sfc, section, material, orde
         machineProgress: machineDetails,
         sfcProgress: {
             gruppi: sfcGruppi,
-            aggr:   sfcAggr,
-            macr:   sfcMacr,
-            all:    sfcAll
+            aggr: sfcAggr,
+            macr: sfcMacr,
+            all: sfcAll
         },
         scostamento: {
-            All:       scostamentoAll,
-            GD:        scostamentoGD,
+            All: scostamentoAll,
+            GD: scostamentoGD,
             Fornitori: scostamentoFornitori
         },
-        mancanti:            { columns: mancantiDetails.columns, data: mancantiDetails.data },
-        evasi:               evasiDetails,
-        modifiche:           modificheDetails,
-        tipologiaVarianze:   varianzeDetails.detailsTipologia,
+        mancanti: { columns: mancantiDetails.columns, data: mancantiDetails.data },
+        evasi: evasiDetails,
+        modifiche: modificheDetails,
+        tipologiaVarianze: varianzeDetails.detailsTipologia,
         responsabilitaVarianze: varianzeDetails.detailsResponsabilita
     };
 
@@ -113,8 +113,8 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
     // Restituisce direttamente la struttura ad albero raggruppata per progetto
     // Ogni nodo parent ha: project, children[]
     // Ogni child ha: project, wbe, section, sfc, order, material, status, reportStatus
-    var result = treeData.map(function(projectNode) {
-        var children = (projectNode.Children || []).map(function(child) {
+    var result = treeData.map(function (projectNode) {
+        var children = (projectNode.Children || []).map(function (child) {
             return {
                 project: "",
                 wbe: child.wbs || "",
@@ -134,18 +134,18 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
 
         // Filtro lato server sui children
         if (section) {
-            children = children.filter(function(item) {
+            children = children.filter(function (item) {
                 return item.section === section;
             });
         }
         // Filtro lato server sui customer
         if (customer) {
-            children = children.filter(function(item) {
+            children = children.filter(function (item) {
                 return item.customer === customer;
             });
         }
         if (phase) {
-            children = children.filter(function(item) {
+            children = children.filter(function (item) {
                 return item.phase === phase || (item.phase === "" && phase == "Assembly");
             });
         }
@@ -166,7 +166,7 @@ async function getDataFilterDashboardKPI(plant, project, phase, customer, sectio
     });
 
     // Rimuovi progetti senza children dopo il filtro
-    result = result.filter(function(node) {
+    result = result.filter(function (node) {
         return node.children.length > 0;
     });
 
@@ -184,28 +184,30 @@ async function _classifyOrders(plant, order) {
     var gruppi = [], aggregati = [], macroaggregati = [];
 
     // Recupera ORDER_TYPE per tutti gli ordini in parallelo (batch)
-    var orderDetails = await Promise.all(allOrders.map(async function(ord) {
+    var orderDetails = await Promise.all(allOrders.map(async function (ord) {
         try {
             var url = hostname + "/order/v1/orders?order=" + ord + "&plant=" + plant;
             var orderResp = await callGet(url);
-            var orderTypeField = orderResp?.customValues?.find(function(obj) { return obj.attribute === "ORDER_TYPE"; });
+            var orderTypeField = orderResp?.customValues?.find(function (obj) { return obj.attribute === "ORDER_TYPE"; });
             var orderType = orderTypeField?.value || "";
-            var unloadPointField = orderResp?.customValues?.find(function(obj) { return obj.attribute === "UNLOAD_POINT"; });
+            var unloadPointField = orderResp?.customValues?.find(function (obj) { return obj.attribute === "UNLOAD_POINT"; });
+            var parentAssemblyField = orderResp?.customValues?.find(function (obj) { return obj.attribute === "PARENT_ASSEMBLY"; });
             var unloadPoint = unloadPointField?.value || null;
+            var parentAssembly = parentAssemblyField?.value || null;
             var plannedStartDate = orderResp?.plannedStartDate || null;
             var sfcValue = orderResp?.sfcs?.[0] || "";
             var material = orderResp?.material?.description || "";
             var execStatus = orderResp?.executionStatus || "";
             var orderStatus = execStatus === "COMPLETED" ? "Completed" : execStatus === "ACTIVE" ? "Started" : execStatus === "NOT_IN_EXECUTION" ? "Not Started" : execStatus;
-            return { order: ord, orderType: orderType, orderStatus: orderStatus, unloadPoint: unloadPoint, plannedStartDate: plannedStartDate, sfc: sfcValue, material: material };
+            return { order: ord, orderType: orderType, orderStatus: orderStatus, unloadPoint: unloadPoint, parentAssembly: parentAssembly, plannedStartDate: plannedStartDate, sfc: sfcValue, material: material };
         } catch (e) {
             console.log("Error fetching order detail for " + ord + ": " + e.message);
-            return { order: ord, orderType: "", orderStatus: "", unloadPoint: null, plannedStartDate: null, sfc: "", material: "" };
+            return { order: ord, orderType: "", orderStatus: "", unloadPoint: null, parentAssembly: null, plannedStartDate: null, sfc: "", material: "" };
         }
     }));
 
     // Per ogni ordine recupera % completamento dall'SFC (ponderata su DURATION) e routing steps
-    var enriched = await Promise.all(orderDetails.map(async function(item) {
+    var enriched = await Promise.all(orderDetails.map(async function (item) {
         var pct = "0,00%";
         var routingSteps = [];
         var totalOps = 0, completedOps = 0;
@@ -214,11 +216,11 @@ async function _classifyOrders(plant, order) {
             try {
                 var urlSfc = hostname + "/sfc/v1/sfcdetail?plant=" + plant + "&sfc=" + item.sfc;
                 var sfcDetail = await callGet(urlSfc);
-                var steps = (sfcDetail?.steps || []).filter(function(s) {
+                var steps = (sfcDetail?.steps || []).filter(function (s) {
                     return (s?.plannedWorkCenter || "") !== "DUMMY_OPERATION" && (s?.operation?.operation || "") !== "DUMMY_OPERATION";
                 });
                 var totalOps = steps.length;
-                var completedOps = steps.filter(function(s) { return s.quantityDone === 1; }).length;
+                var completedOps = steps.filter(function (s) { return s.quantityDone === 1; }).length;
                 var pctOps = "0,00%";
                 if (totalOps > 0) {
                     pctOps = (completedOps / totalOps * 100).toFixed(2).replace(".", ",") + "%";
@@ -239,7 +241,7 @@ async function _classifyOrders(plant, order) {
                 }
 
                 // Combina sfcdetail steps con routing steps per DURATION
-                steps.forEach(function(sfcStep) {
+                steps.forEach(function (sfcStep) {
                     var stepOp = sfcStep?.operation?.operation || "";
                     var status = "New";
                     if (sfcStep.quantityDone === 1) status = "Done";
@@ -248,11 +250,11 @@ async function _classifyOrders(plant, order) {
 
                     // Cerca DURATION nel routing step corrispondente
                     var duration = "";
-                    var matchedRouting = routingStepsData.find(function(rs) {
+                    var matchedRouting = routingStepsData.find(function (rs) {
                         return rs?.routingOperation?.operationActivity?.operationActivity === stepOp;
                     });
                     if (matchedRouting) {
-                        var durationField = matchedRouting?.routingOperation?.customValues?.find(function(cv) { return cv.attribute === "DURATION"; });
+                        var durationField = matchedRouting?.routingOperation?.customValues?.find(function (cv) { return cv.attribute === "DURATION"; });
                         duration = durationField?.value || "";
                     }
 
@@ -268,7 +270,7 @@ async function _classifyOrders(plant, order) {
 
                 // Calcola % completamento ponderata su DURATION
                 var totalDuration = 0, completedDuration = 0;
-                routingSteps.forEach(function(rs) {
+                routingSteps.forEach(function (rs) {
                     var dur = (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 100000;
                     totalDuration += dur;
                     if (rs.status === "Done") completedDuration += dur;
@@ -293,6 +295,7 @@ async function _classifyOrders(plant, order) {
             orderType: item.orderType,
             sfc: item.sfc,
             material: item.material,
+            parentAssembly: item.parentAssembly || null,  // <-- AGGIUNTA
             totalOps: resolvedTotalOps,
             completedOps: resolvedCompletedOps,
             percentualeCompletamento: pct,
@@ -305,7 +308,7 @@ async function _classifyOrders(plant, order) {
     }));
 
     // Classifica
-    enriched.forEach(function(item) {
+    enriched.forEach(function (item) {
         if (item.orderType === "MACH" || item.orderType === "MACR" || item.orderType === "AGGR") {
             if (item.orderType === "AGGR") aggregati.push(item);
             else if (item.orderType === "MACR") macroaggregati.push(item);
@@ -323,7 +326,7 @@ async function _classifyOrders(plant, order) {
  * Usa z_orders_link per ricostruire la gerarchia.
  */
 async function _calcCumulativeDurations(plant, enrichedOrders) {
-    var allOrderIds = enrichedOrders.map(function(item) { return item.order; });
+    var allOrderIds = enrichedOrders.map(function (item) { return item.order; });
 
     // Recupera gerarchia parent->children da DB
     var hierarchyRows = [];
@@ -335,16 +338,16 @@ async function _calcCumulativeDurations(plant, enrichedOrders) {
 
     // Mappa parent -> [children]
     var childrenMap = {};
-    hierarchyRows.forEach(function(row) {
+    hierarchyRows.forEach(function (row) {
         if (!childrenMap[row.parent_order]) childrenMap[row.parent_order] = [];
         childrenMap[row.parent_order].push(row.child_order);
     });
 
     // Mappa order -> somma duration proprie routing steps
     var ownDurationMap = {};
-    enrichedOrders.forEach(function(item) {
+    enrichedOrders.forEach(function (item) {
         var sum = 0;
-        (item.routingSteps || []).forEach(function(rs) { sum += (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 100000; });
+        (item.routingSteps || []).forEach(function (rs) { sum += (parseFloat(String(rs.duration || "").replace(/\./g, "")) || 0) / 100000; });
         ownDurationMap[item.order] = sum;
     });
 
@@ -354,7 +357,7 @@ async function _calcCumulativeDurations(plant, enrichedOrders) {
         if (cache[orderId] !== undefined) return cache[orderId];
         var total = ownDurationMap[orderId] || 0;
         var children = childrenMap[orderId] || [];
-        children.forEach(function(childId) {
+        children.forEach(function (childId) {
             total += getCumulativeDuration(childId);
         });
         cache[orderId] = total;
@@ -363,13 +366,13 @@ async function _calcCumulativeDurations(plant, enrichedOrders) {
 
     // Calcola per tutti gli ordini
     var result = {};
-    allOrderIds.forEach(function(orderId) {
+    allOrderIds.forEach(function (orderId) {
         result[orderId] = getCumulativeDuration(orderId);
     });
 
     // Mappa child -> parent (inversa)
     var childToParent = {};
-    hierarchyRows.forEach(function(row) {
+    hierarchyRows.forEach(function (row) {
         childToParent[row.child_order] = row.parent_order;
     });
 
@@ -384,34 +387,37 @@ async function _calcCumulativeDurations(plant, enrichedOrders) {
  * - % completamento = Ore Effettive / Ore Pianificate (cumulative)
  */
 async function getMachineProgressDetails(plant, wbe, orderClassification, cumulativeDurations, childrenMap) {
+
     var parentColumns = [
-        { key: "type",                     label: "Type",            width: "120px" },
-        { key: "order",                    label: "Order",           width: "180px" },
-        { key: "sfc",                      label: "SFC",             width: "180px" },
-        { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
+        { key: "material", label: "Material", width: "200px" },
+        { key: "type", label: "Type", width: "120px" },
+        { key: "order", label: "Order", width: "180px" },
+        { key: "sfc", label: "SFC", width: "180px" },
+        { key: "orderStatus", label: "Status Ordine", width: "120px" },
     ];
     var childColumns = [
-        { key: "operation",    label: "Operation",       width: "140px" },
-        { key: "description",  label: "Description",     width: "200px" },
-        { key: "workCenter",   label: "Work Center",     width: "130px" },
-        { key: "status",       label: "Status",          width: "100px" },
-        { key: "duration",     label: "Ore Pianificate", width: "100px" },
-        { key: "oreMarcate",   label: "Ore Marcate",     width: "110px" },
-        { key: "oreEffettive", label: "Ore Effettive",   width: "110px" },
+        { key: "operation", label: "Operation", width: "140px" },
+        { key: "description", label: "Description", width: "200px" },
+        { key: "workCenter", label: "Work Center", width: "130px" },
+        { key: "status", label: "Status", width: "100px" },
+        { key: "duration", label: "Ore Pianificate", width: "100px" },
+        { key: "oreMarcate", label: "Ore Marcate", width: "110px" },
+        { key: "oreEffettive", label: "Ore Effettive", width: "110px" },
         { key: "percentualeCompletamento", label: "% Completamento Ore", width: "120px" },
         { key: "oreCompletate", label: "Ore Completate", width: "110px" },
         { key: "percentualeCompletamentoSFC", label: "% Completamento SFC", width: "110px" },
     ];
 
-    // Query z_marking_recap in batch per tutti gli ordini
-    var allOrderIds = orderClassification.all.map(function(item) { return item.order; });
+    var allOrderIds = orderClassification.all.map(function (item) { return item.order; });
+
+    // --- Marking recap lookup ---
     var markingLookup = {};
     try {
         var markingRows = await postgresdbService.executeQuery(
             queryDashKPI.getMarkingRecapForDashboardQuery,
             [plant, wbe, allOrderIds]
         );
-        (markingRows || []).forEach(function(row) {
+        (markingRows || []).forEach(function (row) {
             var key = row.mes_order + "_" + row.operation;
             if (!markingLookup[key]) markingLookup[key] = { marked: 0, variance: 0 };
             markingLookup[key].marked += (parseFloat(row.marked_labor) || 0) / 100;
@@ -421,204 +427,187 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
         console.log("Error fetching marking recap for dashboard: " + e.message);
     }
 
-    // Mappe per calcolo cumulativo ore effettive, marcate e varianza
-    var ownOreEffettiveMap = {};
-    var ownOreMarcateMap = {};
-    var ownOreVarianzaMap = {};
-    var ownOreCompletateMap = {};
-    var hasNumericOreMarcateMap = {};
+    // --- Mappa order -> enriched item ---
+    var orderMap = {};
+    orderClassification.all.forEach(function (item) { orderMap[item.order] = item; });
 
-    var data = orderClassification.all.map(function(item) {
-        var type = "Gruppo";
-        if (item.orderType === "MACH") type = "Macchina";
-        else if (item.orderType === "MACR") type = "Macroaggregato";
-        else if (item.orderType === "AGGR") type = "Aggregato";
+    var r2 = function (n) { return Math.round(n * 100) / 100; };
 
-        var ownOreEffettive = 0;
-        var ownOreMarcate = 0;
-        var ownOreVarianza = 0;
-        var ownOreCompletate = 0;
+    /**
+     * Costruisce le operazioni (routing steps) di un ordine come nodi foglia.
+     * Restituisce anche le metriche proprie dell'ordine.
+     */
+    function _buildOperationNodes(item) {
+        var ownOreEffettive = 0, ownOreMarcate = 0, ownOreVarianza = 0, ownOreCompletate = 0;
         var hasNumericOreMarcate = false;
 
-        var children = (item.routingSteps || []).filter(function(step) {
-            return step.workCenter !== "DUMMY_WORKCENTER";
-        }).map(function(step) {
-            var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
-            var oreEffettive = 0;
-            var oreMarcate = "";
-            var oreVarianza = "";
+        var opNodes = (item.routingSteps || [])
+            .filter(function (step) { return step.workCenter !== "DUMMY_WORKCENTER"; })
+            .map(function (step) {
+                var dur = (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
+                var oreEffettive = 0, oreMarcate = "", oreVarianza = "";
 
-            if (step.workCenter && step.workCenter.startsWith("F_")) {
-                // Workcenter F_: ore effettive in base a status, ore marcate e varianza sempre vuote
-                if (step.status === "Done") {
-                    oreEffettive = dur;
+                if (step.workCenter && step.workCenter.startsWith("F_")) {
+                    oreEffettive = step.status === "Done" ? dur : 0;
                 } else {
-                    oreEffettive = 0;
+                    var key = item.order + "_" + step.operation;
+                    var lookup = markingLookup[key] || { marked: 0, variance: 0 };
+                    oreEffettive = lookup.marked;
+                    oreMarcate = lookup.marked;
+                    oreVarianza = lookup.variance;
                 }
-                oreMarcate = "";
-                oreVarianza = "";
-            } else {
-                // Altri workcenter: leggi da z_marking_recap
-                var key = item.order + "_" + step.operation;
-                var lookup = markingLookup[key] || { marked: 0, variance: 0 };
-                oreEffettive = lookup.marked;
-                oreMarcate = lookup.marked;
-                oreVarianza = lookup.variance;
-            }
 
-            ownOreEffettive += (typeof oreEffettive === "number" ? oreEffettive : 0);
-            ownOreMarcate += (typeof oreMarcate === "number" ? oreMarcate : 0);
-            ownOreVarianza += (typeof oreVarianza === "number" ? oreVarianza : 0);
-            if (typeof oreMarcate === "number") hasNumericOreMarcate = true;
-            ownOreCompletate += (step.status === "Done" ? dur : 0);
+                ownOreEffettive += (typeof oreEffettive === "number" ? oreEffettive : 0);
+                ownOreMarcate += (typeof oreMarcate === "number" ? oreMarcate : 0);
+                ownOreVarianza += (typeof oreVarianza === "number" ? oreVarianza : 0);
+                if (typeof oreMarcate === "number") hasNumericOreMarcate = true;
+                ownOreCompletate += step.status === "Done" ? dur : 0;
 
-            return {
-                operation: step.operation,
-                description: step.description,
-                workCenter: step.workCenter,
-                status: step.status,
-                duration: dur,
-                oreCompletate: step.status === "Done" ? dur : 0,
-                oreEffettive: oreEffettive,
-                oreMarcate: oreMarcate,
-                oreVarianza: oreVarianza,
-                percentualeCompletamento: dur > 0 ? ((typeof oreEffettive === "number" ? oreEffettive : 0) / dur * 100).toFixed(2).replace(".", ",") + "%" : "0,00%"
-            };
-        });
-
-        ownOreEffettiveMap[item.order] = ownOreEffettive;
-        ownOreMarcateMap[item.order] = ownOreMarcate;
-        ownOreVarianzaMap[item.order] = ownOreVarianza;
-        ownOreCompletateMap[item.order] = ownOreCompletate;
-        hasNumericOreMarcateMap[item.order] = hasNumericOreMarcate;
+                return {
+                    _isOperation: true,   // flag per distinguere nodi operazione da nodi ordine
+                    operation: step.operation,
+                    description: step.description,
+                    workCenter: step.workCenter,
+                    status: step.status,
+                    duration: dur,
+                    oreCompletate: step.status === "Done" ? dur : 0,
+                    oreEffettive: oreEffettive,
+                    oreMarcate: oreMarcate,
+                    oreVarianza: oreVarianza,
+                    percentualeCompletamento:
+                        dur > 0
+                            ? ((typeof oreEffettive === "number" ? oreEffettive : 0) / dur * 100)
+                                .toFixed(2).replace(".", ",") + "%"
+                            : "0,00%"
+                };
+            });
 
         return {
-            type: type,
+            opNodes: opNodes,
+            ownOreEffettive: ownOreEffettive,
+            ownOreMarcate: ownOreMarcate,
+            ownOreVarianza: ownOreVarianza,
+            ownOreCompletate: ownOreCompletate,
+            hasNumericOreMarcate: hasNumericOreMarcate
+        };
+    }
+
+    /**
+     * Costruisce ricorsivamente il nodo ordine.
+     * I children del nodo sono: [operazioni proprie] + [nodi ordine figlio (ricorsivi)]
+     */
+    function _buildOrderNode(orderId) {
+        var item = orderMap[orderId];
+        if (!item) return null;
+
+        var childOrderIds = (childrenMap[orderId] || []).filter(function (cid) { return !!orderMap[cid]; });
+
+        // Se questo ordine è nascosto (parentAssembly = X), non costruisce un nodo per sé:
+        // restituisce direttamente i nodi dei suoi figli (che verranno "assorbiti" dal chiamante)
+        if (item.parentAssembly === "X") {
+            // Ritorna un nodo segnaposto con solo i children espansi
+            var grandchildNodes = [];
+            childOrderIds.forEach(function (cid) {
+                var childNode = _buildOrderNode(cid);
+                if (childNode) {
+                    if (childNode._isHidden) {
+                        // Anche il figlio era nascosto: porta su i suoi children
+                        grandchildNodes = grandchildNodes.concat(childNode.children || []);
+                    } else {
+                        grandchildNodes.push(childNode);
+                    }
+                }
+            });
+            return { _isHidden: true, order: orderId, children: grandchildNodes };
+        }
+
+        var ops = _buildOperationNodes(item);
+        var childOrderNodes = [];
+        childOrderIds.forEach(function (cid) {
+            var childNode = _buildOrderNode(cid);
+            if (!childNode) return;
+            if (childNode._isHidden) {
+                // Figlio nascosto: porta su i suoi children direttamente
+                childOrderNodes = childOrderNodes.concat(childNode.children || []);
+            } else {
+                childOrderNodes.push(childNode);
+            }
+        });
+
+        var cumOreEffettive = ops.ownOreEffettive;
+        var cumOreMarcate = ops.ownOreMarcate;
+        var cumOreVarianza = ops.ownOreVarianza;
+        var cumOreCompletate = ops.ownOreCompletate;
+        var cumDuration = cumulativeDurations[orderId] || 0;
+        var hasMarc = ops.hasNumericOreMarcate;
+
+        childOrderNodes.forEach(function (child) {
+            if (child._isOperation) return; // le operazioni non contribuiscono qui, già conteggiate
+            cumOreEffettive += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
+            cumOreMarcate += (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
+            cumOreVarianza += (typeof child.oreVarianza === "number" ? child.oreVarianza : 0);
+            cumOreCompletate += (typeof child.oreCompletate === "number" ? child.oreCompletate : 0);
+            if (typeof child.oreMarcate === "number") hasMarc = true;
+        });
+
+        var children = ops.opNodes.concat(childOrderNodes);
+
+        var pctOre = cumDuration > 0
+            ? (cumOreEffettive / cumDuration * 100).toFixed(2).replace(".", ",") + "%"
+            : "0,00%";
+        var pctSFC = cumDuration > 0
+            ? (cumOreCompletate / cumDuration * 100).toFixed(2).replace(".", ",") + "%"
+            : "0,00%";
+
+        return {
+            _isOperation: false,
+            type: item.orderType,
             order: item.order,
             sfc: item.sfc,
             material: item.material,
             orderStatus: item.orderStatus || "",
-            percentualeCompletamento: "0,00%",
-            percentualeCompletamentoSFC: "0,00%",
-            duration: Math.round((cumulativeDurations[item.order] || 0) * 100) / 100,
-            oreCompletate: 0,
-            oreEffettive: 0,
-            oreMarcate: 0,
-            oreVarianza: 0,
+            duration: r2(cumDuration),
+            oreCompletate: r2(cumOreCompletate),
+            oreEffettive: r2(cumOreEffettive),
+            oreMarcate: hasMarc ? r2(cumOreMarcate) : "",
+            oreVarianza: r2(cumOreVarianza),
+            percentualeCompletamento: pctOre,
+            percentualeCompletamentoSFC: pctSFC,
             children: children
         };
+    }
+
+    // --- Individua gli ordini radice (non hanno un parent nella childrenMap) ---
+    var childSet = new Set();
+    Object.keys(childrenMap).forEach(function (parentId) {
+        (childrenMap[parentId] || []).forEach(function (cid) { childSet.add(cid); });
     });
 
-    // Calcolo cumulativo ore effettive (proprie + discendenti)
-    var cacheEff = {};
-    function getCumulativeOreEffettive(orderId) {
-        if (cacheEff[orderId] !== undefined) return cacheEff[orderId];
-        var total = ownOreEffettiveMap[orderId] || 0;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
-            total += getCumulativeOreEffettive(childId);
-        });
-        cacheEff[orderId] = total;
-        return total;
-    }
+    // Radici = ordini presenti nell'orderMap ma NON figli di nessuno
+    var rootOrderIds = allOrderIds.filter(function (id) { return !childSet.has(id); });
 
-    // Calcolo cumulativo ore marcate (proprie + discendenti)
-    var cacheMarc = {};
-    function getCumulativeOreMarcate(orderId) {
-        if (cacheMarc[orderId] !== undefined) return cacheMarc[orderId];
-        var total = ownOreMarcateMap[orderId] || 0;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
-            total += getCumulativeOreMarcate(childId);
-        });
-        cacheMarc[orderId] = total;
-        return total;
-    }
-
-    // Verifica se un ordine o i suoi discendenti hanno almeno un figlio con ore marcate numeriche
-    var cacheHasMarc = {};
-    function hasCumulativeNumericOreMarcate(orderId) {
-        if (cacheHasMarc[orderId] !== undefined) return cacheHasMarc[orderId];
-        var result = hasNumericOreMarcateMap[orderId] || false;
-        if (!result) {
-            var chl = (childrenMap || {})[orderId] || [];
-            for (var i = 0; i < chl.length; i++) {
-                if (hasCumulativeNumericOreMarcate(chl[i])) { result = true; break; }
-            }
+    // Costruisci l'albero per ogni radice
+    var data = rootOrderIds.map(_buildOrderNode).filter(Boolean).reduce(function(acc, node) {
+        if (node._isHidden) {
+            return acc.concat(node.children || []);
         }
-        cacheHasMarc[orderId] = result;
-        return result;
-    }
+        if (node.children && node.children.length > 0) acc.push(node);
+        return acc;
+    }, []);
 
-    // Calcolo cumulativo ore varianza (proprie + discendenti)
-    var cacheVar = {};
-    function getCumulativeOreVarianza(orderId) {
-        if (cacheVar[orderId] !== undefined) return cacheVar[orderId];
-        var total = ownOreVarianzaMap[orderId] || 0;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
-            total += getCumulativeOreVarianza(childId);
-        });
-        cacheVar[orderId] = total;
-        return total;
-    }
-
-    // Calcolo cumulativo ore completate (proprie + discendenti)
-    var cacheCompl = {};
-    function getCumulativeOreCompletate(orderId) {
-        if (cacheCompl[orderId] !== undefined) return cacheCompl[orderId];
-        var total = ownOreCompletateMap[orderId] || 0;
-        var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
-            total += getCumulativeOreCompletate(childId);
-        });
-        cacheCompl[orderId] = total;
-        return total;
-    }
-
-    var r2 = function(n) { return Math.round(n * 100) / 100; };
-
-    // Imposta valori cumulativi e ricalcola % completamento
-    data.forEach(function(row) {
-        var cumOreEff = r2(getCumulativeOreEffettive(row.order));
-        var cumOreMarcate = r2(getCumulativeOreMarcate(row.order));
-        var cumOreVarianza = r2(getCumulativeOreVarianza(row.order));
-        var cumOreCompletate = r2(getCumulativeOreCompletate(row.order));
-        var cumDuration = r2(cumulativeDurations[row.order] || 0);
-
-        row.oreCompletate = cumOreCompletate;
-        row.oreEffettive = cumOreEff;
-        row.oreMarcate = hasCumulativeNumericOreMarcate(row.order) ? cumOreMarcate : "";
-        row.oreVarianza = cumOreVarianza;
-
-        // % completamento = Ore Effettive / Ore Pianificate
-        if (cumDuration > 0) {
-            row.percentualeCompletamento = (cumOreEff / cumDuration * 100).toFixed(2).replace(".", ",") + "%";
-            row.percentualeCompletamentoSFC = (cumOreCompletate / cumDuration * 100).toFixed(2).replace(".", ",") + "%";
-        } else {
-            row.percentualeCompletamento = "0,00%";
-            row.percentualeCompletamentoSFC = "0,00%";
-        }
-    });
-
-    // Rimuovi ordini senza operazioni residue dopo il filtro DUMMY_WORKCENTER
-    data = data.filter(function(row) {
-        return row.children && row.children.length > 0;
-    });
-
-    // Calcola summary "Visione per tipologia" dai conteggi per ORDER_TYPE e status (esclusi ordini con sole DUMMY_OPERATION)
+    // --- Summary "Visione per tipologia" (invariata) ---
     var summary = { macroaggregati: 0, macroaggregatiCompletati: 0, aggregati: 0, aggregatiCompletati: 0, gruppi: 0, gruppiCompletati: 0 };
-    orderClassification.macroaggregati.forEach(function(item) {
+    orderClassification.macroaggregati.forEach(function (item) {
         if (item.totalOps === 0) return;
         summary.macroaggregati++;
-        if (item.orderStatus === "Completed" ) summary.macroaggregatiCompletati++;
+        if (item.orderStatus === "Completed") summary.macroaggregatiCompletati++;
     });
-    orderClassification.aggregati.forEach(function(item) {
+    orderClassification.aggregati.forEach(function (item) {
         if (item.totalOps === 0) return;
         summary.aggregati++;
-        if (item.orderStatus === "Completed" ) summary.aggregatiCompletati++;
+        if (item.orderStatus === "Completed") summary.aggregatiCompletati++;
     });
-    orderClassification.gruppi.forEach(function(item) {
+    orderClassification.gruppi.forEach(function (item) {
         if (item.totalOps === 0) return;
         summary.gruppi++;
         if (item.orderStatus === "Completed") summary.gruppiCompletati++;
@@ -631,22 +620,25 @@ async function getMachineProgressDetails(plant, wbe, orderClassification, cumula
  * 2.2.2 SFC Progress Details per livello (gruppi/aggr/macr) dalla classificazione
  */
 function _getSFCProgressFromClassification(orderClassification, level, childToParent, machineDetails, operationLogsLookup) {
-    // Mappa order -> orderType per risalire la gerarchia
     var orderTypeMap = {};
-    orderClassification.all.forEach(function(item) { orderTypeMap[item.order] = item.orderType; });
+    var orderMaterialMap = {};
+    orderClassification.all.forEach(function (item) {
+        orderTypeMap[item.order] = item.orderType;
+        orderMaterialMap[item.order] = item.material || "";
+    });
 
-    // Build ore effettive lookup from machineDetails: order_operation -> oreEffettive
     var oreEffettiveLookup = {};
     if (machineDetails && machineDetails.data) {
-        machineDetails.data.forEach(function(row) {
-            (row.children || []).forEach(function(child) {
-                var key = row.order + "_" + child.operation;
-                oreEffettiveLookup[key] = child.oreEffettive;
+        machineDetails.data.forEach(function (row) {
+            (row.children || []).forEach(function (child) {
+                if (child._isOperation) {
+                    var key = row.order + "_" + child.operation;
+                    oreEffettiveLookup[key] = child.oreEffettive;
+                }
             });
         });
     }
 
-    // Risale la catena parent per trovare Aggregato, Macroaggregato, Macchina
     function _getAncestors(orderId) {
         var ancestors = { aggregato: "", macroaggregato: "", macchina: "" };
         var current = orderId;
@@ -664,34 +656,34 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
     }
 
     var columns = [
-        { key: "macchina",        label: "Macchina",        width: "180px" },
-        { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
-        { key: "aggregato",       label: "Aggregato",       width: "180px" },
-        { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
-        { key: "sfc",    label: "SFC",     width: "220px" },
-        { key: "order",  label: "Order",   width: "180px" }, // todo: da togliere
-        { key: "orderStatus",     label: "Status Ordine",   width: "120px" },
-        { key: "totalOps",      label: "Tot. Operazioni", width: "120px" },
-        { key: "completedOps",  label: "Op. Completate",  width: "120px" },
+        { key: "macchina", label: "Macchina", width: "180px" },
+        { key: "macroaggregato", label: "Macroaggregato", width: "180px" },
+        { key: "aggregato", label: "Aggregato", width: "180px" },
+        { key: "gruppo", label: "Gruppo", width: "180px" },
+        { key: "sfc", label: "SFC", width: "220px" },
+        { key: "order", label: "Order", width: "180px" },
+        { key: "orderStatus", label: "Status Ordine", width: "120px" },
+        { key: "totalOps", label: "Tot. Operazioni", width: "120px" },
+        { key: "completedOps", label: "Op. Completate", width: "120px" },
         { key: "percentualeCompletamento", label: "% completamento", width: "120px" }
     ];
 
     var opsColumns = [
-        { key: "macchina",        label: "Macchina",        width: "180px" },
-        { key: "macroaggregato",  label: "Macroaggregato",  width: "180px" },
-        { key: "aggregato",       label: "Aggregato",       width: "180px" },
-        { key: "gruppo",       label: "Gruppo",       width: "180px" }, 
-        { key: "order",       label: "Order",       width: "180px" },
-        { key: "operation",   label: "Operation",   width: "140px" },
-        { key: "description", label: "Description",  width: "200px" },
-        { key: "workCenter",  label: "Work Center",  width: "130px" },
-        { key: "status",      label: "Status",       width: "100px" },
-        { key: "duration",    label: "Ore Pianificate",     width: "100px" },
-        { key: "oreEffettive",  label: "Ore Effettive",       width: "110px" },
-        { key: "startDate",   label: "Data Start",          width: "160px" },
-        { key: "startUser",   label: "Utente Start",        width: "130px" },
-        { key: "completeDate", label: "Data Complete",       width: "160px" },
-        { key: "completeUser", label: "Utente Complete",    width: "130px" },
+        { key: "macchina", label: "Macchina", width: "180px" },
+        { key: "macroaggregato", label: "Macroaggregato", width: "180px" },
+        { key: "aggregato", label: "Aggregato", width: "180px" },
+        { key: "gruppo", label: "Gruppo", width: "180px" },
+        { key: "order", label: "Order", width: "180px" },
+        { key: "operation", label: "Operation", width: "140px" },
+        { key: "description", label: "Description", width: "200px" },
+        { key: "workCenter", label: "Work Center", width: "130px" },
+        { key: "status", label: "Status", width: "100px" },
+        { key: "duration", label: "Ore Pianificate", width: "100px" },
+        { key: "oreEffettive", label: "Ore Effettive", width: "110px" },
+        { key: "startDate", label: "Data Start", width: "160px" },
+        { key: "startUser", label: "Utente Start", width: "130px" },
+        { key: "completeDate", label: "Data Complete", width: "160px" },
+        { key: "completeUser", label: "Utente Complete", width: "130px" },
     ];
 
     var dataMap = {
@@ -703,17 +695,16 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
 
     var sLevel = level || "gruppi";
     var items = dataMap[sLevel] || [];
-    var data = items.filter(function(item) {
-        // Escludi ordini con tutte operazioni DUMMY_OPERATION (totalOps === 0 dopo il filtro)
+
+    var data = items.filter(function (item) {
         return item.totalOps > 0;
-    }).map(function(item) {
+    }).map(function (item) {
         var anc = _getAncestors(item.order);
         var ot = item.orderType || "";
-        // Se l'ordine stesso è di un certo tipo, valorizza la colonna corrispondente con il proprio ordine
-        var macchina = ot === "MACH" ? item.order : anc.macchina;
-        var macroaggregato = ot === "MACR" ? item.order : anc.macroaggregato;
-        var aggregato = ot === "AGGR" ? item.order : anc.aggregato;
-        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.order : "";
+        var macchina = ot === "MACH" ? item.material : orderMaterialMap[anc.macchina] || "";
+        var macroaggregato = ot === "MACR" ? item.material : orderMaterialMap[anc.macroaggregato] || "";
+        var aggregato = ot === "AGGR" ? item.material : orderMaterialMap[anc.aggregato] || "";
+        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.material : "";
         return {
             order: item.order,
             sfc: item.sfc,
@@ -729,18 +720,17 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         };
     });
 
-    // Flat list di tutte le operazioni di tutti gli ordini del livello
     var allOps = [];
-    items.forEach(function(item) {
+    items.forEach(function (item) {
         var anc = _getAncestors(item.order);
         var ot = item.orderType || "";
-        var macchina = ot === "MACH" ? item.order : anc.macchina;
-        var macroaggregato = ot === "MACR" ? item.order : anc.macroaggregato;
-        var aggregato = ot === "AGGR" ? item.order : anc.aggregato;
-        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.order : "";
-        (item.routingSteps || []).filter(function(step) {
+        var macchina = ot === "MACH" ? item.material : orderMaterialMap[anc.macchina] || "";
+        var macroaggregato = ot === "MACR" ? item.material : orderMaterialMap[anc.macroaggregato] || "";
+        var aggregato = ot === "AGGR" ? item.material : orderMaterialMap[anc.aggregato] || "";
+        var gruppo = (ot !== "MACH" && ot !== "MACR" && ot !== "AGGR") ? item.material : "";
+        (item.routingSteps || []).filter(function (step) {
             return step.operation !== "DUMMY_OPERATION";
-        }).forEach(function(step) {
+        }).forEach(function (step) {
             var lookupKey = item.order + "_" + step.operation;
             var oreEffettive = oreEffettiveLookup[lookupKey];
             var logEntry = (operationLogsLookup || {})[lookupKey];
@@ -767,12 +757,7 @@ function _getSFCProgressFromClassification(orderClassification, level, childToPa
         });
     });
 
-    return {
-        columns: columns,
-        data: data,
-        opsColumns: opsColumns,
-        opsData: allOps
-    };
+    return { columns: columns, data: data, opsColumns: opsColumns, opsData: allOps };
 }
 
 /**
@@ -788,24 +773,26 @@ function getSFCProgressDetails(plant, project, wbe, sfc, level) {
  * GD = workcenter che NON inizia con F_, Fornitori = workcenter che inizia con F_
  */
 function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
+
     var parentColumns = [
-        { key: "type",                     label: "Type",            width: "120px" },
-        { key: "order",                    label: "Order",           width: "180px" },
-        { key: "sfc",    label: "SFC",     width: "220px" },
-        { key: "orderStatus",              label: "Status Ordine",   width: "120px" },
+        { key: "material", label: "Material", width: "200px" },
+        { key: "type", label: "Type", width: "120px" },
+        { key: "order", label: "Order", width: "180px" },
+        { key: "sfc", label: "SFC", width: "220px" },
+        { key: "orderStatus", label: "Status Ordine", width: "120px" },
     ];
     var childColumns = [
-        { key: "operation",    label: "Operation",       width: "140px" },
-        { key: "description",  label: "Description",     width: "200px" },
-        { key: "workCenter",   label: "Work Center",     width: "130px" },
-        { key: "status",       label: "Status",          width: "100px" },
+        { key: "operation", label: "Operation", width: "140px" },
+        { key: "description", label: "Description", width: "200px" },
+        { key: "workCenter", label: "Work Center", width: "130px" },
+        { key: "status", label: "Status", width: "100px" },
         { key: "percentualeCompletamento", label: "% Completamento Ore", width: "120px" },
-        { key: "duration",     label: "Ore pianificate", width: "100px" },
-        { key: "oreEffettive", label: "Ore effettive",   width: "110px" },
-        { key: "oreVarianza",  label: "Ore varianza",    width: "110px" },
-        { key: "timespent",    label: "Time Spent",      width: "110px" },
-        { key: "scostamento",  label: "Scostamento",     width: "110px" },
-        { key: "alert",        label: "",                width: "50px", isIcon: true }
+        { key: "duration", label: "Ore pianificate", width: "100px" },
+        { key: "oreEffettive", label: "Ore effettive", width: "110px" },
+        { key: "oreVarianza", label: "Ore varianza", width: "110px" },
+        { key: "timespent", label: "Time Spent", width: "110px" },
+        { key: "scostamento", label: "Scostamento", width: "110px" },
+        { key: "alert", label: "", width: "50px", isIcon: true }
     ];
 
     var isGD = workcenter === "GD";
@@ -818,8 +805,8 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     var ownOreVarianzaMap = {};
 
     // Filtra children per workcenter e calcola somme proprie
-    var data = machineDetails.data.map(function(row) {
-        var filteredChildren = (row.children || []).filter(function(child) {
+    var data = machineDetails.data.map(function (row) {
+        var filteredChildren = (row.children || []).filter(function (child) {
             if (child.workCenter === "DUMMY_WORKCENTER") return false;
             if (isAll) return true;
             var wc = child.workCenter || "";
@@ -829,7 +816,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
 
         var ownDuration = 0, ownOreEffettive = 0, ownOreMarcate = 0, ownOreVarianza = 0;
         var allChildrenVarianzaEmpty = true;
-        filteredChildren.forEach(function(child) {
+        filteredChildren.forEach(function (child) {
             var dur = (typeof child.duration === "number" ? child.duration : 0);
             var eff = (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
             var marc = (typeof child.oreMarcate === "number" ? child.oreMarcate : 0);
@@ -874,7 +861,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         if (cache[orderId] !== undefined) return cache[orderId];
         var total = ownMap[orderId] || 0;
         var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
+        chl.forEach(function (childId) {
             total += getCumulative(ownMap, childId, cache);
         });
         cache[orderId] = total;
@@ -885,7 +872,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
 
     // Mappa order -> row per check varianza vuota ricorsivo
     var dataByOrder = {};
-    data.forEach(function(row) { dataByOrder[row.order] = row; });
+    data.forEach(function (row) { dataByOrder[row.order] = row; });
 
     // Verifica ricorsiva se tutti i figli (propri e discendenti) hanno varianza vuota
     var cacheAllVarEmpty = {};
@@ -894,17 +881,17 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
         var row = dataByOrder[orderId];
         var result = row ? row._allChildrenVarianzaEmpty : true;
         var chl = (childrenMap || {})[orderId] || [];
-        chl.forEach(function(childId) {
+        chl.forEach(function (childId) {
             if (!isAllVarianzaEmpty(childId)) result = false;
         });
         cacheAllVarEmpty[orderId] = result;
         return result;
     }
 
-    var r2s = function(n) { return Math.round(n * 100) / 100; };
+    var r2s = function (n) { return Math.round(n * 100) / 100; };
 
     // Imposta valori cumulativi e ricalcola % completamento
-    data.forEach(function(row) {
+    data.forEach(function (row) {
         row.duration = r2s(getCumulative(ownDurationMap, row.order, cacheDur));
         row.oreEffettive = r2s(getCumulative(ownOreEffettiveMap, row.order, cacheEff));
         row.oreMarcate = r2s(getCumulative(ownOreMarcateMap, row.order, cacheMarc));
@@ -924,7 +911,7 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
     });
 
     // Rimuovi ordini senza operazioni proprie E senza discendenti con operazioni
-    data = data.filter(function(row) {
+    data = data.filter(function (row) {
         return row.children.length > 0 || row.duration > 0;
     });
 
@@ -939,19 +926,19 @@ function getScostamentoDetails(machineDetails, workcenter, childrenMap) {
  *   - Mancanti scaduti: ordine presente, data di ricezione < oggi
  */
 async function getMancantiDetails(plant, project, orderClassification) {
-    var gruppiOrders = orderClassification.gruppi.map(function(item) { return item.order; });
+    var gruppiOrders = orderClassification.gruppi.map(function (item) { return item.order; });
     if (gruppiOrders.length === 0) {
         return { columns: [], data: [], totalMissing: 0, gruppiCount: 0 };
     }
 
     var columns = [
-        { key: "order",                label: "Order",                width: "150px" },
-        { key: "missingComponent",     label: "Componente Mancante",  width: "150px" },
-        { key: "componentDescription", label: "Descrizione",          width: "220px" },
-        { key: "missingQuantity",      label: "Qty Mancante",         width: "110px" },
-        { key: "coverElement",         label: "Cover Element",        width: "150px" },
-        { key: "dataRicezione",        label: "Data Ricezione",       width: "120px" },
-        { key: "stato",                label: "Stato",                width: "120px" }
+        { key: "order", label: "Order", width: "150px" },
+        { key: "missingComponent", label: "Componente Mancante", width: "150px" },
+        { key: "componentDescription", label: "Descrizione", width: "220px" },
+        { key: "missingQuantity", label: "Qty Mancante", width: "110px" },
+        { key: "coverElement", label: "Cover Element", width: "150px" },
+        { key: "dataRicezione", label: "Data Ricezione", width: "120px" },
+        { key: "stato", label: "Stato", width: "120px" }
     ];
 
     var rows = await postgresdbService.executeQuery(queryDashKPI.getMancantiForDashboardQuery, [plant, project, gruppiOrders]);
@@ -960,7 +947,7 @@ async function getMancantiDetails(plant, project, orderClassification) {
 
     // Raggruppa i record per ordine per classificare a livello gruppo
     var orderMap = {}; // order -> array of rows
-    rows.forEach(function(r) {
+    rows.forEach(function (r) {
         if (!orderMap[r.order]) orderMap[r.order] = [];
         orderMap[r.order].push(r);
     });
@@ -968,13 +955,13 @@ async function getMancantiDetails(plant, project, orderClassification) {
     var data = [];
     var totalMissing = 0;
 
-    gruppiOrders.forEach(function(ord) {
+    gruppiOrders.forEach(function (ord) {
         var recs = orderMap[ord];
         if (!recs || recs.length === 0) {
             // Ordine senza mancanti - non aggiungere righe al dettaglio
             return;
         }
-        recs.forEach(function(r) {
+        recs.forEach(function (r) {
             var receiptDate = _getReceiptDate(r);
             var stato = "Con mancanti";
             if (receiptDate && receiptDate < today) {
@@ -1013,7 +1000,7 @@ async function getMancantiDetails(plant, project, orderClassification) {
  */
 async function _getTotalComponentQty(plant, orders) {
     try {
-        var safeOrders = (orders || []).filter(function(o) { return !!o; });
+        var safeOrders = (orders || []).filter(function (o) { return !!o; });
         if (safeOrders.length === 0) return 0;
 
         function _chunkArray(arr, size) {
@@ -1059,7 +1046,7 @@ async function _getTotalComponentQty(plant, orders) {
             }
 
             var keys = Object.keys(row);
-            var aliasKey = keys.find(function(k) {
+            var aliasKey = keys.find(function (k) {
                 return String(k).toLowerCase() === "total_component_qty";
             });
             if (aliasKey) {
@@ -1080,7 +1067,7 @@ async function _getTotalComponentQty(plant, orders) {
         var orderRows = [];
         var orderChunks = _chunkArray(safeOrders, 10);
         for (var c = 0; c < orderChunks.length; c++) {
-            var orderFilter = orderChunks[c].map(function(o) { return "MFG_ORDER eq '" + o + "'"; }).join(" or ");
+            var orderFilter = orderChunks[c].map(function (o) { return "MFG_ORDER eq '" + o + "'"; }).join(" or ");
             var reqOrder = {
                 path: "/mdo/ORDER",
                 query: {
@@ -1100,20 +1087,20 @@ async function _getTotalComponentQty(plant, orders) {
 
         // Raccogli coppie BOM + BOM_VERSION uniche
         var bomSet = {};
-        orderRows.forEach(function(row) {
+        orderRows.forEach(function (row) {
             if (row.BOM && row.BOM_VERSION) {
                 var key = row.BOM + "|" + row.BOM_VERSION;
                 bomSet[key] = { bom: row.BOM, version: row.BOM_VERSION };
             }
         });
-        var bomPairs = Object.keys(bomSet).map(function(k) { return bomSet[k]; });
+        var bomPairs = Object.keys(bomSet).map(function (k) { return bomSet[k]; });
         if (bomPairs.length === 0) return 0;
 
         // Step 2: Query BOM_COMPONENT e somma QUANTITY_TOTAL in JS, sempre a chunk
         var totalComponentQty = 0;
         var bomChunks = _chunkArray(bomPairs, 10);
         for (var b = 0; b < bomChunks.length; b++) {
-            var bomFilter = bomChunks[b].map(function(p) {
+            var bomFilter = bomChunks[b].map(function (p) {
                 return "(BOM eq '" + p.bom + "' and BOM_VERSION eq '" + p.version + "')";
             }).join(" or ");
 
@@ -1132,8 +1119,8 @@ async function _getTotalComponentQty(plant, orders) {
 
             var bomRows = (resBom && resBom.data && resBom.data.value) || [];
             console.log("[DEBUG _getTotalComponentQty] BOM_COMPONENT chunk " + b + " rows:", bomRows.length);
-           
-            bomRows.forEach(function(row) {
+
+            bomRows.forEach(function (row) {
                 totalComponentQty += _normalizeToNumber(row.QUANTITY_PER_BASE);
             });
         }
@@ -1169,18 +1156,18 @@ function _getReceiptDate(row) {
  */
 function getEvasiDetails(orderClassification) {
     var columns = [
-        { key: "order",           label: "Order",           width: "200px" },
-        { key: "unloadPoint",     label: "Unload Point",    width: "200px" },
-        { key: "plannedStartDate",label: "Planned Start",   width: "150px" },
-        { key: "stato",           label: "Stato",           width: "150px" }
+        { key: "order", label: "Order", width: "30%" },
+        { key: "unloadPoint", label: "Unload Point", width: "20%" },
+        { key: "plannedStartDate", label: "Planned Start", width: "25%" },
+        { key: "stato", label: "Stato", width: "25%" }
     ];
 
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
     var data = orderClassification.all
-        .filter(function(item) { return item.unloadPoint != null && item.unloadPoint !== ""; })
-        .map(function(item) {
+        .filter(function (item) { return item.unloadPoint != null && item.unloadPoint !== ""; })
+        .map(function (item) {
             var val = (item.unloadPoint || "").toUpperCase();
             var stato = "Non evaso";
             if (val === "EVASO") {
@@ -1247,7 +1234,7 @@ async function getModificheDetails(plant, project, wbe, sfc, section, material) 
             order: row.order || ""
         };
 
-        var existing = treeData.find(function(item) {
+        var existing = treeData.find(function (item) {
             return item.prog_eco === (row.prog_eco || "") && item.process_id === (row.process_id || "") && item.material === (row.material || "");
         });
 
@@ -1288,24 +1275,24 @@ async function getModificheDetails(plant, project, wbe, sfc, section, material) 
 
     // Colonne parent (livello 1)
     var parentColumns = [
-        { key: "type",                 label: "Type",         width: "70px"  },
-        { key: "prog_eco",             label: "Prog. Number", width: "140px" },
-        { key: "process_id",           label: "Process Id",   width: "100px" },
-        { key: "wbe_element",          label: "WBS Element",  width: "120px" },
-        { key: "material",             label: "Material",     width: "110px" },
-        { key: "material_description", label: "Description",  width: "200px" }
+        { key: "type", label: "Type", width: "70px" },
+        { key: "prog_eco", label: "Prog. Number", width: "140px" },
+        { key: "process_id", label: "Process Id", width: "110px" },
+        { key: "wbe_element", label: "WBS Element", width: "120px" },
+        { key: "material", label: "Material", width: "110px" },
+        { key: "material_description", label: "Description", width: "200px" }
     ];
 
     // Colonne child (livello 2)
     var childColumns = [
-        { key: "child_material",    label: "Child Material",  width: "120px" },
-        { key: "quantity",          label: "Qty",             width: "60px"  },
-        { key: "flux_type",         label: "Flux",            width: "90px"  },
-        { key: "statusDescription", label: "Status Desc.",    width: "120px" },
-        { key: "resolution",        label: "Resolution",      width: "100px" },
-        { key: "note",              label: "Note",            width: "150px" },
-        { key: "sfc",               label: "SFC",             width: "120px" },
-        { key: "order",             label: "Order",           width: "100px" },
+        { key: "child_material", label: "Child Material", width: "120px" },
+        { key: "quantity", label: "Qty", width: "60px" },
+        { key: "flux_type", label: "Flux", width: "90px" },
+        { key: "statusDescription", label: "Status Desc.", width: "120px" },
+        { key: "resolution", label: "Resolution", width: "110px" },
+        { key: "note", label: "Note", width: "150px" },
+        { key: "sfc", label: "SFC", width: "120px" },
+        { key: "order", label: "Order", width: "100px" },
     ];
 
     return { parentColumns: parentColumns, childColumns: childColumns, data: treeData, isTree: true };
@@ -1326,16 +1313,16 @@ async function getVarianzeDetails(plant, order) {
 
     // Calcolo totale ore per percentuali (HCN -> ore: /100)
     var totalOre = 0;
-    data.forEach(function(row) { totalOre += (parseFloat(row.variance_labor) || 0) / 100; });
+    data.forEach(function (row) { totalOre += (parseFloat(row.variance_labor) || 0) / 100; });
 
     // Details Tipologia: reason_for_variance, description, variance_labor, percentuale
     var tipologiaColumns = [
-        { key: "reason_for_variance", label: "Varianza",      width: "120px" },
-        { key: "description",         label: "Descrizione",   width: "250px" },
-        { key: "variance_labor",      label: "Ore Varianza",  width: "120px" },
-        { key: "percentuale",         label: "Percentuale",   width: "120px" }
+        { key: "reason_for_variance", label: "Varianza", width: "25%" },
+        { key: "description", label: "Descrizione", width: "45%" },
+        { key: "variance_labor", label: "Ore Varianza", width: "15%" },
+        { key: "percentuale", label: "Percentuale", width: "15%" }
     ];
-    var tipologiaData = data.map(function(row) {
+    var tipologiaData = data.map(function (row) {
         var ore = (parseFloat(row.variance_labor) || 0) / 100;
         var pct = totalOre > 0 ? (ore / totalOre * 100).toFixed(1) : "0";
         return {
@@ -1348,21 +1335,21 @@ async function getVarianzeDetails(plant, order) {
 
     // Details Responsabilità: attribution, ore sommate, percentuale
     var attrGroups = {};
-    data.forEach(function(row) {
+    data.forEach(function (row) {
         var attr = row.attribution || "Non attribuita";
         var ore = (parseFloat(row.variance_labor) || 0) / 100;
         attrGroups[attr] = (attrGroups[attr] || 0) + ore;
     });
     var responsabilitaColumns = [
-        { key: "attribution",    label: "Responsabilità", width: "250px" },
-        { key: "variance_labor", label: "Ore Varianza",   width: "120px" },
-        { key: "percentuale",    label: "Percentuale",    width: "120px" }
+        { key: "attribution", label: "Responsabilità", width: "50%" },
+        { key: "variance_labor", label: "Ore Varianza", width: "25%" },
+        { key: "percentuale", label: "Percentuale", width: "25%" }
     ];
-    var responsabilitaData = Object.keys(attrGroups).map(function(key) {
+    var responsabilitaData = Object.keys(attrGroups).map(function (key) {
         var ore = attrGroups[key];
         var pct = totalOre > 0 ? (ore / totalOre * 100).toFixed(1) : "0";
         return { attribution: key, variance_labor: ore, percentuale: pct + "%" };
-    }).sort(function(a, b) { return b.variance_labor - a.variance_labor; });
+    }).sort(function (a, b) { return b.variance_labor - a.variance_labor; });
 
     return {
         data: data,
@@ -1385,8 +1372,8 @@ async function getActualDate(plant, wbe, machSection) {
 
 async function _getNcPresenza(plant, orderClassification) {
     // Escludi ordini con sole operazioni DUMMY (totalOps === 0)
-    var validOrders = orderClassification.all.filter(function(item) { return item.totalOps > 0; });
-    var allOrders = validOrders.map(function(item) { return item.order; });
+    var validOrders = orderClassification.all.filter(function (item) { return item.totalOps > 0; });
+    var allOrders = validOrders.map(function (item) { return item.order; });
     try {
         var rows = await postgresdbService.executeQuery(queryDashKPI.getNcPresenzaQuery, [plant, allOrders]);
         var ncOpen = 0, ncClosed = 0, ncBloccanti = 0;
@@ -1411,8 +1398,8 @@ async function _getNcPresenza(plant, orderClassification) {
     return { ncOpen: 0, ncClosed: 0, ncBloccanti: 0, ordiniConNC: "0%" };
 }
 
-module.exports = { 
-    getDashboardKPI, 
+module.exports = {
+    getDashboardKPI,
     getDataFilterDashboardKPI,
     getActualDate,
     getMachineProgressDetails,
@@ -1437,7 +1424,7 @@ function _calcGruppiLevelChart(aData) {
         { label: "SFC Da Iniziare", value: 0 }
     ];
     var completati = 0, iniziati = 0, daIniziare = 0;
-    aData.forEach(function(row) {
+    aData.forEach(function (row) {
         var status = row.orderStatus || "Not Started";
         if (status === "Completed") completati++;
         else if (status === "Started") iniziati++;
@@ -1449,15 +1436,15 @@ function _calcGruppiLevelChart(aData) {
 
     // Arrotondamento che garantisce: somma = 100% e valori > 0 non diventano 0%
     var raw = [
-        { key: "completati",  pct: pctCompletati },
-        { key: "iniziati",    pct: pctIniziati },
-        { key: "daIniziare",  pct: pctDaIniziare }
+        { key: "completati", pct: pctCompletati },
+        { key: "iniziati", pct: pctIniziati },
+        { key: "daIniziare", pct: pctDaIniziare }
     ];
 
     // Step 1: se un valore è > 0 ma < 1, forza a 1 (non può diventare 0%)
     var vals = {};
     var locked = {};
-    raw.forEach(function(item) {
+    raw.forEach(function (item) {
         if (item.pct > 0 && item.pct < 1) {
             vals[item.key] = 1;
             locked[item.key] = true;
@@ -1469,16 +1456,16 @@ function _calcGruppiLevelChart(aData) {
 
     // Step 2: distribuisci il resto (100 - somma) ai non-locked con decimale più alto
     var remainder = 100 - vals.completati - vals.iniziati - vals.daIniziare;
-    var unlocked = raw.filter(function(item) { return !locked[item.key]; })
-        .map(function(item) { return { key: item.key, decimal: item.pct - Math.floor(item.pct) }; })
-        .sort(function(a, b) { return b.decimal - a.decimal; });
+    var unlocked = raw.filter(function (item) { return !locked[item.key]; })
+        .map(function (item) { return { key: item.key, decimal: item.pct - Math.floor(item.pct) }; })
+        .sort(function (a, b) { return b.decimal - a.decimal; });
     for (var r = 0; r < remainder && r < unlocked.length; r++) {
         vals[unlocked[r].key]++;
     }
 
     return [
-        { label: "SFC Completati",  value: vals.completati },
-        { label: "SFC Iniziati",    value: vals.iniziati },
+        { label: "SFC Completati", value: vals.completati },
+        { label: "SFC Iniziati", value: vals.iniziati },
         { label: "SFC Da Iniziare", value: vals.daIniziare }
     ];
 }
@@ -1489,8 +1476,8 @@ function _calcGruppiLevelChart(aData) {
  */
 function _calcMachineProgressChart(aData) {
     var durCompletati = 0, durIniziati = 0, durDaIniziare = 0;
-    aData.forEach(function(row) {
-        (row.children || []).forEach(function(step) {
+    aData.forEach(function (row) {
+        (row.children || []).forEach(function (step) {
             var dur = typeof step.duration === "number" ? step.duration : (parseFloat(String(step.duration || "").replace(/\./g, "")) || 0) / 100000;
             if (step.status === "Done") durCompletati += dur;
             else if (step.status === "In Work") durIniziati += dur;
@@ -1498,8 +1485,8 @@ function _calcMachineProgressChart(aData) {
         });
     });
     return [
-        { label: "Ore completate",  value: durCompletati },
-        { label: "Ore iniziate",    value: durIniziati },
+        { label: "Ore completate", value: durCompletati },
+        { label: "Ore iniziate", value: durIniziati },
         { label: "Ore da iniziare", value: durDaIniziare }
     ];
 }
@@ -1512,8 +1499,8 @@ function _calcScostamentoChart(aData, workcenterType) {
     var pianificato = 0, secondValue = 0, varianza = 0;
     var isFornitori = workcenterType === "Fornitori";
     var isAll = workcenterType === "All";
-    aData.forEach(function(row) {
-        (row.children || []).forEach(function(child) {
+    aData.forEach(function (row) {
+        (row.children || []).forEach(function (child) {
             pianificato += (typeof child.duration === "number" ? child.duration : 0);
             if (isAll) {
                 secondValue += (typeof child.oreEffettive === "number" ? child.oreEffettive : 0);
@@ -1569,7 +1556,7 @@ function _calcMancantiChart(mancantiDetails) {
     // Conta ordini distinti con almeno un record
     var ordersWithMancanti = {};
     var ordersScaduti = {};
-    data.forEach(function(row) {
+    data.forEach(function (row) {
         ordersWithMancanti[row.order] = true;
         if (row.stato === "Mancanti scaduti") {
             ordersScaduti[row.order] = true;
@@ -1583,9 +1570,9 @@ function _calcMancantiChart(mancantiDetails) {
     var countNoMancanti = gruppiCount - countWithMancanti;
 
     return [
-        { label: "Con mancanti",     value: countConMancanti },
+        { label: "Con mancanti", value: countConMancanti },
         { label: "Mancanti scaduti", value: countScaduti },
-        { label: "No mancanti",      value: countNoMancanti }
+        { label: "No mancanti", value: countNoMancanti }
     ];
 }
 
@@ -1594,16 +1581,16 @@ function _calcMancantiChart(mancantiDetails) {
  */
 function _calcEvasiChart(aData) {
     var evasi = 0, nonEvasi = 0, nonEvasiScaduti = 0;
-    aData.forEach(function(row) {
+    aData.forEach(function (row) {
         var stato = row.stato || "";
         if (stato === "Evaso") evasi++;
         else if (stato === "Non evaso scaduto") nonEvasiScaduti++;
         else nonEvasi++;
     });
     return [
-        { label: "Evaso",              value: evasi },
-        { label: "Non evaso",           value: nonEvasi },
-        { label: "Non evaso scaduto",   value: nonEvasiScaduti }
+        { label: "Evaso", value: evasi },
+        { label: "Non evaso", value: nonEvasi },
+        { label: "Non evaso scaduto", value: nonEvasiScaduti }
     ];
 }
 
@@ -1612,9 +1599,9 @@ function _calcEvasiChart(aData) {
  */
 function _calcModificheTotals(aData) {
     var open = 0, closed = 0;
-    aData.forEach(function(parent) {
+    aData.forEach(function (parent) {
         if (!parent.children) return;
-        parent.children.forEach(function(child) {
+        parent.children.forEach(function (child) {
             var status = String(child.status != null ? child.status : "");
             if (status === "1") { closed++; } else { open++; }
         });
@@ -1630,14 +1617,14 @@ function _calcModificheTotals(aData) {
 function _calcModificheChart(aData, sStatusFilter) {
     var groups = { "MT": 0, "MK": 0, "MA": 0 };
     // aData è un array tree: ogni elemento ha .type e .children[]
-    aData.forEach(function(parent) {
+    aData.forEach(function (parent) {
         var rawType = (parent.type || "").toUpperCase();
         var type = "Other";
         if (rawType.indexOf("MT") !== -1) { type = "MT"; }
         else if (rawType.indexOf("MK") !== -1) { type = "MK"; }
         else if (rawType.indexOf("MA") !== -1) { type = "MA"; }
         if (!parent.children) return;
-        parent.children.forEach(function(child) {
+        parent.children.forEach(function (child) {
             var status = String(child.status != null ? child.status : "");
             var match = false;
             if (sStatusFilter === "Open") {
@@ -1650,7 +1637,7 @@ function _calcModificheChart(aData, sStatusFilter) {
             }
         });
     });
-    return ["MT", "MK", "MA"].map(function(key) {
+    return ["MT", "MK", "MA"].map(function (key) {
         return { label: key, value: groups[key] || 0 };
     });
 }
@@ -1659,9 +1646,9 @@ function _calcModificheChart(aData, sStatusFilter) {
  * Calcola Tipologia Varianze chart (raggruppato per reason_for_variance, somma ore varianza)
  */
 function _calcTipologiaVarianzeChart(aData) {
-    return aData.map(function(row) {
+    return aData.map(function (row) {
         return { label: row.reason_for_variance || "NA", value: (parseFloat(row.variance_labor) || 0) / 100 };
-    }).sort(function(a, b) { return b.value - a.value; });
+    }).sort(function (a, b) { return b.value - a.value; });
 }
 
 /**
@@ -1669,11 +1656,11 @@ function _calcTipologiaVarianzeChart(aData) {
  */
 function _calcResponsabilitaVarianzeChart(aData) {
     var groups = {};
-    aData.forEach(function(row) {
+    aData.forEach(function (row) {
         var key = row.attribution || "Non attribuita";
         groups[key] = (groups[key] || 0) + (parseFloat(row.variance_labor) || 0) / 100;
     });
-    return Object.keys(groups).map(function(key) {
+    return Object.keys(groups).map(function (key) {
         return { label: key, value: groups[key] };
-    }).sort(function(a, b) { return b.value - a.value; });
+    }).sort(function (a, b) { return b.value - a.value; });
 }
