@@ -12,11 +12,12 @@ const bomComponentsCache = new Map();
 // --------------------
 function extractComponentFields(comp) {
     const descr = comp?.customValues?.find(o => o.attribute === "DESCRIZIONE COMPONENTE")?.value || "";
+    const missingParts = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
     const missingOrders = comp?.customValues?.find(o => o.attribute === "ORDINE MANCANTE" && o.value === "true") ? "X" : "";
     const missingComponents = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
     const fluxType = comp?.customValues?.find(o => o.attribute === "FLUX_TYPE")?.value || "";
 
-    return { descr, missingOrders, missingComponents, fluxType };
+    return { descr, missingParts, missingOrders, missingComponents, fluxType };
 }
 
 function sortMissingFirst(a, b) {
@@ -87,7 +88,7 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const comps = await getBomComponents(plant, bomInfo.bom, bomInfo.bomType);
 
             const mapped = comps.map(comp => {
-                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
+                const { descr, missingParts, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
 
                 if (missingParts === "X") {
                     var MissingPartsDate = getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
@@ -148,7 +149,7 @@ async function getBomMultilivelloTreeTableData(order, plant) {
 
         const firstLevelChildren = await Promise.all(
             comps.map(async comp => {
-                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
+                const { descr, missingParts, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
 
                 const children = await getChildMaterials(
                     bomInfo.customValueCommessa,
@@ -176,6 +177,7 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
+                    MissingParts: missingParts,
                     MissingOrders: missingOrders,
                     MissingComponents: missingComponents,
                     FluxType: fluxType,
