@@ -86,7 +86,7 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const bomInfo = await getBom(row.child_order, plant);
             const comps = await getBomComponents(plant, bomInfo.bom, bomInfo.bomType);
 
-             const mapped = comps.map(comp => {
+             const mapped = await Promise.all(comps.map(async comp => {
                 const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
                 var MissingPartsDate = "";
 
@@ -103,7 +103,7 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
                     MissingPartsDate: MissingPartsDate,
                     ChildOrder: row.child_order
                 };
-            });
+            }));
 
             // se ha nipoti
             if (bomInfo.parentAssembly === "true" || bomInfo.parentAssembly === "X") {
