@@ -12,14 +12,15 @@ const bomComponentsCache = new Map();
 // --------------------
 function extractComponentFields(comp) {
     const descr = comp?.customValues?.find(o => o.attribute === "DESCRIZIONE COMPONENTE")?.value || "";
-    const missingParts = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
+    const missingOrders = comp?.customValues?.find(o => o.attribute === "ORDINE MANCANTE" && o.value === "true") ? "X" : "";
+    const missingComponents = comp?.customValues?.some(o => o.attribute === "COMPONENTE MANCANTE" && o.value === "true") ? "X" : "";
     const fluxType = comp?.customValues?.find(o => o.attribute === "FLUX_TYPE")?.value || "";
 
-    return { descr, missingParts, fluxType };
+     return { descr, missingOrders, missingComponents, fluxType };
 }
 
 function sortMissingFirst(a, b) {
-    return (b.MissingParts === "X") - (a.MissingParts === "X");
+    return (b.MissingComponents === "X") - (a.MissingComponents === "X");
 }
 
 // --------------------
@@ -85,26 +86,24 @@ async function getChildMaterials(customValueCommessa, order, plant, parentMateri
             const bomInfo = await getBom(row.child_order, plant);
             const comps = await getBomComponents(plant, bomInfo.bom, bomInfo.bomType);
 
-            const mapped = await Promise.all(comps.map(async comp => {
-                const { descr, missingParts, fluxType } = extractComponentFields(comp);
+             const mapped = comps.map(comp => {
+                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
+                var MissingPartsDate = "";
 
-                if (missingParts === "X") {
-                    var MissingPartsDate = await getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
-                }else{
-                    var MissingPartsDate = "";
-                }
+                if (missingComponents === "X") MissingPartsDate = await getMissingPartsDate(plant, row.child_order, parentMaterial, comp.material.material);
                 
                 return {
                     Material: comp.material.material,
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
-                    MissingParts: missingParts,
+                    MissingOrders: missingOrders,
+                    MissingComponents: missingComponents,
                     FluxType: fluxType,
                     MissingPartsDate: MissingPartsDate,
                     ChildOrder: row.child_order
                 };
-            }));
+            });
 
             // se ha nipoti
             if (bomInfo.parentAssembly === "true" || bomInfo.parentAssembly === "X") {
@@ -144,7 +143,8 @@ async function getBomMultilivelloTreeTableData(order, plant) {
 
         const firstLevelChildren = await Promise.all(
             comps.map(async comp => {
-                const { descr, missingParts, fluxType } = extractComponentFields(comp);
+                const { descr, missingOrders, missingComponents, fluxType } = extractComponentFields(comp);
+                var MissingPartsDate = "";
 
                 const children = await getChildMaterials(
                     bomInfo.customValueCommessa,
@@ -153,14 +153,11 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     comp.material.material
                 );
 
-                if (missingParts) {
-                    var MissingPartsDate = await getMissingPartsDate(plant, order, bomInfo.material, comp.material.material);
-                }else{
-                    var MissingPartsDate = "";
-                }
+                if (missingComponents) MissingPartsDate = await getMissingPartsDate(plant, order, bomInfo.material, comp.material.material);
+
 
                 for (var i = 0; i < children.length; i++){
-                    if (children[i].MissingParts === "X") {
+                    if (children[i].MissingComponents === "X") {
                         children[i].MissingPartsDate = await getMissingPartsDate(plant, children[i].ChildOrder, comp.material.material, children[i].Material);
                     }else{
                         children[i].MissingPartsDate = "";
@@ -172,7 +169,8 @@ async function getBomMultilivelloTreeTableData(order, plant) {
                     MaterialDescription: descr,
                     Quantity: comp.quantity,
                     Sequence: comp.sequence,
-                    MissingParts: missingParts,
+                    MissingOrders: missingOrders,
+                    MissingComponents: missingComponents,
                     FluxType: fluxType,
                     MissingPartsDate: MissingPartsDate,
                     Children: children
