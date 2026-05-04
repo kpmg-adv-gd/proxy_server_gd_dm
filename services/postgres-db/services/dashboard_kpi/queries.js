@@ -9,7 +9,7 @@ const getNcPresenzaQuery = `SELECT
 
 const getOrdersConNcQuery = `SELECT DISTINCT dm_order 
     FROM z_defects 
-    WHERE plant = $1 AND dm_order = ANY($2) and status = 'OPEN'`;
+    WHERE plant = $1 AND dm_order = ANY($2)`;
 
 const getTipologiaVarianzeQuery = `SELECT 
     oc.reason_for_variance,
