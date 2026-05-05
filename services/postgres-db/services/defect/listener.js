@@ -133,7 +133,7 @@ module.exports.listenerSetup = (app) => {
     });
 
     app.post("/db/selectDefectForReport", async (req, res) => {
-        const { plant, wbe, sfc, order, qnCode, priority, startDate, endDate, status } = req.body;
+        const { plant, wbe, sfc, order, qnCode, phase, startDate, endDate, status } = req.body;
         try {
             // Creo la query dinamina in base ai parametri ricevuti
             let query = "SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, "
@@ -144,7 +144,7 @@ module.exports.listenerSetup = (app) => {
                         + "left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant "
                         + "left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type "
                         + "left join z_responsible on z_defects.responsible = z_responsible.id "
-                        + "WHERE z_defects.plant = '" + plant + "' and (z_defects.phase is null or z_defects.phase != 'Testing')";
+                        + "WHERE z_defects.plant = '" + plant + "' ";
             if (wbe) {
                 query += ` AND z_defects.wbe = '${wbe}'`;
             }
@@ -154,8 +154,8 @@ module.exports.listenerSetup = (app) => {
             if (qnCode) {
                 query += ` AND z_defects.qn_code = '${qnCode}'`;
             }
-            if (priority) {
-                query += ` AND z_priority.description = '${priority}'`;
+            if (phase) {
+                query += ` AND z_defects.phase = '${phase}'`;
             }
             if (startDate) {
                 query += ` AND z_defects.creation_date >= (SELECT '${startDate}' AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' AS utc_time)`;
