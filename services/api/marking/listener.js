@@ -23,11 +23,11 @@ module.exports.listenerSetup = (app) => {
     app.post("/api/sendMarkingToSapAndUpdateZTable", async (req, res) => {
         try {
             const { plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,
-                user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project, defectId } = req.body;
+                user_id,confirmation,cancellation,cancelled_confirmation,modification,workCenter,operationDescription,project, defectId, phase } = req.body;
 
             var responseConfirmationMarking = await mangeConfirmationMarking(plant,personalNumber,wbe_machine,operation,mes_order,sfc,confirmation_number,marking_date,marked_labor,
                 uom_marked_labor,variance_labor,uom_variance_labor,reason_for_variance,user_id,confirmation,cancellation,cancelled_confirmation,modification,
-                workCenter,operationDescription,project, defectId);
+                workCenter,operationDescription,project, defectId, phase);
             res.status(200).json(responseConfirmationMarking);
         } catch (error) {
             let status = error.status || 500;

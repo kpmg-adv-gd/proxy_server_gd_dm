@@ -3,7 +3,7 @@ const queryMarking = require("./queries");
 
 
 async function getZOpConfirmationData(plant,project,wbe,userId,startMarkingDate,endMarkingDate){
-    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"' and testing = false";
+    let whereCondition = " WHERE zoc.cancelled_confirmation IS NULL and zoc.plant ='"+plant+"'";
     if (!!project) {
         whereCondition += " AND zoc.project = '"+project+"'";
     }
@@ -38,9 +38,9 @@ async function getMarkingData(wbe_machine, mes_order, operation) {
     return data;
 }
 
-async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId, isTesting) {
+async function insertOpConfirmation(plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, defectId, phase) {
     let actualDate = new Date();
-    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId, isTesting && isTesting === true ? true : false]);
+    const data = await postgresdbService.executeQuery(queryMarking.insertOpConfirmationQuery, [plant,wbe_machine, operation, mes_order,sfc, confirmation_number, confirmation_counter, marking_date, marked_labor, uom_marked_labor, variance_labor, uom_variance_labor, reason_for_variance, user_id, user_personal_number, cancellation_flag, cancelled_confirmation,modification, workcenter, operation_description, project, actualDate, defectId, phase]);
     return data;
 }
 
