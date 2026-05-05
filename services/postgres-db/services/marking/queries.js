@@ -40,7 +40,7 @@ const getZOpConfirmationDataByFilterQuery = `WITH zoc AS (
                                                 CASE 
                                                     WHEN zoc.phase = 'Testing' THEN zvl.lev_1
                                                     ELSE zoc.operation
-                                                END AS operation_description,
+                                                END AS operation_description
                                             FROM z_op_confirmations zoc
                                             LEFT JOIN z_marking_recap zrc 
                                                 ON zoc.confirmation_number = zrc.confirmation_number 
