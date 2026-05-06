@@ -558,16 +558,16 @@ async function sendToSAPConfirmationNumberAdditionalOperations(plant, listOperat
     }
 
     console.log("Operations to send to SAP: "+JSON.stringify(dataForSap));
-    try {
-        // Divido dataForSap in più richieste da max 20 operazioni ciascuna
-        var chunkSize = 20;
-        for (var i = 0; i < dataForSap.operations.length; i += chunkSize) {
-            var chunk = dataForSap.operations.slice(i, i + chunkSize);
-            var chunkDataForSap = { operations: chunk };
-            var response = await callPost(url, chunkDataForSap);
+    // Divido dataForSap in più richieste da max 20 operazioni ciascuna
+    var chunkSize = 20;
+    for (var i = 0; i < dataForSap.operations.length; i += chunkSize) {
+        var chunk = dataForSap.operations.slice(i, i + chunkSize);
+        var chunkDataForSap = { operations: chunk };
+        try {
+            await callPost(url, chunkDataForSap);
+        } catch (error) {
+            console.log("Error sending operations to SAP: " + error);
         }
-    } catch (error) {
-        console.log("Error sending operations to SAP: " + error);
     }
 }
 
