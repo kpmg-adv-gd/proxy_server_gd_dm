@@ -58,7 +58,7 @@ const getZOpConfirmationDataByFilterQuery = `WITH zoc AS (
                                                 ON zoc.operation = zvl.id_lev_1 
                                                 AND zvl.plant = $1 
                                         )
-                                        SELECT * FROM zoc;`;
+                                        SELECT * FROM zoc`;
 
 const updateCancelFlagOpConfirmationQuery = `UPDATE z_op_confirmations
                                             SET cancellation_flag=true,
