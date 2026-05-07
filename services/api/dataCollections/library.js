@@ -532,29 +532,10 @@ async function elaborateAnalisiOreVarianza(plant, order) {
             return [];
         }
         
-        // Step 2: Recupero la mappatura dei cluster da Z_SHARED_MEMORY
-        const sharedMemoryData = await getZSharedMemoryData(plant, "PARAMETRI_VARIANCE_CLUSTER");
         let clusterMapping = {};
-        
-        if (sharedMemoryData && sharedMemoryData.length > 0) {
-            try {
-                const parsedData = JSON.parse(sharedMemoryData[0].value);
-                // Converto l'array in un oggetto chiave-valore per accesso rapido
-                if (Array.isArray(parsedData)) {
-                    parsedData.forEach(item => {
-                        if (item.key && item.value) {
-                            clusterMapping[item.key] = item.value;
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error("Error parsing PARAMETRI_VARIANCE_CLUSTER:", error);
-            }
-        }
-        
-        // Step 3: Elaboro i risultati
+        // Step 2: Elaboro i risultati
         const results = varianceData.map(item => {
-            const cluster = clusterMapping[item.variance_cluster] || item.variance_cluster;
+            const cluster =  item.variance_cluster;
             const totalVarianceLabor = parseFloat(item.total_variance_labor || 0);
             
             // Conversione da HCN a ore: divido per 100

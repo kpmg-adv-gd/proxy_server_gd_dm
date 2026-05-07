@@ -90,17 +90,18 @@ const getMarkingTestingDataByOrderQuery = `SELECT *
                                              WHERE plant = $1 AND "order" = $2`;
 
 const getAnalisiOreVarianzaQuery = `SELECT 
-                                        SUBSTRING(zoc.reason_for_variance, 1, 2) as variance_cluster,
-                                        SUM(zoc.variance_labor) as total_variance_labor
+                                        SUM(zoc.variance_labor) as total_variance_labor,
+                                        zvt.attribution as variance_cluster
                                     FROM z_op_confirmations zoc
                                     INNER JOIN z_marking_testing zmt ON zoc.confirmation_number = zmt.confirmation_number AND zoc.plant = zmt.plant AND zoc.operation = zmt.id_lev_1
+                                    LEFT JOIN z_variance_type zvt ON zoc.reason_for_variance = zvt.cause AND zvt.plant = zoc.plant
                                     WHERE zoc.plant = $1
                                         --AND zmt."type" != 'M'
                                         AND zmt."order" = $2 
                                         AND zoc.reason_for_variance IS NOT NULL 
                                         AND zoc.cancellation_flag = false
-                                        AND zoc.testing = true
-                                    GROUP BY SUBSTRING(zoc.reason_for_variance, 1, 2)`;
+                                        AND zoc.phase = 'Testing'
+                                    GROUP BY zvt.attribution`;
 
 const updateZUnproductiveWBSQuery = `UPDATE z_unproductive_wbs
                                SET marked_labor = marked_labor + $3,
