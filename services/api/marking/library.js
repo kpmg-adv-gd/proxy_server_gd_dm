@@ -126,7 +126,7 @@ async function sendMarkingToSap(plant,personalNumber,confirmation_number,reason_
 }
 
 
-async function sendZDMConfirmationsTesting(plant, sfc, order, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, rowSelectedWBS, userId, modification, defect, phase) {
+async function sendZDMConfirmationsTesting(plant, sfc, order, wbe, operation, personalNumber, activityNumber, activityNumberId, cancellation, confirmation, confirmationCounter, confirmationNumber, date, duration, durationUom, reasonForVariance, unCancellation, unConfirmation, wbs, operation_description, userId, modification, defect, workCenter, phase) {
     var pathZDMConfirmations = await getZSharedMemoryData(plant, "ZDM_CONFIRMATIONS");
     if (pathZDMConfirmations.length > 0) pathZDMConfirmations = pathZDMConfirmations[0].value;
     var url = hostname + pathZDMConfirmations;      
@@ -160,7 +160,7 @@ async function sendZDMConfirmationsTesting(plant, sfc, order, operation, persona
             var durationMarked = 0;
             var durationVariance = Number(duration);
         }
-        await insertOpConfirmation(plant, rowSelectedWBS.wbe, rowSelectedWBS.wbs_description, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, null, rowSelectedWBS.wbs_description,rowSelectedWBS.wbs, defect, phase);
+        await insertOpConfirmation(plant, wbe, operation, order, sfc, confirmationNumber, response.OUTPUT.confirmation_counter, date, durationMarked, durationUom, durationVariance, durationUom, reasonForVariance, userId, personalNumber, false, null, modification, workCenter, operation_description,wbs, defect, phase);
         await updateZMarkingTesting(plant, operation, confirmationNumber, durationMarked, durationVariance);
     } else {
         // Se la risposta non è OK, lancio un errore
