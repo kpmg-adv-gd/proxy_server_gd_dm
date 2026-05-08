@@ -37,12 +37,16 @@ const selectZDefectByWBE = `SELECT distinct z_defects.*, z_coding.coding, z_codi
 
 const selectDefectToApprove = `SELECT distinct z_defects.*, z_coding.coding, z_coding.coding_group, z_coding.coding_description, z_coding.coding_group_description, z_priority.description as priority_description, 
                     z_notification_type.description as notification_type_description, 
-                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description
+                    COALESCE(z_responsible.org_level_4, COALESCE(z_responsible.org_level_3, COALESCE(z_responsible.org_level_2, COALESCE(z_responsible.org_level_1, '')))) as responsible_description,
+                    z_verbale_lev_2.lev_1 as macrofase, z_verbale_lev_2.lev_2 as macroattivita, z_verbale_lev_3.lev_3 as checklist
                     FROM z_defects
                     left join z_coding on z_defects.coding_id = z_coding.id
                     left join z_priority on z_defects.priority = z_priority.priority and z_defects.plant = z_priority.plant
                     left join z_notification_type on z_defects.notification_type = z_notification_type.notification_type
                     left join z_responsible on z_defects.responsible = z_responsible.id
+                    left join z_defect_testing on z_defects.id = z_defect_testing.defect_id and z_defect_testing.plant = z_defects.plant
+                    left join z_verbale_lev_2 on z_verbale_lev_2.id_lev_1 = z_defect_testing.id_lev_1 and z_verbale_lev_2.id_lev_2 = z_defect_testing.id_lev_2 AND z_verbale_lev_2.plant = z_defects.plant AND z_verbale_lev_2.sfc = z_defects.sfc
+                    left join z_verbale_lev_3 on z_verbale_lev_3.id_lev_3 = z_defect_testing.id_lev_3 and  z_verbale_lev_3.plant = z_defects.plant AND z_verbale_lev_3.sfc = z_defects.sfc
                     WHERE z_defects.create_qn = TRUE AND z_defects.qn_annullata != TRUE AND z_defects.qn_approvata != TRUE
                     AND z_defects.plant = $1
                     ORDER BY z_defects.creation_date DESC`;
