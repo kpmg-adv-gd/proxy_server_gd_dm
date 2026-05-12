@@ -59,26 +59,26 @@ async function getVerbaleLev2NotDone(plant, workcenter, project, customer, co) {
 }
 
 // Recupero dati per livello 2 e livello 3
-async function getVerbaleLev2ByLev1(plant, order, sfc, id_lev_1) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1, [plant, order, sfc, id_lev_1]);
+async function getVerbaleLev2ByLev1(plant, order, sfc, id_lev_1, phase) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1, [plant, order, sfc, id_lev_1, phase]);
     return data;
 }
 
 // Recupero dati per livello 2 e livello 3
-async function getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, id_lev_1) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1]);
+async function getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, id_lev_1, phase) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1, phase]);
     return data;
 }
 
 // Recupero tutti i machine type
-async function getAllMachineType(plant, sfc) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getAllMachineType, [plant, sfc]);
+async function getAllMachineType(plant, sfc, phase) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getAllMachineType, [plant, sfc, phase]);
     return data;
 }
 
 // Recupero info su task terzo livello
-async function getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type) {
-    const data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type]);
+async function getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase) {
+    const data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase]);
     return data;
 }
 
@@ -114,24 +114,24 @@ async function saveCommentsVerbale(plant, sfc, wbe, id_lev_1, id_lev_2, id_lev_3
 
 // Start task terzo livello (prima controllo che non sia già in In Work o Done)
 // Se serve, faccio startare anche il secondo e primo livello
-async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user) {
+async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase) {
     try {
-        var data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type]);
+        var data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase]);
         if (data.length == 0 || data[0].status_lev_3 == 'In Work') {
             return { result: false, message: "Operation already started." };
         }else if (data[0].status_lev_3 == 'Done') {
             return { result: false, message: "Operation already done." };
         }
-        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1, [plant, order, sfc, id_lev_1]);
+        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1, [plant, order, sfc, id_lev_1, phase]);
 
         // terzo livello passa da New a In Work
-        await postgresdbService.executeQuery(queryVerbali.startTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user]);
+        await postgresdbService.executeQuery(queryVerbali.startTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user, phase]);
         // Gli altri terzo livello dello stesso secondo livello che sono in New passano In Queue
-        await postgresdbService.executeQuery(queryVerbali.startOtherTerzoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2, id_lev_3]);
+        await postgresdbService.executeQuery(queryVerbali.startOtherTerzoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2, id_lev_3, phase]);
         // secondo livello passa da New a In Work (se lo era già non accade nulla)
-        await postgresdbService.executeQuery(queryVerbali.startSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
+        await postgresdbService.executeQuery(queryVerbali.startSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type, phase]);
         // Gli altri secondo livello dello stesso primo livello che sono in New passano In Queue
-        await postgresdbService.executeQuery(queryVerbali.startOtherSecondoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2]);
+        await postgresdbService.executeQuery(queryVerbali.startOtherSecondoLivelloInQueue, [plant, sfc,  id_lev_1, id_lev_2, phase]);
         // primo livello passa da New a In Work (se lo era già non accade nulla)
         if (infoSecondoLivello.filter(item => item.status_lev_3 == 'New' || item.status_lev_3 == 'In Queue').length == infoSecondoLivello.length) {
             var url = hostname+"/sfc/v1/sfcs/start";
@@ -151,20 +151,20 @@ async function startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machi
 
 // Complete task terzo livello (prima controllo che non sia già in Done)
 // Se serve, faccio completare anche il secondo e primo livello
-async function completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user) {
+async function completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase) {
     try {
-        var data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type]);
+        var data = await postgresdbService.executeQuery(queryVerbali.getInfoTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase]);
         if (data.length == 0 || data[0].status_lev_3 == 'New' || data[0].status_lev_3 == 'In Queue') {
             return { result: false, message: "Operation is not started yet." };
         } else if (data[0].status_lev_3 == 'Done') {
             return { result: false, message: "Operation already done." };
         }
         // terzo livello passa da In Work a Done
-        await postgresdbService.executeQuery(queryVerbali.completeTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user]);
+        await postgresdbService.executeQuery(queryVerbali.completeTerzoLivello, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, user, phase]);
         // secondo livello passa da In Work a Done (se sono completati tutti i task)
-        await postgresdbService.executeQuery(queryVerbali.completeSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type]);
+        await postgresdbService.executeQuery(queryVerbali.completeSecondoLivello, [plant, sfc, id_lev_1, id_lev_2, machine_type, phase]);
         // primo livello passa da In Work a Done (se sono completati tutti i task)
-        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1]);
+        var infoSecondoLivello = await postgresdbService.executeQuery(queryVerbali.getVerbaleLev2ByLev1WithNotActive, [plant, order, sfc, id_lev_1, phase]);
         if (infoSecondoLivello.filter(item => item.status_lev_3 == 'Done').length == infoSecondoLivello.length) {
             var url = hostname+"/sfc/v1/sfcs/complete";
             var params = {
@@ -181,9 +181,9 @@ async function completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, ma
     }
 }
 
-async function updateNonConformanceLevel3(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type) {
+async function updateNonConformanceLevel3(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase) {
     try {
-        await postgresdbService.executeQuery(queryVerbali.updateNonConformanceLevel3, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type]);
+        await postgresdbService.executeQuery(queryVerbali.updateNonConformanceLevel3, [plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase]);
         return true;
     } catch (error) {
         return false;

@@ -15,9 +15,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per ottenere tutti machine type
     app.post("/db/getAllMachineType", async (req, res) => {
-        const { plant, sfc } = req.body;
+        const { plant, sfc, phase } = req.body;
         try {
-            const allMachineType = await postgresdbService.getAllMachineType(plant, sfc);
+            const allMachineType = await postgresdbService.getAllMachineType(plant, sfc, phase);
             res.status(200).json(allMachineType); 
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });
@@ -26,9 +26,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per ottenere info su task terzo livello
     app.post("/db/getInfoTerzoLivello", async (req, res) => {
-        const { plant, sfc, id_lev_1,  id_lev_2, id_lev_3, machine_type } = req.body;
+        const { plant, sfc, id_lev_1,  id_lev_2, id_lev_3, machine_type, phase } = req.body;
         try {
-            var infoTerzoLivello = await postgresdbService.getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type);
+            var infoTerzoLivello = await postgresdbService.getInfoTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase);
             var history = [];
             if (infoTerzoLivello.length > 0) {
                 if (infoTerzoLivello[0].status_lev_3 != 'New' && infoTerzoLivello[0].status_lev_3 != 'In Queue') {
@@ -80,9 +80,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per fare start task terzo livello
     app.post("/db/startTerzoLivello", async (req, res) => {
-        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user } = req.body;
+        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase } = req.body;
         try {
-            var execute = await postgresdbService.startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user);
+            var execute = await postgresdbService.startTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase);
             if (execute.result) {
                 res.status(200).json({ message: execute.message });
             }else{
@@ -95,9 +95,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per fare complete task terzo livello
     app.post("/db/completeTerzoLivello", async (req, res) => {
-        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user } = req.body;
+        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase } = req.body;
         try {
-            var execute = await postgresdbService.completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user);
+            var execute = await postgresdbService.completeTerzoLivello(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, order, operation, user, phase);
             if (execute.result) {
                 res.status(200).json({ message: execute.message });
             }else{
@@ -110,9 +110,9 @@ module.exports.listenerSetup = (app) => {
 
     // Api per aggiornare apertura di un difetto su terzo livello
     app.post("/db/updateNonConformanceLevel3", async (req, res) => {
-        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type } = req.body;
+        const { plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase } = req.body;
         try {
-            await postgresdbService.updateNonConformanceLevel3(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type);
+            await postgresdbService.updateNonConformanceLevel3(plant, sfc, id_lev_1, id_lev_2, id_lev_3, machine_type, phase);
             res.status(200).json({ message: "Non conformance updated successfully" });
         } catch (error) {
             res.status(500).json({ error: "Error while executing query" });

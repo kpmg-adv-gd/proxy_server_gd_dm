@@ -124,5 +124,55 @@ async function getFilterPODTI(plant,userId){
     
 }
 
+async function getFilterPODInstallation(plant, userId) {
+
+    try {
+        // MDO requests: Project, Customer, EndUser, CO, CO3
+        const requests = [
+            { key: "Project",  path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'COMMESSA' and PLANT eq '" + plant + "')/groupby((DATA_FIELD_VALUE))" }, method: "GET" },
+            { key: "Customer", path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'CUSTOMER' and PLANT eq '" + plant + "')/groupby((DATA_FIELD_VALUE))" }, method: "GET" },
+            { key: "EndUser",  path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'END_USER' and PLANT eq '" + plant + "')/groupby((DATA_FIELD_VALUE))" }, method: "GET" },
+            { key: "CO",       path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'CO_PREV' and PLANT eq '" + plant + "')/groupby((DATA_FIELD_VALUE))" }, method: "GET" },
+            { key: "CO3",      path: "/mdo/ORDER_CUSTOM_DATA", query: { $apply: "filter(DATA_FIELD eq 'CO3' and PLANT eq '" + plant + "')/groupby((DATA_FIELD_VALUE))" }, method: "GET" },
+        ];
+
+        // Execute all MDO calls in parallel
+        const responses = await Promise.all(
+            requests.map(async (request) => {
+                const mockReq = { path: request.path, query: request.query, method: request.method };
+                try {
+                    const result = await dispatch(mockReq);
+                    return { key: request.key, result };
+                } catch (error) {
+                    return { key: request.key, result: { error: true, message: error.message, code: error.code || 500 } };
+                }
+            })
+        );
+
+        const consolidatedData = responses.reduce((acc, { key, result }) => {
+            if (result.error) {
+                acc[key] = { error: true, message: result.message, code: result.code };
+            } else {
+                acc[key] = Array.isArray(result) ? result : result.data?.value || [];
+            }
+            return acc;
+        }, {});
+
+        // Workcenter is fixed to "Installation" - no need to fetch from user API
+        // Still fetch the user's workcenter list so the certification check works
+        const url = hostname + "/user/v1/users?plant=" + plant + "&userId=" + userId;
+        const responseGetUser = await callGet(url);
+        const workCenters = responseGetUser?.workCenters || [];
+        workCenters.sort((a, b) => a.description.localeCompare(b.description));
+        consolidatedData.WorkCenters = workCenters;
+
+        return consolidatedData;
+    } catch (e) {
+        console.error("Errore in getFilterPODInstallation: " + e);
+        throw new Error("Errore in getFilterPODInstallation: " + e);
+    }
+
+}
+
 // Esporta la funzione
-module.exports = { getFilterPOD, getFilterPODTI };
+module.exports = { getFilterPOD, getFilterPODTI, getFilterPODInstallation };

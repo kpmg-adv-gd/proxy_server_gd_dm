@@ -73,4 +73,58 @@ function getWorkListDataFiltered(response,body){
 
 }
 
-module.exports = { getWorkListDataFiltered };
+function getWorklistPODInstallation(response, filters) {
+    const { project, workcenter, customer, endUser, co, co3 } = filters;
+
+    try {
+        if (response.length === 0) return response;
+
+        const hasFilters = !!project || !!workcenter || !!customer || !!endUser || !!co || !!co3;
+
+        // 1) Se sono presenti filtri, filtro la lista degli SFC in base ai campi customValues
+        const filteredResponse = response.filter(function (obj) {
+            if (!hasFilters) return true;
+
+            const customValues = obj.customValues || [];
+            let projectCondition  = true;
+            let customerCondition = true;
+            let endUserCondition  = true;
+            let coCondition       = true;
+            let co3Condition      = true;
+
+            if (!!project)  projectCondition  = customValues.some(cv => cv.attribute === "COMMESSA"  && cv.value.toUpperCase().includes(project.toUpperCase()));
+            if (!!customer) customerCondition = customValues.some(cv => cv.attribute === "CUSTOMER"  && cv.value.toUpperCase().includes(customer.toUpperCase()));
+            if (!!endUser)  endUserCondition  = customValues.some(cv => cv.attribute === "END_USER"  && cv.value.toUpperCase().includes(endUser.toUpperCase()));
+            if (!!co)       coCondition       = customValues.some(cv => cv.attribute === "CO_PREV"   && cv.value.toUpperCase().includes(co.toUpperCase()));
+            if (!!co3)      co3Condition      = customValues.some(cv => cv.attribute === "CO3"       && cv.value.toUpperCase().includes(co3.toUpperCase()));
+
+            return projectCondition && customerCondition && endUserCondition && coCondition && co3Condition;
+        });
+
+        // 2) Per ogni SFC, mappo i campi rilevanti verso i field attesi dal front-end
+        const managedResponse = filteredResponse.map(function (obj) {
+            const customValues = obj.customValues || [];
+            const findValue = function (attr) {
+                const found = customValues.find(cv => cv.attribute === attr);
+                return found ? found.value : "";
+            };
+            return {
+                sfc:      obj.sfc,
+                status:   obj.status,
+                project:  findValue("COMMESSA"),
+                workcenter: workcenter,
+                customer: findValue("CUSTOMER"),
+                co:       findValue("CO_PREV"),
+                co3:      findValue("CO3"),
+                endUser:  findValue("END_USER"),
+            };
+        });
+
+        return managedResponse;
+    } catch (error) {
+        console.log("Internal Server Error: " + error);
+        throw { status: 500, message: "Error service getWorklistPODInstallation: " + error };
+    }
+}
+
+module.exports = { getWorkListDataFiltered, getWorklistPODInstallation };

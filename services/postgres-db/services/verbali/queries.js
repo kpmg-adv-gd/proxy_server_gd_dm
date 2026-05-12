@@ -7,7 +7,7 @@ const getVerbaleLev2ByLev1 = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2, l2.machine_t
     FROM z_verbale_lev_2 l2 
     INNER JOIN z_verbale_lev_3 l3 ON l2.id_lev_2 = l3.id_lev_2 AND l2.sfc = l3.sfc
     WHERE l2.plant = $1 AND l2."order" = $2 AND l2.sfc = $3
-    AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.active = true 
+    AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.active = true AND l2.phase = $5 AND l3.phase = $5
     ORDER BY l3.id_lev_2, l3.id_lev_3`;
 
     
@@ -18,10 +18,10 @@ const getVerbaleLev2ByLev1WithNotActive = `SELECT l2.sfc, l2.id_lev_2, l2.lev_2,
     FROM z_verbale_lev_2 l2 
     INNER JOIN z_verbale_lev_3 l3 ON l2.id_lev_2 = l3.id_lev_2 AND l2.sfc = l3.sfc
     WHERE l2.plant = $1 AND l2."order" = $2 AND l2.sfc = $3
-    AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4
+    AND l2.id_lev_1 = $4 AND l3.id_lev_1 = $4 AND l2.phase = $5 AND l3.phase = $5
     ORDER BY l3.id_lev_2, l3.id_lev_3`;
 
-const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and sfc = $2 ORDER BY wbe, machine_type`;
+const getAllMachineType = `SELECT DISTINCT wbe, machine_type FROM z_verbale_lev_2 WHERE plant = $1 and sfc = $2 AND phase = $3 ORDER BY wbe, machine_type`;
 
 const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, machine_type, status_lev_3, 
     TO_CHAR((start_date::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as start_date,
@@ -29,7 +29,7 @@ const getInfoTerzoLivello = `SELECT "order", sfc, id_lev_2, id_lev_3, lev_3, mac
     start_user, complete_user, plant, nonconformances
     FROM z_verbale_lev_3 
     WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
-    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
+    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6 AND phase = $7`;
 
 const getCommentsVerbale = `SELECT sfc, plant, id_lev_2, id_lev_3, machine_type, "user", comment, comment_type, status, approval_user, 
     TO_CHAR((datetime::timestamp  AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Rome', 'DD/MM/YYYY HH24:MI:SS') as datetime,
@@ -65,45 +65,45 @@ const getSafetyApprovalComments = `SELECT zc.sfc, zc.plant, zv.id_lev_2, zv.lev_
 const startTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'In Work', start_date = (current_timestamp AT TIME ZONE 'UTC'), start_user = $7
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
+    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6 AND phase = $8`;
 
 const startOtherTerzoLivelloInQueue = `UPDATE z_verbale_lev_3
     SET status_lev_3 = CASE WHEN status_lev_3 = 'New' THEN 'In Queue' ELSE status_lev_3 END
-    WHERE plant = $1 AND sfc = $2
+    WHERE plant = $1 AND sfc = $2 AND phase = $6
     AND (id_lev_1 != $3 OR id_lev_2 != $4 OR id_lev_3 != $5)`;
 
 const startSecondoLivello = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 in ('New','In Queue') THEN 'In Work' ELSE status_lev_2 END, 
     start_lev_2 = CASE WHEN status_lev_2 = 'New' THEN (current_timestamp AT TIME ZONE 'UTC') ELSE start_lev_2 END
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-    AND id_lev_2 = $4 AND machine_type = $5`;
+    AND id_lev_2 = $4 AND machine_type = $5 AND phase = $6`;
 
 const startOtherSecondoLivelloInQueue = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN status_lev_2 = 'New' THEN 'In Queue' ELSE status_lev_2 END
-    WHERE plant = $1 AND sfc = $2
+    WHERE plant = $1 AND sfc = $2 AND phase = $5
     AND (id_lev_1 != $3 OR id_lev_2 != $4)`;
 
 const completeTerzoLivello = `UPDATE z_verbale_lev_3
     SET status_lev_3 = 'Done', complete_date = (current_timestamp AT TIME ZONE 'UTC'), complete_user = $7
     WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
-    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
+    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6 AND phase = $8`;
 
 const completeSecondoLivello = `UPDATE z_verbale_lev_2
     SET status_lev_2 = CASE WHEN (SELECT COUNT(*) FROM z_verbale_lev_3 
                             WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
-                            AND id_lev_2 = $4  AND machine_type = $5 AND status_lev_3 != 'Done') = 0 
+                            AND id_lev_2 = $4  AND machine_type = $5 AND status_lev_3 != 'Done' AND phase = $6) = 0 
                         THEN 'Done' ELSE status_lev_2 END, 
     complete_lev_2 = CASE WHEN (SELECT COUNT(*) FROM z_verbale_lev_3 
                             WHERE plant = $1 AND sfc = $2 and id_lev_1 = $3
-                            AND id_lev_2 = $4 AND machine_type = $5 AND status_lev_3 != 'Done') = 0 
+                            AND id_lev_2 = $4 AND machine_type = $5 AND status_lev_3 != 'Done' AND phase = $6) = 0 
                         THEN (current_timestamp AT TIME ZONE 'UTC') ELSE complete_lev_2 END
         WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-        AND id_lev_2 = $4 AND machine_type = $5`;
+        AND id_lev_2 = $4 AND machine_type = $5 AND phase = $6`;
 
 const updateNonConformanceLevel3 = `UPDATE z_verbale_lev_3
     SET nonconformances = true
     WHERE plant = $1 AND sfc = $2  and id_lev_1 = $3
-    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6`;
+    AND id_lev_2 = $4 AND id_lev_3 = $5 AND machine_type = $6 AND phase = $7`;
 
 const insertZVerbaleLev2 = `INSERT INTO z_verbale_lev_2 ("order", id_lev_1, lev_2, id_lev_2, machine_type, safety, time_lev_2, uom, workcenter_lev_2, status_lev_2, plant, active, priority, wbe, date_lev_1, lev_1)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'New', $10, $11, $12, $13, $14, $15)`;

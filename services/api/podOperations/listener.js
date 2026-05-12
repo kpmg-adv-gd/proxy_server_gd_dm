@@ -52,7 +52,66 @@ module.exports.listenerSetup = (app) => {
             var primoLivello = getPodOperationsTI(responseRouting);
             // recupero secondo livello del primo livello
             for (var i=0; i<primoLivello.length; i++){
-                var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, primoLivello[i].id);
+                var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, primoLivello[i].id, "Testing");
+                var secondlivelloActive = secondoLivello.filter(el => el.active);
+                var status = responseSfcDetails.steps.filter(step => step.stepId == primoLivello[i].id)[0];
+                if (status.quantityInQueue == 1) { 
+                    if (responseSfcDetails.status.code == "401") {
+                        primoLivello[i].status = 'New';
+                    }else{
+                        primoLivello[i].status = 'In Queue';
+                    }
+                } else if (status.quantityInWork == 1) {
+                    primoLivello[i].status = 'In Work';
+                } else if (status.quantityDone == 1) {
+                    primoLivello[i].status = 'Done';
+                }
+                primoLivello[i].datetime = secondlivelloActive.length > 0 ? secondlivelloActive[0].date_lev_1 : null;
+                // Calcolo percentuale completamento del primo livello, facendo media ponderata sul time_lev_2
+                var totalTimeDone = 0, totalTime = 0, idsAnalizzati = [];
+                secondoLivello.forEach(element => {
+                    if (!idsAnalizzati.includes(element.id_lev_2)) {
+                        if (element.status == 'Done') {
+                            // Sommo se è un numero, altrimenti come fosse "0"
+                            totalTimeDone += isNaN(element.time_lev_2) || element.time_lev_2 == null ? 0 : element.time_lev_2;
+                        }
+                        totalTime += isNaN(element.time_lev_2) || element.time_lev_2 == null ? 0 : element.time_lev_2;
+                        idsAnalizzati.push(element.id_lev_2);
+                    }
+                });
+                var percent = totalTime == 0 ? 0 : ((totalTimeDone / totalTime) * 100);
+                primoLivello[i].percent = Math.floor(Math.round(percent * 100) / 100);
+
+                primoLivello[i].SecondoLivello = secondlivelloActive;
+            }
+
+            res.status(200).json({result: primoLivello});
+        } catch (error) {
+            let status = error.status || 500;
+            let errMessage = error.message || "Internal Server Error";
+            console.error("Error calling external API:", errMessage);
+            res.status(status).json({ error: errMessage });
+        }
+    });
+
+    app.post("/api/getPodOperationsInstallation", async (req, res) => {
+        try {
+            const { plant, order, sfc } = req.body;
+            // Verifica che i parametri richiesti siano presenti
+            if (!plant || !order || !sfc) {
+                return res.status(400).json({ error: "Missing required parameters: plant/order/sfc" });
+            }
+
+            // Calcolo dello stato del primo livello in base ai secondi livelli
+            var url = hostname+"/sfc/v1/sfcdetail?plant="+plant+"&sfc="+sfc;
+            var responseSfcDetails = await callGet(url);
+
+            var urlRouting = hostname+"/routing/v1/routings?plant="+plant+"&routing="+order+"&type=SHOP_ORDER";
+            var responseRouting = await callGet(urlRouting);
+            var primoLivello = getPodOperationsTI(responseRouting);
+            // recupero secondo livello del primo livello
+            for (var i=0; i<primoLivello.length; i++){
+                var secondoLivello = await postgresdbService.getVerbaleLev2ByLev1WithNotActive(plant, order, sfc, primoLivello[i].id, "Installation");
                 var secondlivelloActive = secondoLivello.filter(el => el.active);
                 var status = responseSfcDetails.steps.filter(step => step.stepId == primoLivello[i].id)[0];
                 if (status.quantityInQueue == 1) { 
